@@ -962,49 +962,31 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 4 : CRM LEADS & CLIENTS ==================== -->
+      <!-- ==================== TAB 4 : CRM LEADS & AUDIT DES CONVERSIONS ==================== -->
       <section id="tab-crm" class="tab-pane hidden space-y-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 class="text-xl font-black text-slate-900">CRM Centralisé : Prospection & Clients</h2>
-            <p class="text-xs text-slate-500">Filtrez, qualifiez et contactez directement vos prospects qualifiés.</p>
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-blue-50 text-[#0062ff] border border-blue-100">
+                <i data-lucide="microscope" class="w-4 h-4"></i>
+              </span>
+              <h2 class="text-xl font-black text-slate-900">CRM & Audit Médico-Légal des Conversions</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Analyse médico-légale du closing, neutralisation des objections et CRM centralisé des prospects qualifiés.</p>
           </div>
 
-          <!-- Filtres rapides & Export -->
-          <div class="flex items-center gap-2 overflow-x-auto text-xs">
-            <button onclick="loadLeads('Tous')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 font-semibold border border-slate-200 hover:bg-slate-50 shadow-xs">Tous</button>
-            <button onclick="loadLeads('Chaud')" class="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 font-semibold">Chauds 🔥</button>
-            <button onclick="loadLeads('Converti')" class="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 font-semibold">Clients ✅</button>
-            <button onclick="loadLeads('Tiède')" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100 font-semibold">Tièdes</button>
-            <button onclick="window.open('/api/export/leads-csv')" class="px-3 py-1.5 rounded-lg bg-[#0062ff] text-white hover:bg-blue-700 flex items-center gap-1 font-bold shadow-xs">
+          <div class="flex items-center gap-2">
+            <button onclick="loadConversionAudit(true); loadLeads();" class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 flex items-center gap-1.5 text-xs font-bold shadow-xs transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0062ff]"></i> Tout actualiser
+            </button>
+            <button onclick="window.open('/api/export/leads-csv')" class="px-3.5 py-1.5 rounded-lg bg-[#0062ff] text-white hover:bg-blue-700 flex items-center gap-1.5 text-xs font-bold shadow-xs transition">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Exporter CSV
             </button>
           </div>
         </div>
 
-        <div class="glass-card rounded-xl overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th class="p-3.5">Nom & Contact</th>
-                  <th class="p-3.5">Source & Pays</th>
-                  <th class="p-3.5">Intérêt</th>
-                  <th class="p-3.5">Score DUR</th>
-                  <th class="p-3.5">Profil DISC</th>
-                  <th class="p-3.5">Statut</th>
-                  <th class="p-3.5 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 text-slate-800">
-                <!-- Rempli par JavaScript -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- ==================== SECTION FORENSIQUE : AUDIT MÉDICO-LÉGAL DES CONVERSIONS "À LA LOUPE" ==================== -->
-        <div class="glass-card rounded-2xl p-6 space-y-6 border border-slate-200">
+        <!-- ==================== SECTION FORENSIQUE : AUDIT MÉDICO-LÉGAL DES CONVERSIONS "À LA LOUPE" (AU DESSUS DU CRM) ==================== -->
+        <div class="glass-card rounded-2xl p-6 space-y-6 border border-slate-200 shadow-sm">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
             <div>
               <div class="flex items-center gap-3">
@@ -1017,9 +999,14 @@
                 </div>
               </div>
             </div>
-            <button onclick="loadConversionAudit()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 flex items-center gap-2 text-xs font-bold shadow-xs transition">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0062ff]"></i> Actualiser l'Audit
-            </button>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Audit Temps Réel
+              </span>
+              <button onclick="loadConversionAudit(true)" class="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 flex items-center gap-1.5 text-xs font-bold shadow-xs transition">
+                <i data-lucide="refresh-cw" class="w-3 h-3 text-[#0062ff]"></i> Recharger
+              </button>
+            </div>
           </div>
 
           <!-- Forensic KPI Summary Cards -->
@@ -1073,6 +1060,67 @@
                 <!-- Dynamically populated by loadConversionAudit() -->
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE SANS SCROLLER ==================== -->
+        <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 shadow-sm space-y-0">
+          <!-- Barre d'outils de Recherche & Filtres Avancés -->
+          <div class="p-4 bg-white border-b border-slate-200 flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
+            <!-- Champ de Recherche Rapide (Recherche instantanée sans scroller) -->
+            <div class="relative flex-1 min-w-[280px] max-w-xl">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              <input 
+                id="crm-lead-search" 
+                type="text" 
+                oninput="handleLeadSearchInput(this.value)"
+                placeholder="Rechercher par nom, téléphone (+229...), WhatsApp, intérêt, source, pays..." 
+                class="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 placeholder-slate-400 transition"
+              />
+              <button 
+                id="crm-lead-search-clear" 
+                onclick="clearLeadSearch()" 
+                title="Effacer la recherche"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded transition">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Filtres par Statut et Compteur -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs" id="crm-status-chips">
+                <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition">Tous</button>
+                <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-semibold transition">Chauds 🔥</button>
+                <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-emerald-800 font-semibold transition">Clients ✅</button>
+                <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-800 font-semibold transition">Tièdes</button>
+                <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition">Rejetés / RGPD</button>
+              </div>
+
+              <!-- Compteur dynamique -->
+              <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 whitespace-nowrap">
+                Chargement...
+              </div>
+            </div>
+          </div>
+
+          <!-- Tableau avec En-tête Fixe (Sticky) & Défilement Fluide -->
+          <div class="overflow-x-auto max-h-[580px] overflow-y-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
+                <tr>
+                  <th class="p-3.5">Nom & Contact</th>
+                  <th class="p-3.5">Source & Pays</th>
+                  <th class="p-3.5">Intérêt</th>
+                  <th class="p-3.5">Score DUR</th>
+                  <th class="p-3.5">Profil DISC</th>
+                  <th class="p-3.5">Statut</th>
+                  <th class="p-3.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 text-slate-800 bg-white">
+                <!-- Rempli par JavaScript -->
+              </tbody>
+            </table>
           </div>
         </div>
       </section>

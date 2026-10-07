@@ -1105,79 +1105,199 @@ async function runTaskNow(taskId) {
   }
 }
 
-// --- CRM LEADS & CLIENTS ---
-async function loadLeads(statusFilter = "Tous") {
-  try {
-    const res = await fetch(`/api/crm/leads?status=${statusFilter}`);
-    const leads = await res.json();
-    const tbody = document.getElementById("crm-leads-tbody");
-    if (!tbody) return;
+// --- CRM LEADS & CLIENTS (AVEC RECHERCHE RAPIDE SANS SCROLLER) ---
+let crmLeadsData = [];
+let crmCurrentStatusFilter = "Tous";
+let crmCurrentSearchTerm = "";
 
-    if (!leads || leads.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 font-medium">Aucun prospect trouvé dans cette catégorie.</td></tr>`;
-      return;
+function setLeadStatusFilter(status) {
+  crmCurrentStatusFilter = status;
+  
+  // Mettre à jour l'état visuel des boutons de statut
+  const chips = ["Tous", "Chaud", "Converti", "Tiède", "Rejeté"];
+  chips.forEach(s => {
+    const btn = document.getElementById(`filter-chip-${s}`);
+    if (btn) {
+      if (s === status) {
+        btn.className = "px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition";
+      } else {
+        btn.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition";
+      }
     }
+  });
 
-    tbody.innerHTML = leads.map((l, index) => {
-      const fullName = l.nom_complet || l.nom_lead || `Prospect #${l.id}`;
-      const rawPhone = l.whatsapp || l.telephone || '';
-      const phoneDisplay = rawPhone || (l.email || 'Non renseigné');
-      const channel = l.source_contact || l.source_canal || 'Prospection Inbound';
-      const interest = l.centre_interet || l.poste || 'Intérêt Général';
-      const score = l.score_qualification || l.score_dur || 50;
-      const status = l.statut_lead || 'Froid';
+  applyLeadsFilterAndRender();
+}
 
-      let badgeColor = "bg-slate-100 text-slate-700 border border-slate-200";
-      if (status === "Chaud") badgeColor = "bg-amber-50 text-amber-800 border border-amber-200";
-      else if (status === "Converti") badgeColor = "bg-emerald-50 text-emerald-800 border border-emerald-200";
-      else if (status === "Tiède") badgeColor = "bg-blue-50 text-blue-800 border border-blue-200";
-      else if (status.includes("RGPD") || status === "Rejeté") badgeColor = "bg-rose-50 text-rose-800 border border-rose-200";
+function handleLeadSearchInput(value) {
+  crmCurrentSearchTerm = (value || "").trim().toLowerCase();
+  
+  const clearBtn = document.getElementById("crm-lead-search-clear");
+  if (clearBtn) {
+    if (crmCurrentSearchTerm.length > 0) {
+      clearBtn.classList.remove("hidden");
+    } else {
+      clearBtn.classList.add("hidden");
+    }
+  }
 
-      // Simulation/détection du profil DISC basé sur l'index ou notes
-      const discTypes = [
-        { code: "D", label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border border-rose-200" },
-        { code: "I", label: "I (Influent)", color: "bg-amber-50 text-amber-800 border border-amber-200" },
-        { code: "S", label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border border-emerald-200" },
-        { code: "C", label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border border-blue-200" }
-      ];
-      const disc = discTypes[index % 4];
+  applyLeadsFilterAndRender();
+}
 
-      // Opérateur Mobile Money indicatif
-      let opFlag = "🇧🇯 MTN Money";
-      if (rawPhone.includes("225")) opFlag = "🇨🇮 Wave / Orange";
-      else if (rawPhone.includes("221")) opFlag = "🇸🇳 Orange / Wave";
-      else if (rawPhone.includes("237")) opFlag = "🇨🇲 MTN Mobile";
-      else if (rawPhone.includes("223")) opFlag = "🇲🇱 Orange Money";
+function clearLeadSearch() {
+  const searchInput = document.getElementById("crm-lead-search");
+  if (searchInput) {
+    searchInput.value = "";
+    searchInput.focus();
+  }
+  const clearBtn = document.getElementById("crm-lead-search-clear");
+  if (clearBtn) clearBtn.classList.add("hidden");
+  
+  crmCurrentSearchTerm = "";
+  applyLeadsFilterAndRender();
+}
 
-      return `
-        <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
-          <td class="p-3.5">
-            <div class="font-bold text-slate-900">${escapeHtml(fullName)}</div>
-            <div class="text-[11px] text-slate-500 font-medium">${escapeHtml(phoneDisplay)}</div>
-          </td>
-          <td class="p-3.5 text-slate-700">
-            <div class="font-semibold">${escapeHtml(channel)}</div>
-            <div class="text-[10px] text-slate-500 font-medium">${opFlag}</div>
-          </td>
-          <td class="p-3.5 text-slate-700 font-medium">${escapeHtml(interest)}</td>
-          <td class="p-3.5 font-black text-[#0062ff]">${score}/100</td>
-          <td class="p-3.5">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${disc.color}">${disc.label}</span>
-          </td>
-          <td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${badgeColor}">${escapeHtml(status)}</span></td>
-          <td class="p-3.5 text-right">
-            ${rawPhone && !l.opt_out ? `
-              <a href="https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition">
-                WhatsApp
-              </a>
-            ` : `<span class="text-slate-400 font-semibold">-</span>`}
-          </td>
-        </tr>
-      `;
-    }).join("");
+async function loadLeads(statusFilter = null) {
+  try {
+    if (statusFilter !== null) {
+      crmCurrentStatusFilter = statusFilter;
+    }
+    
+    // Chargement complet pour filtrage instantané client-side
+    const res = await fetch("/api/crm/leads?status=Tous");
+    crmLeadsData = await res.json();
+    if (!Array.isArray(crmLeadsData)) crmLeadsData = [];
+
+    // Mettre à jour l'état actif et faire le rendu
+    setLeadStatusFilter(crmCurrentStatusFilter);
   } catch (err) {
     console.error("Erreur CRM :", err);
   }
+}
+
+function applyLeadsFilterAndRender() {
+  const tbody = document.getElementById("crm-leads-tbody");
+  const counterEl = document.getElementById("crm-leads-counter");
+  if (!tbody) return;
+
+  // Filtrage par statut
+  let filtered = crmLeadsData.filter(l => {
+    if (crmCurrentStatusFilter === "Tous") return true;
+    const s = (l.statut_lead || "").toLowerCase();
+    const target = crmCurrentStatusFilter.toLowerCase();
+    if (target === "rejeté") {
+      return s.includes("rejeté") || s.includes("rgpd") || l.opt_out === 1;
+    }
+    return s.includes(target);
+  });
+
+  // Filtrage instantané par mot-clé de recherche
+  if (crmCurrentSearchTerm) {
+    filtered = filtered.filter(l => {
+      const nom = (l.nom_complet || l.nom_lead || "").toLowerCase();
+      const phone = (l.whatsapp || l.telephone || "").toLowerCase();
+      const email = (l.email || "").toLowerCase();
+      const source = (l.source_contact || l.source_canal || "").toLowerCase();
+      const interest = (l.centre_interet || l.poste || "").toLowerCase();
+      const status = (l.statut_lead || "").toLowerCase();
+      const score = String(l.score_qualification || l.score_dur || "");
+      
+      return nom.includes(crmCurrentSearchTerm) ||
+             phone.includes(crmCurrentSearchTerm) ||
+             email.includes(crmCurrentSearchTerm) ||
+             source.includes(crmCurrentSearchTerm) ||
+             interest.includes(crmCurrentSearchTerm) ||
+             status.includes(crmCurrentSearchTerm) ||
+             score.includes(crmCurrentSearchTerm);
+    });
+  }
+
+  // Mise à jour du compteur
+  if (counterEl) {
+    if (crmCurrentSearchTerm || crmCurrentStatusFilter !== "Tous") {
+      counterEl.innerHTML = `<span class="text-[#0062ff] font-black">${filtered.length}</span> sur ${crmLeadsData.length} leads`;
+    } else {
+      counterEl.innerHTML = `${crmLeadsData.length} leads au total`;
+    }
+  }
+
+  if (filtered.length === 0) {
+    const isSearching = crmCurrentSearchTerm.length > 0;
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="p-8 text-center text-slate-500">
+          <div class="max-w-xs mx-auto space-y-2">
+            <i data-lucide="search-x" class="w-8 h-8 text-slate-400 mx-auto"></i>
+            <div class="font-bold text-slate-700">Aucun prospect trouvé</div>
+            <p class="text-xs text-slate-400">
+              ${isSearching ? `Aucun résultat pour "<strong>${escapeHtml(crmCurrentSearchTerm)}</strong>".` : `Aucun prospect dans la catégorie "${escapeHtml(crmCurrentStatusFilter)}".`}
+            </p>
+            ${isSearching ? `<button onclick="clearLeadSearch()" class="mt-2 text-xs font-bold text-[#0062ff] hover:underline">Effacer la recherche</button>` : ''}
+          </div>
+        </td>
+      </tr>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((l, index) => {
+    const fullName = l.nom_complet || l.nom_lead || `Prospect #${l.id}`;
+    const rawPhone = l.whatsapp || l.telephone || '';
+    const phoneDisplay = rawPhone || (l.email || 'Non renseigné');
+    const channel = l.source_contact || l.source_canal || 'Prospection Inbound';
+    const interest = l.centre_interet || l.poste || 'Intérêt Général';
+    const score = l.score_qualification || l.score_dur || 50;
+    const status = l.statut_lead || 'Froid';
+
+    let badgeColor = "bg-slate-100 text-slate-700 border border-slate-200";
+    if (status === "Chaud") badgeColor = "bg-amber-50 text-amber-800 border border-amber-200";
+    else if (status === "Converti") badgeColor = "bg-emerald-50 text-emerald-800 border border-emerald-200";
+    else if (status === "Tiède") badgeColor = "bg-blue-50 text-blue-800 border border-blue-200";
+    else if (status.includes("RGPD") || status === "Rejeté") badgeColor = "bg-rose-50 text-rose-800 border border-rose-200";
+
+    const discTypes = [
+      { code: "D", label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border border-rose-200" },
+      { code: "I", label: "I (Influent)", color: "bg-amber-50 text-amber-800 border border-amber-200" },
+      { code: "S", label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border border-emerald-200" },
+      { code: "C", label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border border-blue-200" }
+    ];
+    const disc = discTypes[index % 4];
+
+    let opFlag = "🇧🇯 MTN Money";
+    if (rawPhone.includes("225")) opFlag = "🇨🇮 Wave / Orange";
+    else if (rawPhone.includes("221")) opFlag = "🇸🇳 Orange / Wave";
+    else if (rawPhone.includes("237")) opFlag = "🇨🇲 MTN Mobile";
+    else if (rawPhone.includes("223")) opFlag = "🇲🇱 Orange Money";
+
+    return `
+      <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+        <td class="p-3.5">
+          <div class="font-bold text-slate-900">${escapeHtml(fullName)}</div>
+          <div class="text-[11px] text-slate-500 font-medium">${escapeHtml(phoneDisplay)}</div>
+        </td>
+        <td class="p-3.5 text-slate-700">
+          <div class="font-semibold">${escapeHtml(channel)}</div>
+          <div class="text-[10px] text-slate-500 font-medium">${opFlag}</div>
+        </td>
+        <td class="p-3.5 text-slate-700 font-medium">${escapeHtml(interest)}</td>
+        <td class="p-3.5 font-black text-[#0062ff]">${score}/100</td>
+        <td class="p-3.5">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${disc.color}">${disc.label}</span>
+        </td>
+        <td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${badgeColor}">${escapeHtml(status)}</span></td>
+        <td class="p-3.5 text-right">
+          ${rawPhone && !l.opt_out ? `
+            <a href="https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition">
+              WhatsApp
+            </a>
+          ` : `<span class="text-slate-400 font-semibold">-</span>`}
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  lucide.createIcons();
 }
 
 // --- AUDIT MÉDICO-LÉGAL DES CONVERSIONS "À LA LOUPE" ---

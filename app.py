@@ -513,12 +513,22 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
     def handle_api_get_leads(self, query):
         status_filter = query.get("status", [None])[0]
+        search_query = (query.get("q", [None])[0] or query.get("search", [None])[0] or "").strip()
         conn = get_connection()
         c = conn.cursor()
+        
+        sql = "SELECT * FROM crm_leads WHERE 1=1"
+        params = []
         if status_filter and status_filter != "Tous":
-            c.execute("SELECT * FROM crm_leads WHERE statut_lead = ? ORDER BY id DESC", (status_filter,))
-        else:
-            c.execute("SELECT * FROM crm_leads ORDER BY id DESC")
+            sql += " AND statut_lead = ?"
+            params.append(status_filter)
+        if search_query:
+            sql += " AND (nom_complet LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR centre_interet LIKE ? OR source_contact LIKE ?)"
+            wildcard = f"%{search_query}%"
+            params.extend([wildcard, wildcard, wildcard, wildcard, wildcard])
+            
+        sql += " ORDER BY id DESC"
+        c.execute(sql, tuple(params))
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
         self.send_json_response(rows)
