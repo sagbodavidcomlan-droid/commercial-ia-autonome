@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 # Import des moteurs métier
-from core.database_store import init_db, get_connection
+from core.database_store import init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
 from core.compliance_gdpr import ComplianceEngine
@@ -184,6 +184,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_catalog(query)
         elif path.startswith("/api/catalog/"):
             self.handle_api_get_catalog_item(path)
+        elif path == "/api/history":
+            self.handle_api_get_history(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -271,6 +273,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_delete_catalog_item(body)
         elif path == "/api/catalog/stock":
             self.handle_api_adjust_stock(body)
+        elif path == "/api/history/clear":
+            self.handle_api_clear_history()
         elif path == "/api/catalog/url":
             self.handle_api_update_catalog_url(body)
         else:
@@ -690,6 +694,36 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "status": autopilot_daemon.get_status()
         })
 
+    def handle_api_get_history(self, query):
+        limit = 100
+        if "limit" in query:
+            try:
+                limit = int(query["limit"][0])
+            except Exception:
+                limit = 100
+        category = query.get("category", [None])[0]
+        logs = get_activity_logs(limit=limit, category=category)
+        
+        # Statistiques rapides
+        cat_counts = {}
+        for l in logs:
+            cat = l.get("category", "GENERAL")
+            cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+        self.send_json_response({
+            "success": True,
+            "total": len(logs),
+            "category_counts": cat_counts,
+            "logs": logs
+        })
+
+    def handle_api_clear_history(self):
+        success = clear_activity_logs()
+        self.send_json_response({
+            "success": success,
+            "message": "Historique réinitialisé avec succès."
+        })
+
     def handle_sales_page(self, path):
         parts = [p for p in path.split("/") if p]
         item_id = None
@@ -796,6 +830,15 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
         conn.commit()
         conn.close()
+
+        log_activity(
+            category="VENTE_PAIEMENT",
+            action=f"Commande confirmée #{order_id} ({customer_name})",
+            lead_name=customer_name,
+            lead_phone=customer_phone,
+            status="PAID",
+            details=f"Offre : {item_nom} | Montant réglé : {prix:,.0f} FCFA | Mode : {payment_method.upper()}"
+        )
 
         # Synchroniser vers HubSpot & Webhooks en arrière-plan
         try:

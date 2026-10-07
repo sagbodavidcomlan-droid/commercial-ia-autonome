@@ -297,6 +297,8 @@ async function initAuthenticatedApp() {
   initSimulator();
   await refreshAutopilotStatus();
   setInterval(refreshAutopilotStatus, 12000);
+  loadHistoryFeed();
+  startHistoryLiveSync();
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -386,6 +388,8 @@ function showTab(tabId) {
   } else if (tabId === "settings") {
     loadSettings();
     loadComplianceRegistry();
+  } else if (tabId === "history") {
+    loadHistoryFeed();
   }
 }
 
@@ -2761,3 +2765,180 @@ async function toggleAutopilot24h() {
     showToast("Erreur lors du basculement Autopilot", "error");
   }
 }
+
+// ========================================================================
+// --- MODULE HISTORIQUE EN DIRECT & SYNCHRONISATION PERMANENTE (3s) ---
+// ========================================================================
+let currentHistoryFilter = "ALL";
+let historySyncInterval = null;
+let lastHistoryItemCount = 0;
+
+function setHistoryFilter(category) {
+  currentHistoryFilter = category;
+  document.querySelectorAll(".hist-filter-btn").forEach(btn => {
+    if (btn.getAttribute("data-category") === category) {
+      btn.className = "hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition bg-[#0062ff] text-white shadow-xs";
+    } else {
+      btn.className = "hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition";
+    }
+  });
+  loadHistoryFeed();
+}
+
+async function refreshHistoryNow() {
+  const btn = document.getElementById("btn-refresh-history");
+  if (btn) btn.classList.add("opacity-50", "pointer-events-none");
+  await loadHistoryFeed();
+  if (btn) btn.classList.remove("opacity-50", "pointer-events-none");
+}
+
+function startHistoryLiveSync() {
+  if (historySyncInterval) clearInterval(historySyncInterval);
+  // Synchronisation permanente toutes les 3 secondes
+  historySyncInterval = setInterval(() => {
+    loadHistoryFeed(true);
+  }, 3000);
+}
+
+function getRelativeTimeStr(dateStr) {
+  if (!dateStr) return "Récemment";
+  try {
+    const d = new Date(dateStr.replace(" ", "T"));
+    if (isNaN(d.getTime())) return dateStr;
+    const now = new Date();
+    const diffSec = Math.floor((now - d) / 1000);
+    if (diffSec < 5) return "À l'instant";
+    if (diffSec < 60) return `Il y a ${diffSec}s`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `Il y a ${diffMin} min`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `Il y a ${diffHours}h`;
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+async function loadHistoryFeed(isSilent = false) {
+  const container = document.getElementById("history-feed-container");
+  if (!container) return;
+
+  try {
+    const url = currentHistoryFilter === "ALL" 
+      ? "/api/history?limit=60" 
+      : `/api/history?limit=60&category=${encodeURIComponent(currentHistoryFilter)}`;
+
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.success) return;
+
+    const logs = data.logs || [];
+    const counts = data.category_counts || {};
+
+    // Mettre à jour les compteurs KPI
+    const totalEl = document.getElementById("hist-stat-total");
+    const durEl = document.getElementById("hist-stat-dur");
+    const waEl = document.getElementById("hist-stat-whatsapp");
+    const salesEl = document.getElementById("hist-stat-sales");
+    const badgeEl = document.getElementById("history-items-count-badge");
+    const syncTimeEl = document.getElementById("history-last-sync-time");
+
+    if (totalEl) totalEl.innerText = data.total || 0;
+    if (durEl) durEl.innerText = counts["QUALIFICATION_DUR"] || 0;
+    if (waEl) waEl.innerText = counts["CLOSING_WHATSAPP"] || 0;
+    if (salesEl) salesEl.innerText = counts["VENTE_PAIEMENT"] || 0;
+    if (badgeEl) badgeEl.innerText = `${logs.length} action${logs.length > 1 ? 's' : ''}`;
+    if (syncTimeEl) {
+      const now = new Date();
+      syncTimeEl.innerText = `Synchronisé à ${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+    }
+
+    if (logs.length === 0) {
+      container.innerHTML = `
+        <div class="p-12 text-center text-slate-400 text-xs">
+          <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+          Aucune action enregistrée pour le moment dans cette catégorie.
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    // Icônes & Couleurs par catégorie
+    const catConfig = {
+      "PROSPECTION": { icon: "radar", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Prospection & Ads" },
+      "QUALIFICATION_DUR": { icon: "brain-circuit", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Qualification DUR" },
+      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "Closing WhatsApp" },
+      "VENTE_PAIEMENT": { icon: "badge-dollar-sign", bg: "bg-amber-50 text-amber-700 border-amber-200/60", label: "Vente & Paiement" },
+      "PATROUILLE": { icon: "zap", bg: "bg-rose-50 text-rose-700 border-rose-200/60", label: "Patrouille Autonome" },
+      "CONFORMITE_RGPD": { icon: "shield-check", bg: "bg-teal-50 text-teal-700 border-teal-200/60", label: "Conformité RGPD" }
+    };
+
+    let html = "";
+    logs.forEach(log => {
+      const cfg = catConfig[log.category] || { icon: "activity", bg: "bg-slate-100 text-slate-700 border-slate-200", label: log.category };
+      const relTime = getRelativeTimeStr(log.timestamp);
+      
+      const statusBadge = log.status === "PAID"
+        ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">ENCAISSÉ</span>'
+        : (log.status === "CLOSING"
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">CLOSING</span>'
+          : (log.status === "SUCCESS"
+            ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">RÉUSSI</span>'
+            : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">INFO</span>'));
+
+      const phoneLink = log.lead_phone && log.lead_phone !== "N/A" && !log.lead_phone.includes("Simulation")
+        ? `<a href="https://wa.me/${log.lead_phone.replace(/\D/g, '')}" target="_blank" class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+             <i data-lucide="phone-call" class="w-3 h-3"></i> ${escapeHtml(log.lead_phone)}
+           </a>`
+        : (log.lead_phone && log.lead_phone !== "N/A" ? `<span class="text-[11px] text-slate-400 font-mono">${escapeHtml(log.lead_phone)}</span>` : '');
+
+      html += `
+        <div class="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3">
+          <div class="flex items-start gap-3.5">
+            <div class="p-2.5 rounded-xl border ${cfg.bg} flex-shrink-0 mt-0.5 shadow-2xs">
+              <i data-lucide="${cfg.icon}" class="w-4 h-4"></i>
+            </div>
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-extrabold text-slate-900">${escapeHtml(log.action)}</span>
+                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.bg}">${cfg.label}</span>
+                ${statusBadge}
+              </div>
+
+              ${log.lead_name ? `
+                <div class="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>${escapeHtml(log.lead_name)}</span>
+                  ${phoneLink ? `&bull; ${phoneLink}` : ''}
+                </div>
+              ` : ''}
+
+              ${log.details ? `
+                <p class="text-xs text-slate-600 font-normal bg-slate-50/90 rounded-lg p-2 border border-slate-100 mt-1 max-w-3xl">
+                  ${escapeHtml(log.details)}
+                </p>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="flex-shrink-0 text-right md:pt-1">
+            <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-500">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+              ${relTime}
+            </span>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${escapeHtml(log.timestamp)}</div>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+
+  } catch (err) {
+    console.error("Erreur chargement historique :", err);
+  }
+}
+

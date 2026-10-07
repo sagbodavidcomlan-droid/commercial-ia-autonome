@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List
 
-from core.database_store import get_connection
+from core.database_store import get_connection, log_activity
 from core.enrichment_engine import EnrichmentEngine
 from core.compliance_gdpr import ComplianceEngine
 from core.smart_rate_limiter import SmartRateLimiter
@@ -192,6 +192,22 @@ class AutopilotOrchestrator:
             })
 
             self.log("QUALIFICATION", f"Lead #{lead_id} ({p['nom']}) qualifié : Score DUR {dur_score}/100 [{statut}] | Profil: {disc_profile}")
+            log_activity(
+                category="QUALIFICATION_DUR",
+                action=f"Lead qualifié #{lead_id} [{statut}]",
+                lead_name=p["nom"],
+                lead_phone=p["phone"],
+                status="SUCCESS" if dur_score >= 65 else "INFO",
+                details=f"Score DUR : {dur_score}/100 | Profil DISC : {disc_profile} | Opérateur : {momo_preferred} | Poste : {p['poste']}"
+            )
+            log_activity(
+                category="CLOSING_WHATSAPP",
+                action=f"Script vocal & message WhatsApp prêts",
+                lead_name=p["nom"],
+                lead_phone=p["phone"],
+                status="CLOSING",
+                details=f"Canal : {p['canal']} | Accroche adaptée au profil psychologique {disc_profile}"
+            )
 
         conn.commit()
 
@@ -211,6 +227,14 @@ class AutopilotOrchestrator:
             "message": f"Sprint autonome terminé avec succès en {duration}s. {len(processed_leads)} leads traités et intégrés."
         }
         self.log("FINISH", summary["message"], status="SUCCESS")
+        log_activity(
+            category="PATROUILLE",
+            action="Sprint de prospection autonome achevé",
+            lead_name="Agent Commercial IA",
+            lead_phone="N/A",
+            status="SUCCESS",
+            details=f"{len(processed_leads)} prospects qualifiés et intégrés dans le CRM en {duration}s"
+        )
         return summary
 
     def get_recent_logs(self, limit: int = 50) -> List[Dict[str, Any]]:

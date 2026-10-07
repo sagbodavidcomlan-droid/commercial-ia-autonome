@@ -15,6 +15,7 @@ import sqlite3
 import json
 import logging
 from datetime import datetime, date
+from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger("DatabaseStore")
 
@@ -213,6 +214,19 @@ def init_db():
     except Exception as e:
         logger.warning(f"Migration catalog_items : {e}")
 
+    # 9. Table du Journal d'Activité en Direct de l'Agent IA
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agent_activity_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        category TEXT DEFAULT 'GENERAL',
+        action TEXT NOT NULL,
+        lead_name TEXT,
+        lead_phone TEXT,
+        status TEXT DEFAULT 'INFO',
+        details TEXT
+    )
+    """)
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide
@@ -229,6 +243,11 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM agenda_tasks")
     if cursor.fetchone()[0] < 10:
         seed_calendar_schedule(conn)
+
+    # Ensemencement du journal d'activité si vide
+    cursor.execute("SELECT COUNT(*) FROM agent_activity_logs")
+    if cursor.fetchone()[0] == 0:
+        seed_activity_logs(conn)
 
     conn.close()
 
@@ -423,6 +442,124 @@ def seed_catalog_data(conn):
         ))
 
     conn.commit()
+
+def seed_activity_logs(conn):
+    cursor = conn.cursor()
+    sample_activities = [
+        (
+            "2026-10-07 23:28:18", "PATROUILLE",
+            "Lancement du cycle de patrouille autonome multi-canaux",
+            "Système Autonome", "N/A", "SUCCESS",
+            "Secteur : Formation Digitale & Compétences Rentables | Cible : BJ, CI, SN"
+        ),
+        (
+            "2026-10-07 23:28:19", "PROSPECTION",
+            "Veille Meta Ads Library & détection des angles d'accroche",
+            "Facebook Ads", "N/A", "INFO",
+            "Analyse des termes de recherche actifs : formation marketing digital, graphisme canva"
+        ),
+        (
+            "2026-10-07 23:34:40", "QUALIFICATION_DUR",
+            "Qualification psychologique et notation DUR d'un prospect",
+            "Nadia Hounkpatin", "+22997123456", "SUCCESS",
+            "Score DUR : 43/100 [Tiède] | Profil DISC : Stable (S) | Opérateur : MTN Mobile Money"
+        ),
+        (
+            "2026-10-07 23:34:41", "CLOSING_WHATSAPP",
+            "Génération du script vocal sur-mesure et pitch d'invitation",
+            "Nadia Hounkpatin", "+22997123456", "CLOSING",
+            "Angle : Sécurité & Accompagnement pas-à-pas | Offre : Pack BootCamp Digital Pro"
+        ),
+        (
+            "2026-10-07 23:34:42", "QUALIFICATION_DUR",
+            "Scoring lead B2B et enrichissement Telco",
+            "Rodrigue Ezin", "+22507889911", "SUCCESS",
+            "Score DUR : 43/100 [Tiède] | Profil DISC : Directif (D) | Opérateur : Moov Money Côte d'Ivoire"
+        ),
+        (
+            "2026-10-07 23:34:43", "CONFORMITE_RGPD",
+            "Vérification Stop-List et conformité légale opt-out",
+            "Rodrigue Ezin", "+22507889911", "SUCCESS",
+            "Base légale : Intérêt légitime B2B / Demande publique | Statut : 100% Conforme"
+        ),
+        (
+            "2026-10-07 23:34:44", "VENTE_PAIEMENT",
+            "Préparation du lien d'encaissement Mobile Money",
+            "Boris Agossa", "+22996451230", "PAID",
+            "Montant : 150 000 FCFA | Mode : MTN Mobile Money / FedaPay | Statut : Prêt à valider"
+        )
+    ]
+    for act in sample_activities:
+        cursor.execute("""
+        INSERT INTO agent_activity_logs (timestamp, category, action, lead_name, lead_phone, status, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, act)
+    conn.commit()
+
+def log_activity(category: str, action: str, lead_name: str = "", lead_phone: str = "", status: str = "INFO", details: str = "") -> int:
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        c.execute("""
+        INSERT INTO agent_activity_logs (timestamp, category, action, lead_name, lead_phone, status, details)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (now_str, category, action, lead_name, lead_phone, status, details))
+        log_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return log_id
+    except Exception as e:
+        logger.error(f"Erreur log_activity : {e}")
+        return 0
+
+def get_activity_logs(limit: int = 100, category: Optional[str] = None) -> List[Dict[str, Any]]:
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        if category and category.lower() not in ("all", "tous", "all_categories"):
+            c.execute("""
+            SELECT id, timestamp, category, action, lead_name, lead_phone, status, details
+            FROM agent_activity_logs
+            WHERE category = ?
+            ORDER BY id DESC LIMIT ?
+            """, (category, limit))
+        else:
+            c.execute("""
+            SELECT id, timestamp, category, action, lead_name, lead_phone, status, details
+            FROM agent_activity_logs
+            ORDER BY id DESC LIMIT ?
+            """, (limit,))
+        rows = c.fetchall()
+        logs = []
+        for r in rows:
+            logs.append({
+                "id": r["id"],
+                "timestamp": r["timestamp"],
+                "category": r["category"],
+                "action": r["action"],
+                "lead_name": r["lead_name"] or "",
+                "lead_phone": r["lead_phone"] or "",
+                "status": r["status"] or "INFO",
+                "details": r["details"] or ""
+            })
+        conn.close()
+        return logs
+    except Exception as e:
+        logger.error(f"Erreur get_activity_logs : {e}")
+        return []
+
+def clear_activity_logs() -> bool:
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM agent_activity_logs")
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur clear_activity_logs : {e}")
+        return False
 
 if __name__ == "__main__":
     init_db()
