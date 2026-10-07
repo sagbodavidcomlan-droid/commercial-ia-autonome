@@ -107,11 +107,12 @@ def score_lead_dur(lead: Dict[str, Any]) -> Dict[str, Any]:
 
 class DURLeadScorer:
     """Wrapper orienté objet pour le calcul de qualification DUR"""
-    def score_lead(self, douleur: str = "", urgence: str = "", ressources: str = "", poste: str = "") -> Dict[str, Any]:
+    def score_lead(self, douleur: str = "", urgence: str = "", ressources: str = "", poste: str = "", phone: str = "") -> Dict[str, Any]:
         lead_dict = {
             "comment_sample": f"{douleur} {urgence} {ressources}",
             "bio": poste,
-            "interest": douleur
+            "interest": douleur,
+            "phone": phone
         }
         return score_lead_dur(lead_dict)
 

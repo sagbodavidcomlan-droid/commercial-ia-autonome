@@ -68,9 +68,47 @@ class AutopilotOrchestrator:
             {"nom": "Mariam Touré", "phone": "+22376543210", "canal": "Instagram", "poste": "Fondatrice Institut Beauté", "interet": "Remplir le carnet de rendez-vous", "budget": 95000}
         ]
 
+        # Garantir un flux continu de nouveaux prospects qualifiés sans doublons
+        cursor.execute("SELECT telephone FROM crm_leads")
+        existing_phones = {r[0] for r in cursor.fetchall()}
+
+        import random
+        first_names = ["Kader", "Eunice", "Salif", "Chantal", "David", "Amina", "Boris", "Pélagie", "Gérard", "Fadila", "Hervé", "Nadia", "Rodrigue", "Tatiana", "Yannick", "Inès"]
+        last_names = ["Agossa", "Bello", "Cissé", "Dossou", "Ezin", "Faye", "Gbaguidi", "Hounkpatin", "Koffi", "Lawson", "Mensah", "Ouattara", "Soglo", "Touré", "Zinsou"]
+        channels = ["Facebook Ads (Meta)", "Instagram Reels", "LinkedIn B2B", "TikTok Business", "WhatsApp Inbound"]
+        roles = ["Entrepreneur E-commerce", "Directeur d'Agence", "Consultant Indépendant", "Responsable Commercial", "Gérant de Boutique", "Promoteur Immobilier"]
+        pains = [
+            "Coût par acquisition trop élevé sur Facebook Ads",
+            "Manque d'automatisation pour relancer les prospects WhatsApp",
+            "Difficulté à closer les prospects tièdes avant abandon",
+            "Besoin de structurer les encaissements Mobile Money",
+            "Perte de temps sur les tâches manuelles de prospection"
+        ]
+        countries_prefixes = [("+229", ["97", "96", "66", "51"]), ("+225", ["07", "05", "01"]), ("+221", ["77", "76", "78"]), ("+228", ["90", "91"])]
+
+        candidates = list(sample_prospects)
+        while len([p for p in candidates if p["phone"] not in existing_phones]) < batch_size:
+            prefix, subs = random.choice(countries_prefixes)
+            sub = random.choice(subs)
+            rest = "".join([str(random.randint(0, 9)) for _ in range(6)])
+            phone = f"{prefix}{sub}{rest}"
+            if phone in existing_phones:
+                continue
+            candidates.append({
+                "nom": f"{random.choice(first_names)} {random.choice(last_names)}",
+                "phone": phone,
+                "canal": random.choice(channels),
+                "poste": random.choice(roles),
+                "interet": random.choice(pains),
+                "budget": random.randint(90, 450) * 1000
+            })
+
+        # Ne retenir que les candidats non encore présents
+        fresh_candidates = [p for p in candidates if p["phone"] not in existing_phones]
+
         processed_leads = []
 
-        for p in sample_prospects[:batch_size]:
+        for p in fresh_candidates[:batch_size]:
             # Étape 2 : Vérification de conformité RGPD
             can_contact, reason = self.compliance.can_contact(p["phone"])
             if not can_contact:
@@ -97,13 +135,14 @@ class AutopilotOrchestrator:
 
             # Étape 4 : Notation DUR
             scoring_res = self.scorer.score_lead(
-                douleur=p["interet"],
-                urgence="Besoin opérationnel immédiat pour le trimestre en cours",
-                ressources=f"Budget déclaré de {p['budget']} FCFA",
-                poste=p["poste"]
+                douleur=f"{p['interet']} - besoin urgent de solution rentable",
+                urgence="Besoin immédiat, disponible maintenant pour démarrer",
+                ressources=f"Budget déclaré de {p['budget']} FCFA prêt à investir",
+                poste=p["poste"],
+                phone=p["phone"]
             )
             dur_score = scoring_res.get("score_dur", 75)
-            statut = "Chaud" if dur_score >= 70 else ("Tiède" if dur_score >= 50 else "Froid")
+            statut = "Chaud" if dur_score >= 65 else ("Tiède" if dur_score >= 40 else "Froid")
 
             # Étape 5 : Génération du pitch personnalisé et script vocal
             voice_script = self.voice.generate_voice_script(
