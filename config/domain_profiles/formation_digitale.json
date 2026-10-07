@@ -1,0 +1,33 @@
+{
+  "domaine_id": "formation_digitale",
+  "nom_domaine": "Formation Digitale & Compétences Rentables",
+  "description": "Vente de packs de formations pratiques (Canva, Marketing, Freelance) pour jeunes et étudiants en Afrique francophone.",
+  "cible": {
+    "public": "Jeunes de 16 à 30 ans, étudiants, chercheurs d'emploi",
+    "pays": ["BJ", "CI", "SN", "CM", "TG", "BF", "ML", "CD", "GA", "NE"],
+    "profil_dur": {
+      "douleur_keywords": ["rentrée", "financer", "chômage", "sans emploi", "étudiant", "revenu", "indépendance", "besoin d'argent", "galère", "débutant"],
+      "urgence_keywords": ["vacances", "maintenant", "immédiat", "vite", "rapide", "disponible", "tout de suite"],
+      "ressource_keywords": ["apprendre", "prêt", "motivé", "travailler", "former", "canva", "design", "marketing"]
+    }
+  },
+  "mots_cles_prospection": {
+    "facebook_ads": ["formation marketing digital", "formation graphisme canva", "apprendre le graphisme", "devenir freelance"],
+    "linkedin": ["recherche stage marketing", "formation canva étudiant", "apprendre le graphisme", "missions freelance"],
+    "tiktok_instagram": ["formation canva", "tuto graphisme débutant", "gagner argent en ligne"]
+  },
+  "offre": {
+    "nom_produit": "Pack Formations Digitales & Canva Pro",
+    "prix": "15 000 FCFA",
+    "lien_paiement_ou_rdv": "https://formations.sagbodavid.com/pack-digital",
+    "modes_paiement": "Mobile Money (MTN, Moov, Orange, Wave) ou Carte bancaire",
+    "delivrable": "Accès immédiat à l'espace vidéo de formation + Groupe privé d'entraide WhatsApp"
+  },
+  "objections": {
+    "prix": "Rappeler que la formation est rentabilisée dès le tout premier visuel ou client trouvé (prix solidaire spécial vacances).",
+    "technique": "Rassurer : 100% pas-à-pas, accessible sur simple smartphone sans compétences préalables.",
+    "temps": "Accès 24h/24 en ligne, modules de 10-15 minutes que l'on peut suivre à son rythme.",
+    "confiance": "Déjà plus de 350 apprenants formés, accompagnement personnalisé et garantie satisfait ou remboursé 7 jours."
+  },
+  "tonalite": "Fraternelle, dynamique, rassurante, valorisante et orientée passage à l'action"
+}

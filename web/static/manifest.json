@@ -1,0 +1,18 @@
+{
+  "name": "Invo. — Direction Commerciale & Unité IA",
+  "short_name": "Invo.",
+  "description": "Application autonome de prospection, vente et pilotage commercial 24h/24",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fe",
+  "theme_color": "#0062ff",
+  "icons": [
+    {
+      "src": "/static/img/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "database_name": "Agent IA Prospection & CRM Notion",
+  "databases": [
+    {
+      "title": "Prospection & Leads",
+      "properties": {
+        "Nom": { "title": {} },
+        "WhatsApp": { "phone_number": {} },
+        "Email": { "email": {} },
+        "Source": {
+          "select": {
+            "options": [
+              { "name": "Facebook Ads Library", "color": "blue" },
+              { "name": "LinkedIn", "color": "blue" },
+              { "name": "Facebook Groups", "color": "purple" },
+              { "name": "TikTok Ads", "color": "pink" },
+              { "name": "Instagram", "color": "orange" },
+              { "name": "Bouche à oreille", "color": "green" }
+            ]
+          }
+        },
+        "Lien Profil LinkedIn": { "url": {} },
+        "Interet": {
+          "select": {
+            "options": [
+              { "name": "Graphisme Canva", "color": "default" },
+              { "name": "Marketing Digital", "color": "blue" },
+              { "name": "Création Web", "color": "green" }
+            ]
+          }
+        },
+        "Score DUR": { "number": { "format": "number" } },
+        "Statut": {
+          "status": {
+            "options": [
+              { "name": "Nouveau", "color": "gray" },
+              { "name": "Tiède", "color": "yellow" },
+              { "name": "Chaud", "color": "orange" },
+              { "name": "Très Chaud", "color": "red" },
+              { "name": "Converti", "color": "green" },
+              { "name": "Perdu", "color": "brown" }
+            ]
+          }
+        },
+        "Relances Effectuees": { "number": { "format": "number" } },
+        "Derniere Interaction": { "date": {} },
+        "Notes & Objections": { "rich_text": {} }
+      }
+    },
+    {
+      "title": "CRM Clients & Ventes",
+      "properties": {
+        "Nom Client": { "title": {} },
+        "WhatsApp": { "phone_number": {} },
+        "Email": { "email": {} },
+        "Pack": { "select": {} },
+        "Montant": { "number": { "format": "number" } },
+        "Date Achat": { "date": {} },
+        "Score NPS": { "number": { "format": "number" } },
+        "Statut Onboarding": {
+          "select": {
+            "options": [
+              { "name": "Non commencé", "color": "red" },
+              { "name": "En cours", "color": "yellow" },
+              { "name": "Actif / Autonome", "color": "green" }
+            ]
+          }
+        },
+        "Upsell Propose": { "checkbox": {} },
+        "Ambassadeur": { "checkbox": {} }
+      }
+    }
+  ]
+}

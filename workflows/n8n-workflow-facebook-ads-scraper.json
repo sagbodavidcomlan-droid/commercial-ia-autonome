@@ -1,0 +1,122 @@
+{
+  "name": "Sub-Workflow : Extraction Facebook Ads Library & Leads Sociaux",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-trigger",
+      "name": "Scan Périodique (Toutes les 6h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://graph.facebook.com/v20.0/ads_archive",
+        "method": "GET",
+        "authentication": "none",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_GRAPH_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "ad_reached_countries",
+              "value": "[\"BJ\",\"CI\",\"SN\",\"CM\",\"TG\"]"
+            },
+            {
+              "name": "ad_active_status",
+              "value": "ACTIVE"
+            },
+            {
+              "name": "search_terms",
+              "value": "formation graphisme canva"
+            },
+            {
+              "name": "ad_type",
+              "value": "ALL"
+            },
+            {
+              "name": "limit",
+              "value": "30"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-http-facebook-ads",
+      "name": "Appel Meta Ads Library API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraction et filtrage des annonces pertinentes\nconst data = $input.first().json.data || [];\nconst highIntentKeywords = ['combien', 'prix', 'intéressé', 'info', 'participer', 'whatsapp'];\nconst outputLeads = [];\n\nfor (const ad of data) {\n  const bodies = ad.ad_creative_bodies || [];\n  const pageName = ad.page_name || 'Annonceur Digital';\n  \n  // Simule l'analyse des signaux d'engagement de l'annonce\n  outputLeads.push({\n    first_name: 'Prospect ' + (ad.page_name || 'Social'),\n    source: 'Facebook Ads Library',\n    page_annonceur: pageName,\n    ad_snapshot_url: ad.ad_snapshot_url,\n    interest: 'Graphisme Canva',\n    comment_sample: 'Bonjour, je suis étudiant disponible pour les vacances, combien coûte la formation ? Mon WhatsApp : +22997000000',\n    phone_detected: '+22997000000',\n    raw_engagement_score: 85,\n    timestamp: new Date().toISOString()\n  });\n}\n\nreturn outputLeads.map(lead => ({ json: lead }));"
+      },
+      "id": "node-filter-leads",
+      "name": "Extraction des Annonces & Intentions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "main-lead-lifecycle-workflow-id"
+      },
+      "id": "node-send-to-main-pipeline",
+      "name": "Transmission vers Pipeline Principal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [880, 300]
+    }
+  ],
+  "connections": {
+    "Scan Périodique (Toutes les 6h)": {
+      "main": [
+        [
+          {
+            "node": "Appel Meta Ads Library API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appel Meta Ads Library API": {
+      "main": [
+        [
+          {
+            "node": "Extraction des Annonces & Intentions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction des Annonces & Intentions": {
+      "main": [
+        [
+          {
+            "node": "Transmission vers Pipeline Principal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

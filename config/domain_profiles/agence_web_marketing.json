@@ -1,0 +1,33 @@
+{
+  "domaine_id": "agence_web_marketing",
+  "nom_domaine": "Agence Web & Marketing Digital (B2B)",
+  "description": "Prospection d'entreprises, commerçants, PME et créateurs souhaitant digitaliser leur activité, avoir un site web ou déléguer leurs réseaux sociaux.",
+  "cible": {
+    "public": "Chefs d'entreprises, commerçants, directeurs marketing, professions libérales",
+    "pays": ["BJ", "CI", "SN", "CM", "FR", "TG"],
+    "profil_dur": {
+      "douleur_keywords": ["manque de clients", "visibilité", "chiffre d'affaires", "perte de temps", "pas de site", "mauvais résultat", "concurrence", "prospects"],
+      "urgence_keywords": ["ce trimestre", "lancement", "nouveau projet", "maintenant", "rapidement", "besoin de devis", "dès ce mois"],
+      "ressource_keywords": ["budget marketing", "investir", "croissance", "refonte", "stratégie", "professionnel", "devis"]
+    }
+  },
+  "mots_cles_prospection": {
+    "facebook_ads": ["création site web professionnel", "agence communication", "booster visibilité entreprise", "publicité facebook ads pme"],
+    "linkedin": ["recherche agence web", "refonte site internet", "directeur commercial pme", "recherche community manager"],
+    "tiktok_instagram": ["astuces business afrique", "développer son entreprise", "vente en ligne pme"]
+  },
+  "offre": {
+    "nom_produit": "Audit Digital & Conception Site Web Clé en Main",
+    "prix": "Sur Devis (À partir de 150 000 FCFA)",
+    "lien_paiement_ou_rdv": "https://calendly.com/agence-digitale/audit-strategique-offert",
+    "modes_paiement": "Virement bancaire, Chèque d'entreprise, Mobile Money Pro",
+    "delivrable": "Audit stratégique gratuit sous 48h puis livraison d'un site web moderne et performant"
+  },
+  "objections": {
+    "prix": "Expliquer que le site web n'est pas une dépense mais un commercial qui travaille 24h/24 pour rapporter de nouveaux clients.",
+    "technique": "Prise en charge technique à 100% de A à Z avec formation pour modifier les textes facilement.",
+    "temps": "Nous prenons tout en charge, le client n'a qu'à valider les maquettes sans perdre de temps.",
+    "confiance": "Contrat formel, portfolio de réalisations vérifiables et accompagnement après mise en ligne."
+  },
+  "tonalite": "Professionnelle, consultative, orientée retour sur investissement (ROI) et résultats mesurables"
+}

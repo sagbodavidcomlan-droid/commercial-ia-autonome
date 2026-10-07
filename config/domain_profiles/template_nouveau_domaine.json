@@ -1,0 +1,33 @@
+{
+  "domaine_id": "votre_nouveau_domaine",
+  "nom_domaine": "Nom de votre activité (ex: Coaching Sportif, Cabinet Comptable, etc.)",
+  "description": "Description claire de ce que vous proposez et à qui vous vous adressez.",
+  "cible": {
+    "public": "Profil exact des clients que vous recherchez (ex: Femmes actives, PME, Étudiants)",
+    "pays": ["BJ", "CI", "SN", "CM", "FR"],
+    "profil_dur": {
+      "douleur_keywords": ["problème 1", "frustration 2", "besoin 3", "perte", "manque"],
+      "urgence_keywords": ["maintenant", "rapidement", "ce mois", "urgent", "disponible"],
+      "ressource_keywords": ["investir", "prêt", "motivé", "budget", "acheter", "démarrer"]
+    }
+  },
+  "mots_cles_prospection": {
+    "facebook_ads": ["mot-clé pub 1", "mot-clé pub 2", "recherche 3"],
+    "linkedin": ["mot-clé linkedin 1", "recherche pro 2"],
+    "tiktok_instagram": ["tendance 1", "hashtag 2"]
+  },
+  "offre": {
+    "nom_produit": "Nom de votre produit ou prestation",
+    "prix": "Tarif ou 'Sur devis'",
+    "lien_paiement_ou_rdv": "https://votre-site.com/reservation-ou-paiement",
+    "modes_paiement": "Mobile Money, Carte bancaire, Virement",
+    "delivrable": "Ce que le client reçoit exactement dès validation"
+  },
+  "objections": {
+    "prix": "Votre meilleur argument pour justifier votre tarif et la valeur apportée.",
+    "technique": "Comment vous rassurez le client sur la simplicité de votre solution.",
+    "temps": "Pourquoi cela ne lui prendra pas trop de temps.",
+    "confiance": "Vos preuves, garanties, avis clients et gages de sérieux."
+  },
+  "tonalite": "Style de communication (ex: Chaleureux, Professionnel, Énergique, Fraternel)"
+}

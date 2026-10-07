@@ -1,0 +1,196 @@
+{
+  "base_name": "Agent IA Prospection & CRM Commercial",
+  "description": "Schéma officiel Airtable configuré pour l'orchestration n8n, le scoring DUR et la relation client post-achat.",
+  "tables": [
+    {
+      "name": "Leads_Prospection",
+      "description": "Module 1 : Base de prospection et intelligence commerciale",
+      "fields": [
+        {
+          "name": "Nom_Complet",
+          "type": "singleLineText",
+          "description": "Prénom et nom pour personnalisation des messages"
+        },
+        {
+          "name": "WhatsApp",
+          "type": "phoneNumber",
+          "description": "Numéro au format international E.164 (+229..., +225...)"
+        },
+        {
+          "name": "Email",
+          "type": "email",
+          "description": "Adresse email de contact"
+        },
+        {
+          "name": "Source_Contact",
+          "type": "singleSelect",
+          "options": [
+            "Facebook Ads Library",
+            "Facebook Group",
+            "LinkedIn",
+            "TikTok Ads",
+            "Instagram",
+            "Recommandation",
+            "Autre"
+          ]
+        },
+        {
+          "name": "LinkedIn_Profile_URL",
+          "type": "url",
+          "description": "Lien vers le profil public LinkedIn du prospect"
+        },
+        {
+          "name": "Centre_Interet",
+          "type": "singleSelect",
+          "options": [
+            "Graphisme Canva",
+            "Marketing Digital",
+            "Création Web",
+            "Montage Vidéo",
+            "Freelance Général"
+          ]
+        },
+        {
+          "name": "Score_Qualification",
+          "type": "number",
+          "options": { "precision": 0 },
+          "description": "Score DUR calculé de 0 à 100"
+        },
+        {
+          "name": "Statut_Lead",
+          "type": "singleSelect",
+          "options": [
+            "Nouveau",
+            "Froid",
+            "Tiède",
+            "Chaud",
+            "Très Chaud",
+            "Relance_24h",
+            "Relance_48h",
+            "Relance_72h",
+            "Converti",
+            "Rejeté"
+          ]
+        },
+        {
+          "name": "Nombre_Relances",
+          "type": "number",
+          "options": { "precision": 0 },
+          "defaultValue": 0
+        },
+        {
+          "name": "Date_Derniere_Interaction",
+          "type": "dateTime",
+          "options": { "timeZone": "Africa/Porto-Novo", "dateFormat": "YYYY-MM-DD" }
+        },
+        {
+          "name": "Historique_Interactions",
+          "type": "multilineText",
+          "description": "Logs d'échanges, objections traitées et réponses reçues"
+        },
+        {
+          "name": "Client_Lie",
+          "type": "multipleRecordLinks",
+          "linkedTableId": "Clients_CRM",
+          "description": "Lien vers la fiche client une fois converti"
+        }
+      ]
+    },
+    {
+      "name": "Clients_CRM",
+      "description": "Module 2 : CRM relation client, SAV, suivi et ventes additionnelles",
+      "fields": [
+        {
+          "name": "Nom_Complet",
+          "type": "singleLineText"
+        },
+        {
+          "name": "WhatsApp",
+          "type": "phoneNumber"
+        },
+        {
+          "name": "Email",
+          "type": "email"
+        },
+        {
+          "name": "Produit_Achete",
+          "type": "singleSelect",
+          "options": [
+            "Pack Digital Starter",
+            "Pack Graphisme Pro & Canva",
+            "Pack Marketing & Freelance",
+            "Masterclass Complète VIP"
+          ]
+        },
+        {
+          "name": "Montant_Paye",
+          "type": "currency",
+          "options": { "precision": 0, "symbol": "FCFA" }
+        },
+        {
+          "name": "Date_Achat",
+          "type": "dateTime",
+          "options": { "timeZone": "Africa/Porto-Novo", "dateFormat": "YYYY-MM-DD" }
+        },
+        {
+          "name": "Date_Fin_Acces",
+          "type": "dateTime",
+          "options": { "timeZone": "Africa/Porto-Novo", "dateFormat": "YYYY-MM-DD" }
+        },
+        {
+          "name": "Etat_Utilisation",
+          "type": "singleSelect",
+          "options": [
+            "Pas encore commencé",
+            "En cours de visionnage",
+            "Premier projet réalisé",
+            "Formation terminée"
+          ]
+        },
+        {
+          "name": "Satisfaction_NPS",
+          "type": "number",
+          "options": { "precision": 0 },
+          "description": "Note de 1 à 10 attribuée par le client"
+        },
+        {
+          "name": "Feedback_Client",
+          "type": "multilineText",
+          "description": "Avis, suggestions ou blocages mentionnés"
+        },
+        {
+          "name": "Ventes_Additionnelles_Proposees",
+          "type": "checkbox",
+          "options": { "icon": "check", "color": "greenBright" }
+        },
+        {
+          "name": "Statut_Ambassadeur",
+          "type": "singleSelect",
+          "options": [
+            "Non éligible",
+            "Sollicité",
+            "Actif (Affilié)",
+            "Top Partenaire"
+          ]
+        },
+        {
+          "name": "Lien_Affilie",
+          "type": "url",
+          "description": "Lien unique de parrainage pour commissions"
+        }
+      ]
+    },
+    {
+      "name": "Logs_Evenements",
+      "description": "Table d'audit trail et historique de toutes les actions de l'agent",
+      "fields": [
+        { "name": "Date_Heure", "type": "dateTime" },
+        { "name": "Action", "type": "singleLineText" },
+        { "name": "Canal", "type": "singleSelect", "options": ["WhatsApp", "Email", "Webhook", "System"] },
+        { "name": "Destinataire", "type": "singleLineText" },
+        { "name": "Contenu_Apercu", "type": "multilineText" },
+        { "name": "Statut_Envoi", "type": "singleSelect", "options": ["Succès", "Échec", "En attente"] }
+      ]
+    }
+  ]
+}

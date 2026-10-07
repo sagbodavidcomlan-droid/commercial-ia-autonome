@@ -1,0 +1,61 @@
+{
+  "domaine_id": "cosmetiques_bio",
+  "nom_domaine": "Cosmétiques & Soins Bio",
+  "cible": {
+    "pays": [
+      "BJ",
+      "CI",
+      "SN",
+      "CM",
+      "TG"
+    ],
+    "avatar_client": "Femmes actives 25-45 ans",
+    "profil_dur": {
+      "douleur_keywords": [
+        "besoin",
+        "problème",
+        "difficulté",
+        "coût"
+      ],
+      "urgence_keywords": [
+        "maintenant",
+        "urgent",
+        "rapide",
+        "ce mois"
+      ],
+      "ressource_keywords": [
+        "budget",
+        "payer",
+        "investir",
+        "prêt"
+      ]
+    }
+  },
+  "mots_cles_prospection": {
+    "facebook_ads": [
+      "Cosmétiques & Soins Bio",
+      "solution Cosmétiques & Soins Bio"
+    ],
+    "linkedin": [
+      "expert Cosmétiques & Soins Bio",
+      "directeur Cosmétiques & Soins Bio"
+    ],
+    "tiktok_instagram": [
+      "#cosmetiques_bio",
+      "astuce Cosmétiques & Soins Bio"
+    ]
+  },
+  "offre": {
+    "nom_produit": "Gamme Savon & Sérum Éclat Karité",
+    "prix": "25000 FCFA",
+    "description": "Soins naturels certifiés sans hydroquinone",
+    "lien_livraison": "https://sales-platform.local/access",
+    "lien_paiement_ou_rdv": "https://checkout.sales-platform.local"
+  },
+  "objections_specifiques": {
+    "prix": "Dure plus de 3 mois, soit moins de 300 FCFA par jour pour une peau éclatante.",
+    "temps": "Tout est conçu pour s'intégrer sans perturber votre emploi du temps.",
+    "confiance": "Nous garantissons des résultats mesurables avec références clients vérifiables."
+  },
+  "tonalite": "Professionnelle, consultative, rassurante et dynamique"
+}

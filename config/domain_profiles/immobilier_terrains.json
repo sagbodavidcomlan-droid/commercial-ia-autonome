@@ -1,0 +1,33 @@
+{
+  "domaine_id": "immobilier_terrains",
+  "nom_domaine": "Immobilier & Parcelles Sécurisées",
+  "description": "Prospection d'acquéreurs pour l'achat de parcelles certifiées, terrains avec Titre Foncier, et logements locatifs en Afrique et diaspora.",
+  "cible": {
+    "public": "Cadres, membres de la diaspora africaine, investisseurs, particuliers voulant bâtir leur maison",
+    "pays": ["BJ", "CI", "SN", "FR", "US", "CA", "TG"],
+    "profil_dur": {
+      "douleur_keywords": ["peur d'arnaque", "litige", "double vente", "loyer cher", "propriétaire", "sécurisé", "titre foncier", "diaspora"],
+      "urgence_keywords": ["opportunité", "cette semaine", "visite", "disponible", "dernier lot", "prix promotionnel"],
+      "ressource_keywords": ["investir", "acheter", "budget", "comptant", "échéancier", "notaire", "plan"]
+    }
+  },
+  "mots_cles_prospection": {
+    "facebook_ads": ["parcelle à vendre titre foncier", "terrain sécurisé", "maison à vendre", "investissement immobilier afrique"],
+    "linkedin": ["investisseur immobilier afrique", "cadre diaspora", "achat terrain"],
+    "tiktok_instagram": ["visite parcelle", "terrain avec titre foncier", "devenir propriétaire"]
+  },
+  "offre": {
+    "nom_produit": "Parcelles Sécurisées avec Titre Foncier Global & Plan d'Échéancier",
+    "prix": "À partir de 3 500 000 FCFA (Facilités de paiement)",
+    "lien_paiement_ou_rdv": "https://wa.me/22997000000?text=Bonjour,%20je%20souhaite%20réserver%20une%20visite%20de%20parcelle",
+    "modes_paiement": "Virement bancaire certifié, Notaire, Dépôt d'acompte échelonné",
+    "delivrable": "Visite guidée sur le site + Remise du dossier topographique et vérification notariée"
+  },
+  "objections": {
+    "prix": "Possibilité d'échelonner le paiement jusqu'à 12 mois sans intérêts et plus-value garantie sous 2 ans.",
+    "technique": "Tout est vérifiable chez le géomètre et chez le notaire avant tout versement.",
+    "temps": "Visite virtuelle en direct par appel vidéo WhatsApp pour les personnes à l'étranger ou la diaspora.",
+    "confiance": "Documents administratifs officiels (TF, ADC, État des lieux) disponibles immédiatement à la consultation."
+  },
+  "tonalite": "Hautement rassurante, sérieuse, transparente, valorisant le patrimoine et la sécurité juridique"
+}

@@ -1,0 +1,30 @@
+/* Styles additionnels et optimisations d'impression pour les Rapports du Directeur */
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, aside, button, .no-print {
+    display: none !important;
+  }
+  #modal-report {
+    position: static !important;
+    background: transparent !important;
+    display: block !important;
+  }
+  .glass-card {
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
+/* Animations légères */
+.fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

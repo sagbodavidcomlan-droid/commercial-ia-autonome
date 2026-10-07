@@ -1,0 +1,230 @@
+{
+  "name": "Workflow : Évaluation NPS & Auto-Amélioration Commerciale",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "node-daily-cron-nps",
+      "name": "Vérification Quotidienne (Clients J+30)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "operation": "list",
+        "application": "appXXXXXXXXXXXXXX",
+        "table": "Clients_CRM",
+        "filterByFormula": "AND({Satisfaction_NPS} = '', DATETIME_DIFF(TODAY(), {Date_Achat}, 'days') >= 30)"
+      },
+      "id": "node-airtable-find-clients",
+      "name": "Recherche Clients J+30 sans NPS",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.WhatsApp }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=Hello {{ $json.Nom_Complet }} ! 🌟 Cela fait maintenant 1 mois que tu as rejoint la formation. Sur une échelle de 1 à 10, à quel point recommanderais-tu le programme à un proche ? (Réponds simplement par le chiffre)"
+            }
+          ]
+        }
+      },
+      "id": "node-send-nps-survey",
+      "name": "Envoi Enquête NPS WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-nps-response",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-nps-answer",
+      "name": "Réception Note NPS Client",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = ($json.body?.message || $json.body?.text || '').trim();\nconst phone = ($json.body?.senderPhone || $json.body?.waId || '').replace(/\\D/g, '');\nconst scoreMatch = text.match(/\\b([0-9]|10)\\b/);\nconst npsScore = scoreMatch ? parseInt(scoreMatch[0], 10) : null;\n\nlet segment = 'Inconnu';\nif (npsScore !== null) {\n  if (npsScore >= 8) segment = 'Promoteur';\n  else if (npsScore >= 7) segment = 'Passif';\n  else segment = 'Détracteur';\n}\n\nreturn [{\n  json: {\n    sender_phone: '+' + phone,\n    nps_score: npsScore,\n    nps_segment: segment,\n    raw_response: text,\n    feedback_date: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-parse-nps-score",
+      "name": "Analyse Note & Segmentation (DUR)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 520]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.nps_score }}",
+              "operation": "largerEqual",
+              "value2": 8
+            }
+          ]
+        }
+      },
+      "id": "node-if-promoter",
+      "name": "Client Promoteur (>= 8) ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 520]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.sender_phone }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=Un grand MERCI pour cette note ! ❤️ Comme tu apprécies la formation, nous avons activé ton compte Ambassadeur : tu touches 40% de commission cash sur chaque ami parrainé ! Ton lien : https://sagbodavid.com/affilie?ref={{ $json.sender_phone }}"
+            }
+          ]
+        }
+      },
+      "id": "node-send-ambassador-invite",
+      "name": "Invitation Ambassadeur & Lien Affiliation (40%)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 440]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $env.ADMIN_WHATSAPP_PHONE }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=⚠️ ALERTE SAV CLIENT INSATISFAIT : Le client {{ $json.sender_phone }} a noté {{ $json.nps_score }}/10 avec le message : '{{ $json.raw_response }}'. Intervention humaine recommandée."
+            }
+          ]
+        }
+      },
+      "id": "node-alert-human-support",
+      "name": "Alerte Intervention Humaine SAV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 600]
+    }
+  ],
+  "connections": {
+    "Vérification Quotidienne (Clients J+30)": {
+      "main": [
+        [
+          {
+            "node": "Recherche Clients J+30 sans NPS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recherche Clients J+30 sans NPS": {
+      "main": [
+        [
+          {
+            "node": "Envoi Enquête NPS WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Réception Note NPS Client": {
+      "main": [
+        [
+          {
+            "node": "Analyse Note & Segmentation (DUR)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse Note & Segmentation (DUR)": {
+      "main": [
+        [
+          {
+            "node": "Client Promoteur (>= 8) ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Promoteur (>= 8) ?": {
+      "main": [
+        [
+          {
+            "node": "Invitation Ambassadeur & Lien Affiliation (40%)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerte Intervention Humaine SAV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

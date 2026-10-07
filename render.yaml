@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: commercial-ia-autonome
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 app.py
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0

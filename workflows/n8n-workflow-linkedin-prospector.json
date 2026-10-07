@@ -1,0 +1,182 @@
+{
+  "name": "Sub-Workflow : Prospection & Social Selling LinkedIn",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 12
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-linkedin",
+      "name": "Scan Périodique LinkedIn (Toutes les 12h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recherche simulée / connecteur API LinkedIn de posts et profils engagés\nconst sampleLinkedInLeads = [\n  {\n    prospect_name: \"Jean-Eudes Agbossou\",\n    headline: \"Étudiant en Licence 3 | Passionné de Graphisme & Canva | En recherche active\",\n    location: \"Bénin\",\n    prospect_profile_url: \"https://www.linkedin.com/in/jean-eudes-agbossou\",\n    comment_text: \"Je suis très motivé pour me former pendant ces vacances et lancer mes projets. WhatsApp : +22996112233\",\n    source: \"LinkedIn\",\n    interest: \"Graphisme Canva\"\n  },\n  {\n    prospect_name: \"Fatou Ndiaye\",\n    headline: \"Jeune diplômée | Débutante en Marketing Digital | En quête d'indépendance\",\n    location: \"Sénégal\",\n    prospect_profile_url: \"https://www.linkedin.com/in/fatou-ndiaye-design\",\n    comment_text: \"Infos sur le pack svp ! Comment participer ? Mail : fatou@test.sn\",\n    source: \"LinkedIn\",\n    interest: \"Marketing Digital\"\n  }\n];\n\nreturn sampleLinkedInLeads.map(lead => ({ json: lead }));"
+      },
+      "id": "node-fetch-linkedin-posts",
+      "name": "Extraction Posts & Candidats LinkedIn",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraction des contacts & Scoring DUR spécial LinkedIn\nconst lead = $json;\nconst text = (lead.headline + ' ' + lead.comment_text).toLowerCase();\n\n// Extraction téléphone et email\nconst emailMatch = lead.comment_text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);\nconst phoneMatch = lead.comment_text.match(/(\\+?[0-9]{8,14})/);\n\nconst phone = phoneMatch ? phoneMatch[0] : '';\nconst email = emailMatch ? emailMatch[0] : '';\n\n// Note d'invitation personnalisée LinkedIn (< 300 caractères)\nconst prenom = lead.prospect_name.split(' ')[0];\nconst note = `Hello ${prenom} ! J'ai vu ton profil et ton intérêt pour ${lead.interest}. On accompagne les jeunes ambitieux à monétiser ces compétences dès ces vacances. Ravi d'échanger avec toi ici !`;\n\nreturn [{\n  json: {\n    Nom_Complet: lead.prospect_name,\n    Email: email,\n    WhatsApp: phone,\n    LinkedIn_Profile_URL: lead.prospect_profile_url,\n    Source_Contact: 'LinkedIn',\n    Centre_Interet: lead.interest,\n    Score_Qualification: 80,\n    Statut_Lead: 'Chaud',\n    Note_Invitation_LinkedIn: note.substring(0, 295),\n    Date_Detection: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-process-linkedin-lead",
+      "name": "Scoring DUR & Génération Note (<300 car)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "application": "appXXXXXXXXXXXXXX",
+        "table": "Leads_Prospection",
+        "addAllFields": true,
+        "options": {}
+      },
+      "id": "node-save-linkedin-lead-airtable",
+      "name": "Sync Airtable (Leads LinkedIn)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.WhatsApp }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "node-if-phone-available",
+      "name": "Numéro WhatsApp détecté ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.WhatsApp }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=Hello {{ $json.Nom_Complet }} ! 👋 J'ai vu ton profil sur LinkedIn et ton message concernant {{ $json.Centre_Interet }}. C'est David SAGBO ! Tu souhaites te former dès maintenant pour lancer tes premières prestations ?"
+            }
+          ]
+        }
+      },
+      "id": "node-send-whatsapp-from-linkedin",
+      "name": "Prise de contact directe WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 220]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "1XXXXXXXXXXXXX_ID_GOOGLE_SHEETS",
+        "range": "Logs_Commerciaux!A:L",
+        "options": {}
+      },
+      "id": "node-log-linkedin-action",
+      "name": "Log Action LinkedIn (Google Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1320, 380]
+    }
+  ],
+  "connections": {
+    "Scan Périodique LinkedIn (Toutes les 12h)": {
+      "main": [
+        [
+          {
+            "node": "Extraction Posts & Candidats LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraction Posts & Candidats LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Scoring DUR & Génération Note (<300 car)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scoring DUR & Génération Note (<300 car)": {
+      "main": [
+        [
+          {
+            "node": "Sync Airtable (Leads LinkedIn)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sync Airtable (Leads LinkedIn)": {
+      "main": [
+        [
+          {
+            "node": "Numéro WhatsApp détecté ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Numéro WhatsApp détecté ?": {
+      "main": [
+        [
+          {
+            "node": "Prise de contact directe WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Action LinkedIn (Google Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

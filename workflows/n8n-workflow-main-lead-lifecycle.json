@@ -1,0 +1,358 @@
+{
+  "name": "Pipeline Principal : Cycle Complet Lead -> Conversion -> CRM & SAV",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-nouveau-lead",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-inbound-lead",
+      "name": "Webhook Réception Lead (FB Ads / Form)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Moteur de Qualification & Scoring DUR (Douleur, Urgence, Reconnaissance/Ressources)\nconst lead = $input.first().json;\n\nlet score = 0;\nconst text = [lead.comment_sample, lead.bio, lead.post_content, lead.message, lead.interest].join(' ').toLowerCase();\n\n// 1. Douleur (Max 25 pts)\nconst douleurKw = ['rentrée', 'financer', 'chômage', 'étudiant', 'revenu', 'indépendance', 'besoin d\\'argent', 'galère'];\nlet dMatches = douleurKw.filter(k => text.includes(k)).length;\nconst scoreDouleur = Math.min(dMatches * 8, 25);\n\n// 2. Urgence (Max 25 pts)\nconst urgenceKw = ['vacances', 'maintenant', 'immédiat', 'vite', 'rapide', 'disponible', 'tout de suite'];\nlet uMatches = urgenceKw.filter(k => text.includes(k)).length;\nconst scoreUrgence = Math.min(uMatches * 9, 25);\n\n// 3. Ressources / Motivation (Max 25 pts)\nconst ressourceKw = ['apprendre', 'prêt', 'motivé', 'formation', 'canva', 'design', 'marketing'];\nlet rMatches = ressourceKw.filter(k => text.includes(k)).length;\nconst scoreMotivation = Math.min(rMatches * 8, 25);\n\n// 4. Contactabilité (Max 15 pts)\nlet phone = (lead.phone || lead.whatsapp || lead.phone_detected || '').replace(/\\D/g, '');\nconst hasPhone = phone.length >= 8;\nconst hasEmail = (lead.email || '').includes('@');\nconst scoreContact = (hasPhone ? 10 : 0) + (hasEmail ? 5 : 0);\n\n// 5. Intention d'achat (Max 10 pts)\nconst intentKw = ['combien', 'prix', 'intéressé', 'lien', 'inscription'];\nlet iMatches = intentKw.filter(k => text.includes(k)).length;\nconst scoreIntent = Math.min(iMatches * 5, 10);\n\ntotalScore = Math.min(Math.max(scoreDouleur + scoreUrgence + scoreMotivation + scoreContact + scoreIntent, 15), 100);\n\nlet statut = 'Nouveau';\nif (totalScore >= 90) statut = 'Très Chaud';\nelse if (totalScore >= 70) statut = 'Chaud';\nelse if (totalScore >= 40) statut = 'Tiède';\nelse statut = 'Froid';\n\n// Nettoyage téléphone format international\nlet formattedPhone = hasPhone ? (phone.startsWith('22') || phone.startsWith('23') ? '+' + phone : '+229' + phone) : '';\n\nreturn [{\n  json: {\n    nom_complet: lead.name || lead.first_name || 'Champion',\n    email: lead.email || '',\n    whatsapp: formattedPhone,\n    source_contact: lead.source || 'Facebook Ads Library',\n    centre_interet: lead.interest || 'Graphisme Canva',\n    score_qualification: totalScore,\n    statut_lead: statut,\n    nombre_relances: 0,\n    historique_interactions: `[${new Date().toISOString()}] Lead qualifié avec un score DUR de ${totalScore}/100.`,\n    date_creation: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-dur-scorer",
+      "name": "Calculateur de Score DUR (IA)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 240]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "application": "appXXXXXXXXXXXXXX",
+        "table": "Leads_Prospection",
+        "addAllFields": true,
+        "options": {}
+      },
+      "id": "node-airtable-upsert-lead",
+      "name": "Enregistrement CRM (Airtable Leads)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [660, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.score_qualification }}",
+              "operation": "largerEqual",
+              "value2": 40
+            }
+          ]
+        }
+      },
+      "id": "node-if-qualified",
+      "name": "Lead Qualifié (Score >= 40) ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 240]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.whatsapp }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=Hello {{ $json.nom_complet }} ! 👋 J'espère que tu as la super forme. J'ai vu que tu t'intéresses à la maîtrise de {{ $json.centre_interet }} pour générer des revenus pendant ces vacances. Dis-moi, tu souhaites te lancer dès ce mois-ci pour décrocher tes premières opportunités ?"
+            }
+          ]
+        }
+      },
+      "id": "node-send-whatsapp-hook",
+      "name": "Envoi Accroche WhatsApp Personnalisée",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 180]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-whatsapp-inbound",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-whatsapp-reply",
+      "name": "Webhook Réponse WhatsApp Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalisation du message entrant et détection d'objection\nconst body = $input.first().json.body || {};\nconst text = (body.text || body.message || body.messageText || '').toLowerCase();\nconst phone = (body.senderPhone || body.waId || body.phone || '').replace(/\\D/g, '');\n\nconst objections = {\n  prix: ['cher', 'pas d\\'argent', 'moyens', 'cout', 'budget', 'tarif'],\n  technique: ['ordinateur', 'pc', 'compliqué', 'débutant', 'technique'],\n  temps: ['temps', 'occupé', 'dispo', 'horaires'],\n  paiement: ['payer', 'mobile money', 'moov', 'mtn', 'orange', 'wave', 'compte'],\n  confiance: ['arnaque', 'vrai', 'preuve', 'témoignage', 'sérieux']\n};\n\nlet detectedType = 'discussion';\nfor (const [key, patterns] of Object.entries(objections)) {\n  if (patterns.some(p => text.includes(p))) {\n    detectedType = 'objection_' + key;\n    break;\n  }\n}\n\nif (text.includes('lien') || text.includes('acheter') || text.includes('comment faire pour payer')) {\n  detectedType = 'ready_to_buy';\n}\n\nreturn [{\n  json: {\n    sender_phone: '+' + phone,\n    message_recu: text,\n    type_objection: detectedType,\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "node-parse-reply",
+      "name": "Analyseur de Réponse & Objections",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 480]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es l'assistant commercial IA de David SAGBO. Un prospect t'a écrit sur WhatsApp : \"{{ $json.message_recu }}\".\nType d'intention/objection détectée : {{ $json.type_objection }}.\n\nRègles impératives :\n- Réponds en 3 à 5 lignes maximum.\n- Tonalité : Fraternelle, rassurante, motivante (style grand frère bienveillant en Afrique).\n- Si la personne demande le lien ou veut payer, donne le lien de paiement avec Mobile Money (MTN, Moov, Orange, Wave) : https://formations.sagbodavid.com/pack-digital.\n- Si c'est une objection prix, rappelle que la formation est rentabilisée dès la 1ère prestation.\n- Termine toujours par une question engageante.",
+        "options": {}
+      },
+      "id": "node-ai-sales-agent",
+      "name": "Agent IA Conversationnel (LLM)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [680, 480]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.sender_phone }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        }
+      },
+      "id": "node-send-ai-response-whatsapp",
+      "name": "Envoi Réponse IA WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 480]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-paiement-confirme",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-payment",
+      "name": "Webhook Paiement Reçu (Systeme.io / Stripe)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 720]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst contact = body.contact || {};\nconst email = contact.email || body.email || body.customer_email || 'client@example.com';\nconst name = contact.first_name ? (contact.first_name + ' ' + (contact.surname || '')) : (body.customer_name || 'Nouveau Client');\nlet phone = (contact.phone || body.customer_phone || '').replace(/\\D/g, '');\nlet formattedPhone = phone.length >= 8 ? (phone.startsWith('22') ? '+' + phone : '+229' + phone) : '';\n\nreturn [{\n  json: {\n    Nom_Complet: name,\n    Email: email,\n    WhatsApp: formattedPhone,\n    Produit_Achete: body.product_name || 'Pack Digital Starter',\n    Montant_Paye: body.amount || 15000,\n    Date_Achat: new Date().toISOString(),\n    Etat_Utilisation: 'Pas encore commencé',\n    Satisfaction_NPS: null,\n    Ventes_Additionnelles_Proposees: false,\n    Statut_Ambassadeur: 'Sollicité',\n    Lien_Affilie: `https://sagbodavid.com/affilie?ref=${formattedPhone}`\n  }\n}];"
+      },
+      "id": "node-parse-customer-payment",
+      "name": "Traitement Données Client Post-Achat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 720]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "application": "appXXXXXXXXXXXXXX",
+        "table": "Clients_CRM",
+        "addAllFields": true,
+        "options": {}
+      },
+      "id": "node-airtable-add-customer",
+      "name": "Ajout Fiche Client (CRM)",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2,
+      "position": [680, 720]
+    },
+    {
+      "parameters": {
+        "url": "https://api.wati.io/api/v1/sendSessionMessage/{{ $json.WhatsApp }}",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.WATI_BEARER_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messageText",
+              "value": "=FÉLICITATIONS {{ $json.Nom_Complet }} ! 🥳 Bienvenue officiellement ! Ton accès au Pack Formations est validé. Espace membre : https://formations.sagbodavid.com/connexion | Groupe privé WhatsApp des apprenants : https://chat.whatsapp.com/ExempleGroupeDavid. Regarde la première vidéo de 12 min pour démarrer !"
+            }
+          ]
+        }
+      },
+      "id": "node-send-welcome-delivery-whatsapp",
+      "name": "Livraison Immédiate Accès WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 720]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "sheetId": "1XXXXXXXXXXXXX_ID_GOOGLE_SHEETS",
+        "range": "Logs_Commerciaux!A:L",
+        "options": {}
+      },
+      "id": "node-google-sheets-logger",
+      "name": "Audit & Export Logs Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1120, 720]
+    }
+  ],
+  "connections": {
+    "Webhook Réception Lead (FB Ads / Form)": {
+      "main": [
+        [
+          {
+            "node": "Calculateur de Score DUR (IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculateur de Score DUR (IA)": {
+      "main": [
+        [
+          {
+            "node": "Enregistrement CRM (Airtable Leads)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enregistrement CRM (Airtable Leads)": {
+      "main": [
+        [
+          {
+            "node": "Lead Qualifié (Score >= 40) ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Qualifié (Score >= 40) ?": {
+      "main": [
+        [
+          {
+            "node": "Envoi Accroche WhatsApp Personnalisée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Réponse WhatsApp Lead": {
+      "main": [
+        [
+          {
+            "node": "Analyseur de Réponse & Objections",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyseur de Réponse & Objections": {
+      "main": [
+        [
+          {
+            "node": "Agent IA Conversationnel (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent IA Conversationnel (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Envoi Réponse IA WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Paiement Reçu (Systeme.io / Stripe)": {
+      "main": [
+        [
+          {
+            "node": "Traitement Données Client Post-Achat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traitement Données Client Post-Achat": {
+      "main": [
+        [
+          {
+            "node": "Ajout Fiche Client (CRM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajout Fiche Client (CRM)": {
+      "main": [
+        [
+          {
+            "node": "Livraison Immédiate Accès WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Livraison Immédiate Accès WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Audit & Export Logs Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

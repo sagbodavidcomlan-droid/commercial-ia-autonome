@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  commercial-os:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: commercial_ai_platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persistance de la base de données SQLite et des configurations
+      - ./database:/app/database
+      - ./config/domain_profiles:/app/config/domain_profiles
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/dashboard')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

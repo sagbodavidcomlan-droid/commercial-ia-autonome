@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="fr" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ item.name }} | Offre Exclusive & Commande Sécurisée</title>
+    <!-- PWA Meta Tags & Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0062ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Invo.">
+    <link rel="apple-touch-icon" href="/static/img/icon.svg">
+    <!-- Google Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .gradient-glow {
+            background: radial-gradient(circle at 50% 10%, rgba(0, 98, 255, 0.08) 0%, rgba(244, 247, 254, 0) 70%);
+        }
+        .step-number-box {
+            background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px 0 rgba(234, 88, 12, 0.35);
+        }
+        .step-number-box-blue {
+            background: linear-gradient(135deg, #0062ff 0%, #0043b8 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 14px 0 rgba(0, 98, 255, 0.35);
+        }
+        .glass-panel {
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 4px 25px -4px rgba(15, 23, 42, 0.04);
+        }
+        .polaroid-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease;
+        }
+        .polaroid-card:hover {
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="bg-[#f4f7fe] text-slate-800 min-h-screen font-sans selection:bg-[#0062ff] selection:text-white">
+
+    <!-- TOP URGENCY BANNER -->
+    <div class="bg-gradient-to-r from-[#0043b8] via-[#0062ff] to-[#0052cc] text-white py-2.5 px-4 text-center text-xs md:text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-md">
+        <span class="animate-pulse flex h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+        <span>⚡ <strong>OFFRE EXCLUSIVE À FORT IMPACT</strong> : Tarif promotionnel limité. Clôture de la session dans :</span>
+        <span id="countdown-timer" class="bg-black/25 px-2.5 py-0.5 rounded-md font-mono text-white text-xs ml-1 border border-white/20">14:59</span>
+    </div>
+
+    <!-- NAVIGATION HEADER -->
+    <header class="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-[#0062ff] flex items-center justify-center text-white shadow-md shadow-blue-500/30">
+                    <i class="fa-solid fa-bolt text-sm"></i>
+                </div>
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-xl font-black text-slate-900 tracking-tight">Invo<span class="text-[#0062ff]">.</span></span>
+                    <span class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider hidden sm:inline">Offre Officielle</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="hidden sm:flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 font-semibold">
+                    <i class="fa-solid fa-shield-halved text-emerald-600"></i> Paiement 100% Sécurisé
+                </span>
+                <a href="#commander" class="inline-flex items-center gap-2 bg-[#0062ff] hover:bg-blue-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-md shadow-blue-500/20">
+                    Commander <i class="fa-solid fa-arrow-down text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="gradient-glow">
+
+        <!-- 1. HERO SECTION -->
+        <section class="max-w-5xl mx-auto px-4 pt-12 pb-14 text-center">
+            <!-- Category Badge -->
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200/60 text-[#0062ff] text-xs font-bold uppercase tracking-wider mb-5">
+                <i class="fa-solid fa-award"></i> {{ item.category or 'Programme Clé en Main' }}
+            </div>
+
+            <!-- Big Bold Headline -->
+            <h1 class="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-4xl mx-auto">
+                REPRENEZ LE CONTRÔLE DE VOTRE <span class="text-[#0062ff]">CROISSANCE COMMERCIALE</span> EN 60 MINUTES !
+            </h1>
+
+            <p class="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto mt-5 leading-relaxed font-normal">
+                {{ item.description or 'Une offre complète spécialement conçue pour accélérer vos résultats, convertir vos prospects 24h/24 et sécuriser votre chiffre d’affaires sans complication technique.' }}
+            </p>
+
+            <!-- Reassurance pills -->
+            <div class="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold text-slate-600 pt-4">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Prêt à l'emploi</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Assistance & Suivi 7j/7</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Garantie 30 Jours</span>
+            </div>
+
+            <!-- Device Mockup Visual Block (Like reference image) -->
+            <div class="mt-10 relative max-w-3xl mx-auto">
+                <div class="bg-gradient-to-br from-[#0043b8] via-[#0062ff] to-[#0052cc] rounded-3xl p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden">
+                    <div class="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <!-- Left info in mockup -->
+                        <div class="text-left space-y-3">
+                            <span class="px-3 py-1 rounded-full bg-white/20 text-white text-[11px] font-bold uppercase tracking-wider">
+                                Solution Active 24h/24
+                            </span>
+                            <h2 class="text-2xl sm:text-3xl font-black leading-tight">
+                                {{ item.name }}
+                            </h2>
+                            <p class="text-xs sm:text-sm text-blue-100 font-normal leading-relaxed">
+                                Automatisation intelligente, qualification instantanée des leads et encaissement sécurisé.
+                            </p>
+                            <div class="flex items-center gap-3 pt-2">
+                                <div class="bg-white/15 px-3 py-1.5 rounded-xl text-center border border-white/20">
+                                    <span class="text-[10px] text-blue-200 block">Satisfaction</span>
+                                    <span class="font-extrabold text-sm text-white">4.9 / 5</span>
+                                </div>
+                                <div class="bg-white/15 px-3 py-1.5 rounded-xl text-center border border-white/20">
+                                    <span class="text-[10px] text-blue-200 block">Temps moyen</span>
+                                    <span class="font-extrabold text-sm text-white">60 min</span>
+                                </div>
+                                <div class="bg-white/15 px-3 py-1.5 rounded-xl text-center border border-white/20">
+                                    <span class="text-[10px] text-blue-200 block">Disponibilité</span>
+                                    <span class="font-extrabold text-sm text-emerald-300">Immédiate</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right visual card -->
+                        <div class="w-full md:w-72 bg-white rounded-2xl p-5 text-slate-900 shadow-xl border border-white/30 text-left">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <span class="text-[10px] font-bold uppercase text-slate-400">Tarif Promotionnel</span>
+                                <span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold">-35% EXCLUSIF</span>
+                            </div>
+                            <div class="mt-3">
+                                <span class="text-xs text-slate-400 line-through">{{ "{:,.0f}".format((item.price or 0) * 1.35) }} FCFA</span>
+                                <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                                    {{ "{:,.0f}".format(item.price or 0) }} <span class="text-sm font-bold text-slate-400">FCFA</span>
+                                </div>
+                            </div>
+                            <a href="#commander" class="w-full mt-4 bg-[#0062ff] hover:bg-blue-600 text-white font-bold text-xs py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md transition">
+                                <i class="fa-solid fa-lock"></i> Réserver Mon Accès
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Primary Hero CTA -->
+            <div class="mt-8 space-y-2">
+                <a href="#commander" class="inline-flex items-center justify-center gap-3 bg-[#0062ff] hover:bg-[#0052cc] text-white text-base font-extrabold px-8 py-4 rounded-2xl shadow-xl shadow-blue-500/25 transition-all transform hover:-translate-y-0.5">
+                    <span>Accéder Immédiatement à l'Offre</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <p class="text-xs text-slate-400 font-medium">
+                    🔒 Garantie 30 Jours Satisfait ou Remboursé • Aucun engagement contraignant
+                </p>
+            </div>
+        </section>
+
+        <!-- 2. SOCIAL PROOF & PARTNER LOGOS -->
+        <section class="border-y border-slate-200/80 bg-white py-8">
+            <div class="max-w-5xl mx-auto px-4 text-center">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-5">
+                    ILS NOUS FONT CONFIANCE & ACCÉLÈRENT LEURS VENTES AVEC NOTRE TECHNOLOGIE
+                </span>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 items-center justify-center opacity-70">
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-layer-group text-[#0062ff]"></i> TechAfrica
+                    </div>
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cube text-[#0062ff]"></i> Dakar Retail
+                    </div>
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-chart-line text-[#0062ff]"></i> Sahel Growth
+                    </div>
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-wallet text-[#0062ff]"></i> Wave Partner
+                    </div>
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-rocket text-[#0062ff]"></i> InovCorp
+                    </div>
+                    <div class="font-extrabold text-sm text-slate-700 tracking-tight flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-shield text-[#0062ff]"></i> AfriScale
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. PROBLEM / PAIN POINT SECTION (Like Reference Image) -->
+        <section class="max-w-5xl mx-auto px-4 py-16">
+            <div class="text-center max-w-2xl mx-auto mb-12 space-y-3">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-200/60 text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Problème & Risque Actuel
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    VOTRE ENTREPRISE PERD-ELLE DU CHIFFRE D'AFFAIRES CHAQUE JOUR ?
+                </h2>
+                <p class="text-sm text-slate-600 leading-relaxed">
+                    Dans le monde numérique actuel, la lenteur et le manque de suivi détruisent vos conversions. Vos prospects attendent des réponses immédiates.
+                </p>
+            </div>
+
+            <!-- 3 Pain Point Polaroid Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Pain Point 1 -->
+                <div class="polaroid-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <h3 class="font-bold text-base text-slate-900 mb-2">Temps de Réponse Trop Lent</h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            78% des prospects achètent auprès du premier prestataire qui répond. Si vous mettez des heures à traiter un lead, il a déjà signé chez votre concurrent.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-rose-600 text-xs font-bold">
+                        <i class="fa-solid fa-xmark"></i> Opportunités Perdues
+                    </div>
+                </div>
+
+                <!-- Pain Point 2 -->
+                <div class="polaroid-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-money-bill-trend-up"></i>
+                        </div>
+                        <h3 class="font-bold text-base text-slate-900 mb-2">Budgets Ads Gaspillés</h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Investir dans les publicités Facebook, TikTok ou Google sans un tunnel de closing ultra-optimisé revient à remplir une passoire. Le coût par client explose.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-amber-600 text-xs font-bold">
+                        <i class="fa-solid fa-xmark"></i> Rentabilité Dégradée
+                    </div>
+                </div>
+
+                <!-- Pain Point 3 -->
+                <div class="polaroid-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl mb-4">
+                            <i class="fa-solid fa-battery-empty"></i>
+                        </div>
+                        <h3 class="font-bold text-base text-slate-900 mb-2">Épuisement & Tâches Répétitives</h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Passer ses journées à répéter les mêmes tarifs, envoyer les mêmes fiches et faire des relances manuelles empêche le dirigeant de se focaliser sur sa stratégie.
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-purple-600 text-xs font-bold">
+                        <i class="fa-solid fa-xmark"></i> Surcharge Mentale
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. THE SOLUTION SECTION (6 NUMBERED STEPS FROM REFERENCE IMAGE) -->
+        <section class="bg-slate-900 text-white py-16 px-4">
+            <div class="max-w-5xl mx-auto">
+                <div class="text-center max-w-2xl mx-auto mb-12 space-y-3">
+                    <div class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/10 text-amber-400 border border-white/15 text-xs font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-lightbulb"></i> La Solution Officielle
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+                        PRENEZ LE CONTRÔLE DE VOTRE SYSTÈME EN 6 ÉTAPES
+                    </h2>
+                    <p class="text-sm text-slate-300 font-normal leading-relaxed">
+                        Voici la méthode exacte intégrée à cette offre pour convertir vos prospects et automatiser vos rentrées d'argent :
+                    </p>
+                </div>
+
+                <!-- 6 NUMBERED STEP CARDS -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Step 1 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                1
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Audit & Stratégie Sur-Mesure
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Configuration adaptée à votre secteur d'activité : définition de la cible idéale, proposition de valeur et grille tarifaire.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                2
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Déploiement Clé en Main
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Mise en place de votre offre avec fiches techniques persuasives prêtes à convaincre immédiatement les acheteurs hésitants.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                3
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Sécurisation & Multi-Canaux
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Connexion directe à vos réseaux (WhatsApp, Facebook, LinkedIn) pour capter chaque lead sans aucune rupture d'échange.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                4
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Qualification & Closing 24h/24
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Réponse instantanée aux objections, traitement bienveillant et accompagnement de chaque client jusqu'au paiement.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                5
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Encaissement Mobile Sécurisé
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Prise en charge native de Wave Money, Orange Money, MTN et Cartes bancaires avec confirmation automatique instantanée.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 6 -->
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
+                        <div>
+                            <div class="step-number-box w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg mb-4">
+                                6
+                            </div>
+                            <h3 class="font-extrabold text-sm uppercase tracking-wide text-white mb-2">
+                                Suivi & Garantie Totale
+                            </h3>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Fiche client enregistrée au CRM, notification directe sur votre téléphone et garantie satisfaction intégrale 30 jours.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary CTA inside dark section -->
+                <div class="mt-12 text-center">
+                    <a href="#commander" class="inline-flex items-center justify-center gap-3 bg-[#0062ff] hover:bg-blue-600 text-white text-sm sm:text-base font-extrabold px-8 py-4 rounded-2xl shadow-xl transition">
+                        <span>Activer Mon Offre Maintenant</span>
+                        <i class="fa-solid fa-arrow-down"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. TESTIMONIALS SECTION -->
+        <section class="max-w-5xl mx-auto px-4 py-16">
+            <div class="text-center max-w-2xl mx-auto mb-12 space-y-3">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 text-xs font-bold uppercase tracking-wider">
+                    <i class="fa-solid fa-star text-amber-500"></i> Témoignages & Avis Vérifiés
+                </div>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    ILS TÉMOIGNENT DE LEURS RÉSULTATS
+                </h2>
+                <p class="text-sm text-slate-600">
+                    Plus de 380 entreprises et indépendants utilisent cette solution au quotidien.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Review 1 -->
+                <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="text-amber-500 text-xs space-x-1 mb-3">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed italic">
+                            « La mise en place a été incroyablement rapide. Nous avons enregistré 4 ventes dès le premier week-end sur des prospects WhatsApp qui attendaient habituellement le lundi ! »
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] font-extrabold text-xs flex items-center justify-center">
+                            MD
+                        </div>
+                        <div>
+                            <strong class="text-xs font-bold text-slate-900 block">Moussa Diop</strong>
+                            <span class="text-[10px] text-slate-400">Directeur E-commerce, Dakar</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review 2 -->
+                <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="text-amber-500 text-xs space-x-1 mb-3">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed italic">
+                            « Le paiement direct par Wave et Orange Money a fait grimper notre taux de validation de plus de 40%. Nos clients adorent la simplicité du bon de commande. »
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-extrabold text-xs flex items-center justify-center">
+                            AK
+                        </div>
+                        <div>
+                            <strong class="text-xs font-bold text-slate-900 block">Aïssatou Koné</strong>
+                            <span class="text-[10px] text-slate-400">Fondatrice Agence Digitale, Abidjan</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review 3 -->
+                <div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="text-amber-500 text-xs space-x-1 mb-3">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="text-xs text-slate-700 leading-relaxed italic">
+                            « Tout est clair, sécurisé et automatique. Le lien WhatsApp direct après commande nous permet de finaliser la relation client de manière très humaine. »
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-extrabold text-xs flex items-center justify-center">
+                            PT
+                        </div>
+                        <div>
+                            <strong class="text-xs font-bold text-slate-900 block">Patrick Traoré</strong>
+                            <span class="text-[10px] text-slate-400">Consultant Formateur, Cotonou</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. EXPRESS CHECKOUT SECTION (BON DE COMMANDE OFFICIEL) -->
+        <section id="commander" class="max-w-4xl mx-auto px-4 pb-20 pt-8">
+            <div class="glass-panel rounded-3xl p-6 sm:p-10 shadow-2xl relative overflow-hidden border-2 border-blue-500/20">
+                <!-- Header Badge -->
+                <div class="text-center max-w-xl mx-auto mb-8 space-y-2">
+                    <span class="px-3 py-1 rounded-full bg-[#0062ff] text-white text-[11px] font-bold uppercase tracking-wider">
+                        Bon de Commande Sécurisé
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                        VALIDER MA COMMANDE EN 1 CLIC
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        Remplissez le formulaire ci-dessous pour recevoir votre accès prioritaire.
+                    </p>
+                </div>
+
+                <!-- Product Summary Box -->
+                <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase text-slate-400">Article Sélectionné</span>
+                        <h3 class="text-lg font-bold text-slate-900 mt-0.5">{{ item.name }}</h3>
+                        <p class="text-xs text-slate-500">
+                            {% if item.type == 'produit' %}Livrable physique • Stock disponible ({% if item.stock %}{{ item.stock }}{% else %}10{% endif %} unités){% else %}Service certifié • Démarrage immédiat{% endif %}
+                        </p>
+                    </div>
+                    <div class="text-center sm:text-right">
+                        <span class="text-xs text-slate-400 line-through block">{{ "{:,.0f}".format((item.price or 0) * 1.35) }} FCFA</span>
+                        <span class="text-2xl sm:text-3xl font-extrabold text-[#0062ff] tracking-tight">
+                            {{ "{:,.0f}".format(item.price or 0) }} <span class="text-sm font-semibold text-slate-400">FCFA</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Checkout Form -->
+                <form id="order-form" onsubmit="submitOrder(event)" class="space-y-6">
+                    <input type="hidden" id="product-id" value="{{ item.id }}">
+                    <input type="hidden" id="product-name" value="{{ item.name }}">
+                    <input type="hidden" id="product-price" value="{{ item.price }}">
+
+                    <!-- Step A: Coordonnées -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px]">A</span>
+                            Vos Coordonnées de Livraison & Facturation :
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">Nom complet ou Entreprise *</label>
+                                <input type="text" id="cust-name" required placeholder="Ex: Amadou Diallo" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">Numéro WhatsApp (pour le reçu) *</label>
+                                <input type="tel" id="cust-phone" required placeholder="Ex: +221 77 123 45 67" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">Adresse Email *</label>
+                                <input type="email" id="cust-email" required placeholder="Ex: amadou@entreprise.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-slate-600 font-semibold mb-1">Ville & Pays de résidence *</label>
+                                <input type="text" id="cust-city" required placeholder="Ex: Dakar, Sénégal" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step B: Mode de Paiement -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-1.5">
+                            <span class="w-5 h-5 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px]">B</span>
+                            Sélectionnez Votre Moyen de Paiement :
+                        </h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                            <label class="cursor-pointer border-2 border-[#0062ff] bg-blue-50/50 p-3 rounded-xl flex flex-col items-center justify-center text-center gap-2 hover:bg-blue-50 transition">
+                                <input type="radio" name="payment_method" value="wave" checked class="accent-[#0062ff]">
+                                <i class="fa-solid fa-mobile-screen-button text-xl text-[#0062ff]"></i>
+                                <span class="font-bold text-slate-800">Wave Money</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-200 bg-white p-3 rounded-xl flex flex-col items-center justify-center text-center gap-2 hover:bg-slate-50 transition">
+                                <input type="radio" name="payment_method" value="orange_money" class="accent-[#0062ff]">
+                                <i class="fa-solid fa-money-bill-wave text-xl text-amber-500"></i>
+                                <span class="font-bold text-slate-800">Orange Money</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-200 bg-white p-3 rounded-xl flex flex-col items-center justify-center text-center gap-2 hover:bg-slate-50 transition">
+                                <input type="radio" name="payment_method" value="mtn_momo" class="accent-[#0062ff]">
+                                <i class="fa-solid fa-wallet text-xl text-yellow-500"></i>
+                                <span class="font-bold text-slate-800">MTN MoMo</span>
+                            </label>
+                            <label class="cursor-pointer border border-slate-200 bg-white p-3 rounded-xl flex flex-col items-center justify-center text-center gap-2 hover:bg-slate-50 transition">
+                                <input type="radio" name="payment_method" value="carte_bancaire" class="accent-[#0062ff]">
+                                <i class="fa-solid fa-credit-card text-xl text-slate-700"></i>
+                                <span class="font-bold text-slate-800">Carte / Stripe</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="btn-submit-order" class="w-full bg-[#0062ff] hover:bg-[#0052cc] text-white font-extrabold text-sm sm:text-base py-4 px-6 rounded-2xl shadow-xl shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-lock"></i>
+                        <span>CONFIRMER ET PAYER MAINTENANT</span>
+                    </button>
+
+                    <!-- Reassurance Footer in Card -->
+                    <div class="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 pt-2">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-emerald-500"></i> Cryptage SSL 256-bit</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-award text-amber-500"></i> Garantie 30 Jours</span>
+                        <span class="flex items-center gap-1.5"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Confirmation WhatsApp Instantanée</span>
+                    </div>
+                </form>
+
+                <!-- Order Success Modal -->
+                <div id="order-success-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl max-w-md w-full p-6 text-center space-y-4 border border-slate-200 shadow-2xl">
+                        <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto text-2xl">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <h3 class="text-xl font-extrabold text-slate-900">Commande Confirmée !</h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Merci pour votre confiance. Votre commande a été enregistrée avec succès. Un conseiller IA et notre équipe vous transmettent vos accès immédiatement.
+                        </p>
+                        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 text-left space-y-1 font-mono" id="order-details-box">
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <a id="whatsapp-link" href="#" target="_blank" class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition">
+                                <i class="fa-brands fa-whatsapp text-sm"></i> Ouvrir WhatsApp
+                            </a>
+                            <button onclick="closeSuccessModal()" class="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. FAQ SECTION -->
+        <section class="max-w-3xl mx-auto px-4 pb-20 space-y-4">
+            <h3 class="text-xl font-bold text-slate-900 text-center mb-6">Questions Fréquemment Posées</h3>
+            
+            <details class="group bg-white border border-slate-200/90 rounded-2xl p-5 cursor-pointer shadow-sm">
+                <summary class="font-bold text-sm text-slate-800 flex justify-between items-center">
+                    <span>Comment se déroule l'accès après mon paiement ?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+                    Dès validation de votre règlement Wave, Orange Money ou Carte, notre unité commerciale génère votre reçu officiel et déclenche immédiatement la mise à disposition de votre commande. Vous recevez un lien instantané sur WhatsApp.
+                </p>
+            </details>
+
+            <details class="group bg-white border border-slate-200/90 rounded-2xl p-5 cursor-pointer shadow-sm">
+                <summary class="font-bold text-sm text-slate-800 flex justify-between items-center">
+                    <span>Les paiements Mobile Money sont-ils sécurisés ?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+                    Oui, à 100%. Les transactions sont opérées via les passerelles officielles et cryptées de bout en bout avec validation par code OTP sur votre téléphone. Aucune coordonnée sensible n'est enregistrée.
+                </p>
+            </details>
+
+            <details class="group bg-white border border-slate-200/90 rounded-2xl p-5 cursor-pointer shadow-sm">
+                <summary class="font-bold text-sm text-slate-800 flex justify-between items-center">
+                    <span>Comment fonctionne la garantie 30 jours ?</span>
+                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <p class="text-xs text-slate-600 mt-3 leading-relaxed">
+                    Si pour une raison quelconque vous n'êtes pas entièrement satisfait du résultat, contactez simplement notre support sur WhatsApp dans les 30 jours pour obtenir une révision intégrale ou une solution immédiate.
+                </p>
+            </details>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-200/80 bg-white py-8 text-center text-xs text-slate-500">
+        <p>&copy; 2026 Invo. Sales Engine. Tous droits réservés. Conforme RGPD & Réglementations Commerce Numérique.</p>
+    </footer>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // Compte à rebours d'urgence
+        let duration = 14 * 60 + 59;
+        const countdownEl = document.getElementById('countdown-timer');
+        setInterval(function() {
+            if (duration <= 0) return;
+            duration--;
+            var mins = Math.floor(duration / 60);
+            var secs = duration % 60;
+            if (countdownEl) {
+                countdownEl.textContent = (mins < 10 ? '0' : '') + mins + ':' + (secs < 10 ? '0' : '') + secs;
+            }
+        }, 1000);
+
+        // Soumission de commande
+        async function submitOrder(e) {
+            e.preventDefault();
+            var btn = document.getElementById('btn-submit-order');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Traitement sécurisé en cours...';
+
+            var payload = {
+                product_id: parseInt(document.getElementById('product-id').value),
+                customer_name: document.getElementById('cust-name').value.trim(),
+                customer_phone: document.getElementById('cust-phone').value.trim(),
+                customer_email: document.getElementById('cust-email').value.trim(),
+                customer_city: document.getElementById('cust-city').value.trim(),
+                payment_method: document.querySelector('input[name="payment_method"]:checked') ? document.querySelector('input[name="payment_method"]:checked').value : 'wave'
+            };
+
+            try {
+                var res = await fetch('/api/sales/order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+
+                if (data.status === 'success') {
+                    var box = document.getElementById('order-details-box');
+                    box.innerHTML = '<div><strong>Réf Commande :</strong> #' + data.order_id + '</div>' +
+                                    '<div><strong>Client :</strong> ' + payload.customer_name + '</div>' +
+                                    '<div><strong>Mode :</strong> ' + payload.payment_method.toUpperCase() + '</div>' +
+                                    '<div><strong>Montant :</strong> ' + Number(data.amount).toLocaleString() + ' FCFA</div>';
+
+                    var cleanPhone = payload.customer_phone.replace(/[^0-9]/g, '');
+                    var waMsg = encodeURIComponent('Bonjour, je viens de valider ma commande pour ' + document.getElementById('product-name').value + ' (Réf #' + data.order_id + '). Pouvez-vous confirmer ma validation ?');
+                    document.getElementById('whatsapp-link').href = 'https://wa.me/' + cleanPhone + '?text=' + waMsg;
+
+                    document.getElementById('order-success-modal').classList.remove('hidden');
+                } else {
+                    alert('Erreur lors de la commande : ' + (data.message || 'Vérifiez vos informations'));
+                }
+            } catch (err) {
+                alert('Erreur réseau. Veuillez réessayer.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-lock"></i> CONFIRMER ET PAYER MAINTENANT';
+            }
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('order-success-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

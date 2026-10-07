@@ -1,0 +1,241 @@
+📘 CAHIER DES CHARGES OFFICIEL
+
+Création d’un Agent IA de Prospection, Conversion & Relation Client
+
+🔧 Version MVP évolutive – à forte autonomie
+
+📆 Date : Août 2025
+
+👤 Client : SAGBO Comlan David
+
+---
+
+1. 🧭 CONTEXTE GÉNÉRAL DU PROJET
+
+1.1 Objectif global
+
+Développer un Agent IA autonome capable de gérer l’ensemble du cycle commercial d’un pack de formations digitales (marketing, graphisme, web…). L’agent doit prospecter, qualifier, engager, convertir, livrer, assurer le SAV, faire du suivi post-achat et générer des ventes additionnelles.
+
+---
+
+2. 🎯 MISSION GLOBALE DE L’AGENT IA
+
+Rôle attendu :
+
+L’IA doit fonctionner comme un responsable commercial, marketing et relation client tout-en-un, de manière intelligente, humaine, efficace, et orientée croissance.
+
+Les piliers :
+
+1. Prospecter automatiquement la bonne cible (profil DUR)
+
+2. Scorer, segmenter et engager avec pertinence
+
+3. Gérer le cycle de vente jusqu’au paiement
+
+4. Livrer, suivre et fidéliser les clients
+
+5. Générer des upsells, recommandations et réactivation de clients dormants
+
+---
+
+3. 🧠 CIBLE PRIORITAIRE (Profil DUR)
+
+3.1 Profil type à viser
+
+> Jeunes de 16 à 30 ans, en Afrique francophone, disponibles pendant les vacances, souhaitant se former rapidement à un métier digital pour générer des revenus immédiats et financer un rêve, projet ou rentrée.
+
+3.2 Caractéristiques précises
+
+Actifs sur WhatsApp, Facebook, TikTok
+
+Intéressés par l'indépendance financière
+
+Peu de moyens mais forte motivation
+
+Peu ou pas de compétences techniques
+
+Disponibles immédiatement
+
+---
+
+4. 🔍 MODULE 1 : Base de données de prospection
+
+(Fonction : Pré-vente, intelligence commerciale, relances)
+
+4.1 Champs requis dans la base
+
+Champ	Type	Description
+
+Prénom / Nom	Texte	Pour la personnalisation
+
+Email	Email	Pour future newsletter
+
+WhatsApp	Numéro	Canal principal
+
+Source du contact	Tag	Facebook / TikTok / Referral…
+
+Centre d’intérêt	Choix	Graphisme / Marketing / Web…
+
+Score de qualification	Numérique	Calculé automatiquement
+
+Statut	État	Nouveau / Chaud / Converti / Rejeté
+
+Historique d’interactions	Texte	Date + action
+
+4.2 Fonctionnalités requises
+
+Détection automatique de doublons
+
+Possibilité de relances ciblées
+
+Visualisation du funnel par statut
+
+Connexion à WhatsApp API pour relance directe
+
+Intégration native ou via Zapier/Make
+
+---
+
+5. 💼 MODULE 2 : Base de données relation client (CRM)
+
+(Fonction : Livraison, SAV, fidélisation, ventes additionnelles)
+
+5.1 Champs requis dans la base
+
+Champ	Type	Description
+
+Nom complet	Texte	-
+
+WhatsApp	Numéro	-
+
+Email	Email	-
+
+Produit acheté	Texte	Nom du pack
+
+Date d’achat	Date	-
+
+Date de fin d’accès	Date	Pour suivi
+
+Satisfaction (score)	Échelle	1 à 10
+
+État d’utilisation	État	Commencé / Pas encore
+
+Ventes additionnelles proposées	Oui/Non	-
+
+Feedback client	Texte	-
+
+5.2 Fonctionnalités requises
+
+Envoi d’emails de suivi ou vocaux WhatsApp
+
+Détection de client inactif
+
+Campagne de réactivation automatique
+
+Module d’évaluation interne de satisfaction (score NPS)
+
+Campagnes de recommandation
+
+---
+
+6. 🤖 MODULE 3 : Agent IA opérationnel
+
+6.1 Tâches automatisées attendues
+
+Fonction	Exemple d’action
+
+Prospection IA	Récupérer profils depuis TikTok / Facebook / WhatsApp
+
+Scoring & qualification	Lire profil + comportement et attribuer un score
+
+Message personnalisé	Rédiger un message d’accroche sur WhatsApp
+
+Relance automatique	Envoyer 1 à 2 relances avec personnalisation
+
+FAQ client (SAV)	Répondre aux questions fréquentes via bot IA
+
+Closing	Lien de paiement + preuve sociale en cas d’objection
+
+Post-achat	Message de bienvenue + lien d’accès aux formations
+
+Fidélisation	Message 7 jours après / relance après 30 jours
+
+Upsell	Proposition de formation complémentaire ou offre flash
+
+---
+
+7. 💬 STYLE DE COMMUNICATION DE L’IA
+
+Tonalité : amicale, dynamique, humaine, rassurante
+
+Langage : simple, accessible, jamais robotique
+
+Personnalisation : prénom, canal d’entrée, intérêt, phase du cycle client
+
+Canal principal : WhatsApp (prioritaire), Email (secondaire), Messenger (en option)
+
+Gestion du silence : relances automatiques 24h, 48h, 72h
+
+---
+
+8. 🧰 TECHNOLOGIES PROPOSÉES
+
+Fonction	Outil suggéré
+
+CRM & base leads	Airtable / Notion
+
+Landing page + formulaire	Systeme.io
+
+Automatisation	Zapier / Make / Pabbly
+
+Message WhatsApp	Wati.io / WhatHub
+
+Chatbot IA	Chatbase / Botpress
+
+Lien de paiement	PayTech / Stripe
+
+Stockage & reporting	Google Sheets / Notion
+
+Intelligence IA	GPT-4o / Claude / LLAMA 3
+
+---
+
+9. 📈 INDICATEURS DE SUCCÈS À MESURER
+
+Taux de conversion (prospect → client)
+
+Taux de clic sur messages IA
+
+Temps de réponse moyen
+
+Volume de ventes générées
+
+Taux d’activation des clients formés
+
+Nombre de leads collectés avec WhatsApp + email
+
+---
+
+10. 🛠️ LIVRABLES ATTENDUS
+
+Agent IA fonctionnel, connecté à WhatsApp, email, CRM
+
+Deux bases de données bien structurées et interconnectées
+
+Processus automatisé de A à Z (scraping, message, relance, fidélisation)
+
+10 messages IA rédigés avec variation selon phase du cycle
+
+1 tableau de bord de pilotage (Google Sheets ou Notion)
+
+---
+
+11. 📎 PIÈCES JOINTES À INCLURE (à construire)
+
+Liste des messages IA (acquisition, relance, fidélisation)
+
+Modèle de landing page (Systeme.io)
+
+Diagramme du flux prospect → client → ambassadeur
+
+Tableau scoring & segmentation prospects
