@@ -1109,18 +1109,96 @@
               <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
                   <th class="p-3.5">Nom & Contact</th>
-                  <th class="p-3.5">Source & Pays</th>
-                  <th class="p-3.5">Intérêt</th>
+                  <th class="p-3.5">Canal d'Attraction</th>
+                  <th class="p-3.5">Intérêt & Rôle</th>
                   <th class="p-3.5">Score DUR</th>
                   <th class="p-3.5">Profil DISC</th>
                   <th class="p-3.5">Statut</th>
-                  <th class="p-3.5 text-right">Action</th>
+                  <th class="p-3.5 text-right">Actions & Échanges</th>
                 </tr>
               </thead>
               <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 text-slate-800 bg-white">
                 <!-- Rempli par JavaScript -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- ==================== MODAL DE CONVERSATION OMNICANALE ==================== -->
+        <div id="modal-lead-conversation" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4">
+          <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-[#0062ff]/10 text-[#0062ff] flex items-center justify-center font-black text-sm shrink-0" id="conv-modal-avatar">
+                  PS
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="text-base font-black text-slate-900 truncate" id="conv-modal-lead-name">Nom Prospect</h3>
+                    <span id="conv-modal-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">Chaud 🔥</span>
+                    <span id="conv-modal-dur-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black bg-blue-50 text-[#0062ff] border border-blue-200">DUR: 82/100</span>
+                  </div>
+                  <p class="text-xs text-slate-500 truncate" id="conv-modal-contact-details">Poste / Coordonnées</p>
+                </div>
+              </div>
+              <button onclick="closeLeadConversation()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+
+            <!-- Onglets de sélection du canal (Messenger, LinkedIn, Email, WhatsApp) -->
+            <div class="px-4 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between gap-2 overflow-x-auto">
+              <div class="flex items-center gap-1.5" id="conv-channel-tabs-container">
+                <!-- Rempli par JavaScript (Boutons Messenger, LinkedIn, Email, WhatsApp) -->
+              </div>
+              <span class="text-[11px] font-semibold text-slate-400 hidden sm:inline" id="conv-channel-note">Sélectionnez le canal d'échange</span>
+            </div>
+
+            <!-- Bannière contextuelle du canal actif -->
+            <div class="px-4 py-2 bg-blue-50/70 border-b border-blue-100/80 flex items-center justify-between text-xs text-slate-700" id="conv-channel-info-banner">
+              <div class="flex items-center gap-2 truncate">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#0062ff] shrink-0"></i>
+                <span class="font-medium text-slate-600 truncate" id="conv-channel-account-text">Compte émetteur : Page Facebook Dave Sagbo</span>
+              </div>
+              <span class="text-[10px] font-bold text-[#0062ff] shrink-0" id="conv-channel-tone-badge">IA Autonome Active</span>
+            </div>
+
+            <!-- Fil des messages (Chat Feed) -->
+            <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 bg-slate-50/40 min-h-[260px] max-h-[380px]" id="conv-messages-feed">
+              <!-- Rempli par JavaScript -->
+            </div>
+
+            <!-- Zone de Saisie & Actions Rapides IA -->
+            <div class="p-3 sm:p-4 bg-white border-t border-slate-200 space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                  <button onclick="generateAiConversationReply()" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> 🪄 Générer Relance IA
+                  </button>
+                  <button onclick="insertCheckoutLinkInConversation()" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition">
+                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Lien Paiement Mobile Money
+                  </button>
+                </div>
+                <span class="text-[11px] text-slate-400 font-medium" id="conv-active-channel-label">Canal : Messenger</span>
+              </div>
+
+              <div class="flex items-end gap-2">
+                <textarea 
+                  id="conv-input-message" 
+                  rows="2"
+                  placeholder="Écrire un message à ce prospect sur ce canal..."
+                  class="flex-1 p-2.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 resize-none transition"
+                ></textarea>
+                <button 
+                  onclick="sendLeadConversationMessage()" 
+                  id="btn-conv-send"
+                  class="px-4 py-2.5 rounded-xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition h-[42px] shrink-0"
+                >
+                  <i data-lucide="send" class="w-3.5 h-3.5"></i> Envoyer
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -2030,17 +2108,23 @@
             <button onclick="setHistoryFilter('QUALIFICATION_DUR')" data-category="QUALIFICATION_DUR" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
               Qualification DUR
             </button>
-            <button onclick="setHistoryFilter('CLOSING_WHATSAPP')" data-category="CLOSING_WHATSAPP" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-              WhatsApp & Scripts
+            <button onclick="setHistoryFilter('MESSENGER_FACEBOOK')" data-category="MESSENGER_FACEBOOK" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-blue-800 hover:bg-blue-50 transition">
+              🔵 Messenger Facebook
+            </button>
+            <button onclick="setHistoryFilter('LINKEDIN_MESSAGING')" data-category="LINKEDIN_MESSAGING" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-sky-800 hover:bg-sky-50 transition">
+              🔷 LinkedIn B2B
+            </button>
+            <button onclick="setHistoryFilter('EMAIL_CLOSING')" data-category="EMAIL_CLOSING" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-purple-800 hover:bg-purple-50 transition">
+              📧 Emailing Pro
+            </button>
+            <button onclick="setHistoryFilter('CLOSING_WHATSAPP')" data-category="CLOSING_WHATSAPP" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-emerald-800 hover:bg-emerald-50 transition">
+              🟢 WhatsApp & Scripts
             </button>
             <button onclick="setHistoryFilter('VENTE_PAIEMENT')" data-category="VENTE_PAIEMENT" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-              Ventes & Paiements
+              💳 Ventes & Paiements
             </button>
             <button onclick="setHistoryFilter('PATROUILLE')" data-category="PATROUILLE" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
               Patrouille Autonome
-            </button>
-            <button onclick="setHistoryFilter('PROSPECTION')" data-category="PROSPECTION" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
-              Veille Meta & Ads
             </button>
             <button onclick="setHistoryFilter('CONFORMITE_RGPD')" data-category="CONFORMITE_RGPD" class="hist-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
               Conformité RGPD

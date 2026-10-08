@@ -35,6 +35,8 @@ from core.autopilot_daemon import autopilot_daemon
 from core.auth_manager import auth_manager
 from modules.config_loader import get_active_config, set_active_domain, create_domain_profile
 from modules.ai_sales_agent import AISalesAgent
+from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
+from core.database_store import get_lead_messages, get_lead_channels
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -158,6 +160,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_conversion_audit()
         elif path == "/api/crm/leads":
             self.handle_api_get_leads(query)
+        elif path == "/api/crm/leads/conversation":
+            self.handle_api_get_lead_conversation(query)
         elif path == "/api/crm/customers":
             self.handle_api_get_customers()
         elif path == "/api/compliance":
@@ -231,6 +235,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_add_calendar_event(body)
         elif path == "/api/crm/leads/anonymize":
             self.handle_api_anonymize_lead(body)
+        elif path == "/api/crm/leads/conversation/send":
+            self.handle_api_send_lead_message(body)
+        elif path == "/api/crm/leads/conversation/generate-ai":
+            self.handle_api_generate_ai_reply(body)
         elif path == "/api/compliance/optout":
             self.handle_api_test_optout(body)
         elif path == "/api/settings":
@@ -540,6 +548,106 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
         self.send_json_response(rows)
+
+    def handle_api_get_lead_conversation(self, query):
+        lead_id_str = query.get("lead_id", [None])[0] or query.get("id", [None])[0]
+        if not lead_id_str:
+            self.send_json_response({"error": "Paramètre lead_id requis."}, status=400)
+            return
+
+        try:
+            lead_id = int(lead_id_str)
+        except ValueError:
+            self.send_json_response({"error": "lead_id invalide."}, status=400)
+            return
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+        row = c.fetchone()
+        conn.close()
+
+        if not row:
+            self.send_json_response({"error": f"Lead #{lead_id} introuvable."}, status=404)
+            return
+
+        lead = dict(row)
+        requested_channel = query.get("channel", [None])[0]
+        primary_channel = omnichannel_messenger.detect_primary_channel(lead)
+        active_channel = requested_channel.upper() if requested_channel else primary_channel
+
+        available_channels = omnichannel_messenger.get_available_channels(lead)
+        messages = get_lead_messages(lead_id, active_channel)
+
+        suggested_pitch = omnichannel_messenger.generate_channel_pitch(lead, active_channel)
+
+        self.send_json_response({
+            "success": True,
+            "lead": {
+                "id": lead["id"],
+                "nom_complet": lead.get("nom_complet") or lead.get("nom_lead") or f"Prospect #{lead_id}",
+                "telephone": lead.get("whatsapp") or lead.get("telephone") or "",
+                "email": lead.get("email") or "",
+                "source": lead.get("source_contact") or lead.get("source_canal") or "Prospection Inbound",
+                "poste": lead.get("poste") or "Entrepreneur",
+                "score_dur": lead.get("score_qualification") or lead.get("score_dur") or 50,
+                "profil_disc": lead.get("profil_disc") or "Analytique (C)",
+                "statut": lead.get("statut_lead") or "Tiède",
+                "notes": lead.get("notes") or lead.get("centre_interet") or ""
+            },
+            "active_channel": active_channel,
+            "channel_info": SUPPORTED_CHANNELS.get(active_channel, {}),
+            "available_channels": available_channels,
+            "suggested_pitch": suggested_pitch,
+            "messages": messages
+        })
+
+    def handle_api_send_lead_message(self, body):
+        lead_id = body.get("lead_id")
+        channel = body.get("channel", "WHATSAPP").upper()
+        message = (body.get("message") or "").strip()
+        sender = body.get("sender", "AGENT").upper()
+
+        if not lead_id or not message:
+            self.send_json_response({"error": "lead_id et message requis."}, status=400)
+            return
+
+        result = omnichannel_messenger.dispatch_lead_message(
+            lead_id=int(lead_id),
+            channel=channel,
+            message=message,
+            sender=sender
+        )
+
+        messages = get_lead_messages(int(lead_id), channel)
+        result["messages"] = messages
+        self.send_json_response(result)
+
+    def handle_api_generate_ai_reply(self, body):
+        lead_id = body.get("lead_id")
+        channel = body.get("channel", "WHATSAPP").upper()
+
+        if not lead_id:
+            self.send_json_response({"error": "lead_id requis."}, status=400)
+            return
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_leads WHERE id = ?", (int(lead_id),))
+        row = c.fetchone()
+        conn.close()
+
+        if not row:
+            self.send_json_response({"error": f"Lead #{lead_id} introuvable."}, status=404)
+            return
+
+        lead = dict(row)
+        pitch = omnichannel_messenger.generate_channel_pitch(lead, channel)
+        self.send_json_response({
+            "success": True,
+            "suggested_message": pitch,
+            "channel": channel
+        })
 
     def handle_api_anonymize_lead(self, body):
         phone = body.get("phone", "")

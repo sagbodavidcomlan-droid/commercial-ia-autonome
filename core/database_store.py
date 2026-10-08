@@ -14,7 +14,7 @@ import os
 import sqlite3
 import json
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger("DatabaseStore")
@@ -227,6 +227,20 @@ def init_db():
         details TEXT
     )
     """)
+
+    # 10. Table Messagerie Omnicanale (Facebook Messenger, LinkedIn, Email, WhatsApp)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS crm_lead_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL,
+        channel TEXT NOT NULL,
+        sender TEXT NOT NULL,
+        message TEXT NOT NULL,
+        timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+        status TEXT DEFAULT 'DELIVERED',
+        metadata_json TEXT
+    )
+    """)
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide
@@ -248,6 +262,11 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM agent_activity_logs")
     if cursor.fetchone()[0] == 0:
         seed_activity_logs(conn)
+
+    # Ensemencement des conversations omnicanales si vide
+    cursor.execute("SELECT COUNT(*) FROM crm_lead_messages")
+    if cursor.fetchone()[0] == 0:
+        seed_omnichannel_conversations(conn)
 
     conn.close()
 
@@ -560,6 +579,207 @@ def clear_activity_logs() -> bool:
     except Exception as e:
         logger.error(f"Erreur clear_activity_logs : {e}")
         return False
+
+# ============================================================================
+# GESTION DES MESSAGES OMNICANAUX (FACEBOOK MESSENGER, LINKEDIN, EMAIL, WHATSAPP)
+# ============================================================================
+
+def log_lead_message(lead_id: int, channel: str, sender: str, message: str, status: str = "DELIVERED", metadata: Optional[Dict[str, Any]] = None) -> int:
+    """Enregistre un message dans le fil de conversation omnicanal d'un lead"""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        meta_json = json.dumps(metadata) if metadata else None
+        c.execute("""
+        INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (lead_id, channel.upper(), sender.upper(), message, now_str, status, meta_json))
+        msg_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return msg_id
+    except Exception as e:
+        logger.error(f"Erreur log_lead_message : {e}")
+        return 0
+
+def get_lead_messages(lead_id: int, channel: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Récupère les messages d'un prospect, optionnellement filtrés par canal"""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        if channel and channel.upper() not in ("ALL", "TOUS"):
+            c.execute("""
+            SELECT id, lead_id, channel, sender, message, timestamp, status, metadata_json
+            FROM crm_lead_messages
+            WHERE lead_id = ? AND channel = ?
+            ORDER BY id ASC
+            """, (lead_id, channel.upper()))
+        else:
+            c.execute("""
+            SELECT id, lead_id, channel, sender, message, timestamp, status, metadata_json
+            FROM crm_lead_messages
+            WHERE lead_id = ?
+            ORDER BY id ASC
+            """, (lead_id,))
+        rows = c.fetchall()
+        messages = []
+        for r in rows:
+            meta = {}
+            if r["metadata_json"]:
+                try:
+                    meta = json.loads(r["metadata_json"])
+                except Exception:
+                    pass
+            messages.append({
+                "id": r["id"],
+                "lead_id": r["lead_id"],
+                "channel": r["channel"],
+                "sender": r["sender"],
+                "message": r["message"],
+                "timestamp": r["timestamp"],
+                "status": r["status"] or "DELIVERED",
+                "metadata": meta
+            })
+        conn.close()
+        return messages
+    except Exception as e:
+        logger.error(f"Erreur get_lead_messages : {e}")
+        return []
+
+def get_lead_channels(lead_id: int) -> List[str]:
+    """Retourne la liste des canaux sur lesquels ce lead a déjà des échanges"""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT DISTINCT channel FROM crm_lead_messages WHERE lead_id = ?", (lead_id,))
+        channels = [r[0] for r in c.fetchall()]
+        conn.close()
+        return channels
+    except Exception:
+        return []
+
+def seed_omnichannel_conversations(conn):
+    """Ensemence des conversations ultra-réalistes et fidèles sur chaque canal"""
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal, poste, centre_interet FROM crm_leads")
+    leads = cursor.fetchall()
+    if not leads:
+        return
+
+    now_base = datetime.now()
+
+    for row in leads:
+        lead_id = row["id"]
+        nom = row["nom_complet"] or row["nom_lead"] or f"Prospect #{lead_id}"
+        phone = row["whatsapp"] or row["telephone"] or ""
+        email = row["email"] or ""
+        source = (row["source_contact"] or row["source_canal"] or "").lower()
+        poste = row["poste"] or "Entrepreneur"
+
+        # 1. Échanges Facebook Messenger (pour leads Facebook ou index 1)
+        if "facebook" in source or "meta" in source or lead_id % 4 == 1:
+            t1 = (now_base - timedelta(hours=4, minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=4, minutes=13)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=2, minutes=20)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=2, minutes=17)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'FACEBOOK_MESSENGER', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour, j'ai vu votre publicité Facebook sur l'automatisation commerciale. Est-ce adapté pour mon activité ({poste}) ?", t1, json.dumps({"source_page": "Page Facebook Dave Sagbo", "ad_id": "meta_act_89201"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour {nom} ! Ravi de vous lire. Absolument ! Notre agent IA est conçu pour qualifier automatiquement vos prospects, calculer leur budget et envoyer directement le bon de commande sans que vous perdiez de temps.", t2, json.dumps({"source_page": "Page Facebook Dave Sagbo", "model": "Agent Commercial IA"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'FACEBOOK_MESSENGER', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "D'accord, et comment se passe l'intégration avec nos moyens de paiement locaux ?", t3, json.dumps({"source_page": "Page Facebook Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, f"L'agent génère des liens de paiement instantanés FedaPay/MTN MoMo/Moov Money. Le client valide sur son téléphone en 30 secondes et vous recevez les fonds directement. Vous pouvez tester dès maintenant ici : https://commercial-ia-autonome.onrender.com/catalogue", t4, json.dumps({"source_page": "Page Facebook Dave Sagbo", "intent": "CLOSING_PAYMENT"})))
+
+        # 2. Échanges LinkedIn (pour leads LinkedIn ou index 2)
+        elif "linkedin" in source or lead_id % 4 == 2:
+            t1 = (now_base - timedelta(days=1, hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(days=1, hours=4, minutes=45)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=5, minutes=52)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Hello {nom} ! Ravi d'être connecté sur LinkedIn. J'ai vu votre profil de {poste}. Nous accompagnons les décideurs à automatiser leur prospection B2B sans risque de restriction grâce à une vélocité contrôlée par IA.", t1, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)", "inmail_type": "Connection_Followup"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Dave, merci pour votre message. En effet, notre principal défi est de filtrer les prospects qualifiés avant de leur bloquer un créneau d'agenda. Comment fonctionne votre scoring ?", t2, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Notre algorithme calcule un score DUR (Douleur, Urgence, Reconnaissance de valeur) en analysant les réponses du lead. Seuls les décideurs avec un score >= 65/100 sont synchronisés dans votre agenda avec lien Google Meet.", t3, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Très clair ! Pouvez-vous me partager une brochure tarifaire ou votre lien de réservation pour un échange de 15 min ?", t4, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
+
+        # 3. Échanges Emailing Professionnel (pour leads email ou index 3)
+        elif "email" in source or (email and not phone) or lead_id % 4 == 3:
+            t1 = (now_base - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(days=1, hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour {nom},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un audit rapide de votre secteur.\n\nEn moyenne, 73% des leads qualifiés sont perdus faute d'une réponse sous 5 minutes. Notre Agent Commercial IA répond en moins de 90 secondes, 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nL'Équipe Commerciale Dave Sagbo", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "lead@entreprise.com"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre agent sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "lead@entreprise.com"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, f"Bonjour {nom},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction technique ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
+
+        # 4. Échanges WhatsApp Business
+        else:
+            t1 = (now_base - timedelta(hours=1, minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=1, minutes=28)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(minutes=45)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour ! Je suis intéressé par votre offre de formation & automatisation commerciale.", t1, json.dumps({"phone": phone})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour {nom} ! Bienvenue sur la ligne officielle Dave Sagbo 🚀\nPourriez-vous me préciser quel est votre objectif principal pour ce mois ?", t2, json.dumps({"phone": phone, "type": "interactive_prompt"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, f"Mon objectif est d'atteindre au moins 500 000 FCFA de ventes par mois.", t3, json.dumps({"phone": phone})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, f"Objectif très réaliste avec nos scripts de persuasion validés ! Voici le lien direct pour finaliser votre commande avec paiement sécurisé Mobile Money : https://commercial-ia-autonome.onrender.com/commande?lead_id={lead_id}", t4, json.dumps({"phone": phone, "payment_prompt": True})))
+
+    conn.commit()
 
 if __name__ == "__main__":
     init_db()

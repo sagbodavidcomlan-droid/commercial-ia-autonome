@@ -24,6 +24,7 @@ from core.smart_rate_limiter import SmartRateLimiter
 from core.voice_engine import VoiceEngine
 from modules.ai_lead_scorer import DURLeadScorer
 from modules.config_loader import get_active_config
+from modules.omnichannel_messenger import omnichannel_messenger
 
 class AutopilotOrchestrator:
     def __init__(self):
@@ -200,13 +201,27 @@ class AutopilotOrchestrator:
                 status="SUCCESS" if dur_score >= 65 else "INFO",
                 details=f"Score DUR : {dur_score}/100 | Profil DISC : {disc_profile} | Opérateur : {momo_preferred} | Poste : {p['poste']}"
             )
-            log_activity(
-                category="CLOSING_WHATSAPP",
-                action=f"Script vocal & message WhatsApp prêts",
-                lead_name=p["nom"],
-                lead_phone=p["phone"],
-                status="CLOSING",
-                details=f"Canal : {p['canal']} | Accroche adaptée au profil psychologique {disc_profile}"
+            # Détection du canal de relance natif (Facebook Messenger, LinkedIn, Email, WhatsApp)
+            lead_dict = {
+                "id": lead_id,
+                "nom_complet": p["nom"],
+                "source_canal": p["canal"],
+                "source_contact": p["canal"],
+                "telephone": p["phone"],
+                "whatsapp": p["phone"],
+                "poste": p["poste"],
+                "centre_interet": p["interet"]
+            }
+            primary_channel = omnichannel_messenger.detect_primary_channel(lead_dict)
+            pitch = omnichannel_messenger.generate_channel_pitch(lead_dict, primary_channel)
+            
+            # Consigner le message sortant et journaliser l'activité selon le canal
+            omnichannel_messenger.dispatch_lead_message(
+                lead_id=lead_id,
+                channel=primary_channel,
+                message=pitch,
+                sender="AGENT",
+                metadata={"origin": "Autopilot Sprint", "dur_score": dur_score, "disc": disc_profile}
             )
 
         conn.commit()

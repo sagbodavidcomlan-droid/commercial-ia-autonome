@@ -1264,11 +1264,16 @@ function applyLeadsFilterAndRender() {
     ];
     const disc = discTypes[index % 4];
 
-    let opFlag = "🇧🇯 MTN Money";
-    if (rawPhone.includes("225")) opFlag = "🇨🇮 Wave / Orange";
-    else if (rawPhone.includes("221")) opFlag = "🇸🇳 Orange / Wave";
-    else if (rawPhone.includes("237")) opFlag = "🇨🇲 MTN Mobile";
-    else if (rawPhone.includes("223")) opFlag = "🇲🇱 Orange Money";
+    // Détection du badge de canal d'attraction
+    const chLower = (channel || "").toLowerCase();
+    let channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
+    if (chLower.includes("linkedin")) {
+      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
+    } else if (chLower.includes("email") || (!rawPhone && l.email)) {
+      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
+    } else if (chLower.includes("whatsapp") || rawPhone) {
+      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
+    }
 
     return `
       <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
@@ -1277,27 +1282,315 @@ function applyLeadsFilterAndRender() {
           <div class="text-[11px] text-slate-500 font-medium">${escapeHtml(phoneDisplay)}</div>
         </td>
         <td class="p-3.5 text-slate-700">
-          <div class="font-semibold">${escapeHtml(channel)}</div>
-          <div class="text-[10px] text-slate-500 font-medium">${opFlag}</div>
+          <div>${channelBadge}</div>
+          <div class="text-[10px] text-slate-500 font-medium mt-0.5 truncate max-w-[120px]">${escapeHtml(channel)}</div>
         </td>
-        <td class="p-3.5 text-slate-700 font-medium">${escapeHtml(interest)}</td>
+        <td class="p-3.5 text-slate-700">
+          <div class="font-medium truncate max-w-[150px]">${escapeHtml(interest)}</div>
+          <div class="text-[10px] text-slate-400 font-semibold">${escapeHtml(l.poste || 'Professionnel')}</div>
+        </td>
         <td class="p-3.5 font-black text-[#0062ff]">${score}/100</td>
         <td class="p-3.5">
           <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${disc.color}">${disc.label}</span>
         </td>
         <td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${badgeColor}">${escapeHtml(status)}</span></td>
-        <td class="p-3.5 text-right">
-          ${rawPhone && !l.opt_out ? `
-            <a href="https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition">
-              WhatsApp
-            </a>
-          ` : `<span class="text-slate-400 font-semibold">-</span>`}
+        <td class="p-3.5 text-right whitespace-nowrap">
+          <div class="flex items-center justify-end gap-1.5">
+            <button onclick="openLeadConversation(${l.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition">
+              <i data-lucide="messages-square" class="w-3 h-3"></i>
+              <span>Voir Conversation</span>
+            </button>
+            ${rawPhone && !l.opt_out ? `
+              <a href="https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}" target="_blank" title="Ouvrir WhatsApp direct" class="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 p-1.5 rounded-lg text-[11px] inline-flex items-center transition">
+                <i data-lucide="message-circle" class="w-3 h-3"></i>
+              </a>
+            ` : ''}
+          </div>
         </td>
       </tr>
     `;
   }).join("");
 
   lucide.createIcons();
+}
+
+// ============================================================================
+// MODAL DE CONVERSATION OMNICANALE (MESSENGER, LINKEDIN, EMAIL, WHATSAPP)
+// ============================================================================
+let activeConversationLeadId = null;
+let activeConversationChannel = null;
+let activeConversationData = null;
+
+async function openLeadConversation(leadId, channel = null) {
+  activeConversationLeadId = leadId;
+  const modal = document.getElementById("modal-lead-conversation");
+  if (!modal) return;
+
+  modal.classList.remove("hidden");
+  const feed = document.getElementById("conv-messages-feed");
+  if (feed) {
+    feed.innerHTML = `
+      <div class="p-12 text-center text-slate-400 space-y-2">
+        <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-[#0062ff]"></i>
+        <div class="text-xs font-semibold">Chargement des échanges sécurisés...</div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
+  try {
+    const url = `/api/crm/leads/conversation?lead_id=${leadId}${channel ? '&channel=' + channel : ''}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.error || "Erreur de chargement", "error");
+      return;
+    }
+
+    activeConversationData = data;
+    activeConversationChannel = data.active_channel;
+
+    // Mise à jour de l'en-tête du modal
+    const lead = data.lead;
+    const nameEl = document.getElementById("conv-modal-lead-name");
+    const avatarEl = document.getElementById("conv-modal-avatar");
+    const statusEl = document.getElementById("conv-modal-status-badge");
+    const durEl = document.getElementById("conv-modal-dur-badge");
+    const contactEl = document.getElementById("conv-modal-contact-details");
+
+    if (nameEl) nameEl.textContent = lead.nom_complet;
+    if (avatarEl) {
+      const parts = lead.nom_complet.split(" ");
+      avatarEl.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+    }
+    if (statusEl) statusEl.textContent = lead.statut;
+    if (durEl) durEl.textContent = `DUR: ${lead.score_dur}/100`;
+    if (contactEl) {
+      contactEl.textContent = `${lead.poste} • ${lead.telephone || lead.email || 'Contact en ligne'} • Source : ${lead.source}`;
+    }
+
+    // Mise à jour des onglets de canaux
+    renderConversationChannelTabs(data.available_channels, data.active_channel);
+
+    // Mise à jour de la bannière contextuelle
+    const bannerText = document.getElementById("conv-channel-account-text");
+    const toneBadge = document.getElementById("conv-channel-tone-badge");
+    const activeLabel = document.getElementById("conv-active-channel-label");
+    const inputMsg = document.getElementById("conv-input-message");
+
+    const chInfo = data.channel_info || {};
+    if (bannerText) {
+      bannerText.textContent = `Compte émetteur : ${chInfo.account_info || chInfo.label || data.active_channel}`;
+    }
+    if (toneBadge) {
+      toneBadge.textContent = `Tonalité : ${chInfo.tone || 'Persuasion IA'}`;
+    }
+    if (activeLabel) {
+      activeLabel.textContent = `Canal : ${chInfo.label || data.active_channel}`;
+    }
+    if (inputMsg) {
+      inputMsg.placeholder = `Écrire un message à ${lead.nom_complet} sur ${chInfo.label || data.active_channel}...`;
+    }
+
+    // Affichage des messages
+    renderConversationMessages(data.messages, lead.nom_complet);
+
+  } catch (err) {
+    console.error("Erreur ouverture conversation :", err);
+    showToast("Impossible de charger la conversation.", "error");
+  }
+}
+
+function renderConversationChannelTabs(availableChannels, activeChannel) {
+  const container = document.getElementById("conv-channel-tabs-container");
+  if (!container) return;
+
+  container.innerHTML = (availableChannels || []).map(ch => {
+    const isActive = ch.code === activeChannel;
+    const btnClass = isActive 
+      ? "bg-[#0062ff] text-white font-bold shadow-xs border-[#0062ff]" 
+      : "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 font-semibold";
+
+    let iconName = "message-square";
+    if (ch.code === "FACEBOOK_MESSENGER") iconName = "facebook";
+    else if (ch.code === "LINKEDIN") iconName = "linkedin";
+    else if (ch.code === "EMAIL") iconName = "mail";
+    else if (ch.code === "WHATSAPP") iconName = "message-circle";
+
+    return `
+      <button 
+        onclick="switchConversationChannel('${ch.code}')" 
+        class="px-3 py-1 rounded-lg text-xs border flex items-center gap-1.5 transition ${btnClass}"
+      >
+        <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i>
+        <span>${escapeHtml(ch.label)}</span>
+      </button>
+    `;
+  }).join("");
+
+  lucide.createIcons();
+}
+
+function renderConversationMessages(messages, leadName) {
+  const feed = document.getElementById("conv-messages-feed");
+  if (!feed) return;
+
+  if (!messages || messages.length === 0) {
+    feed.innerHTML = `
+      <div class="p-8 text-center text-slate-400 space-y-2">
+        <i data-lucide="message-square-plus" class="w-8 h-8 mx-auto text-slate-300"></i>
+        <div class="text-xs font-bold text-slate-600">Aucun échange préalable sur ce canal</div>
+        <p class="text-[11px] text-slate-400 max-w-sm mx-auto">
+          L'agent IA peut initier le contact dès maintenant. Cliquez sur « 🪄 Générer Relance IA » pour préparer la première accroche.
+        </p>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  const parts = (leadName || "Prospect").split(" ");
+  const initials = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+
+  feed.innerHTML = messages.map(m => {
+    const isLead = m.sender === "LEAD";
+    if (isLead) {
+      return `
+        <div class="flex items-start gap-2.5 max-w-[85%]">
+          <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
+            ${initials}
+          </div>
+          <div class="space-y-1">
+            <div class="p-3 rounded-2xl rounded-tl-xs bg-white text-slate-800 text-xs border border-slate-200 shadow-xs leading-relaxed whitespace-pre-wrap">
+              ${escapeHtml(m.message)}
+            </div>
+            <div class="text-[10px] text-slate-400 pl-1 font-medium flex items-center gap-1">
+              <span>${escapeHtml(m.timestamp)}</span> • <span class="capitalize font-semibold text-slate-500">${escapeHtml(m.channel.toLowerCase().replace('_', ' '))}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="flex items-start gap-2.5 max-w-[85%] ml-auto flex-row-reverse">
+          <div class="w-7 h-7 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
+            IA
+          </div>
+          <div class="space-y-1 text-right">
+            <div class="p-3 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-md shadow-blue-500/10 leading-relaxed text-left whitespace-pre-wrap">
+              ${escapeHtml(m.message)}
+            </div>
+            <div class="text-[10px] text-slate-400 pr-1 font-medium flex items-center justify-end gap-1">
+              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Agent Commercial IA</span> • <span>✓✓</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }).join("");
+
+  lucide.createIcons();
+
+  // Défilement automatique vers le dernier message
+  setTimeout(() => {
+    feed.scrollTop = feed.scrollHeight;
+  }, 50);
+}
+
+function closeLeadConversation() {
+  const modal = document.getElementById("modal-lead-conversation");
+  if (modal) modal.classList.add("hidden");
+  activeConversationLeadId = null;
+  activeConversationChannel = null;
+  activeConversationData = null;
+}
+
+function switchConversationChannel(channelCode) {
+  if (!activeConversationLeadId) return;
+  openLeadConversation(activeConversationLeadId, channelCode);
+}
+
+async function sendLeadConversationMessage() {
+  const input = document.getElementById("conv-input-message");
+  if (!input || !activeConversationLeadId) return;
+
+  const text = input.value.trim();
+  if (!text) {
+    showToast("Veuillez saisir un message.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("btn-conv-send");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/crm/leads/conversation/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeConversationLeadId,
+        channel: activeConversationChannel,
+        message: text,
+        sender: "AGENT"
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      input.value = "";
+      renderConversationMessages(data.messages, activeConversationData?.lead?.nom_complet);
+      showToast(`Message envoyé via ${activeConversationChannel} !`, "success");
+      // Mettre à jour l'historique d'activité
+      loadHistoryFeed();
+    } else {
+      showToast(data.error || "Erreur lors de l'envoi", "error");
+    }
+  } catch (err) {
+    console.error("Erreur envoi message :", err);
+    showToast("Échec de communication.", "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function generateAiConversationReply() {
+  if (!activeConversationLeadId || !activeConversationChannel) return;
+
+  const input = document.getElementById("conv-input-message");
+  if (!input) return;
+
+  try {
+    input.value = "Génération de la relance IA en cours...";
+    const res = await fetch("/api/crm/leads/conversation/generate-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeConversationLeadId,
+        channel: activeConversationChannel
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.suggested_message) {
+      input.value = data.suggested_message;
+      input.focus();
+      showToast(`Relance IA générée pour ${activeConversationChannel} !`, "success");
+    } else {
+      input.value = "";
+      showToast("Impossible de générer la suggestion.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur suggestion IA :", err);
+    if (input) input.value = "";
+  }
+}
+
+function insertCheckoutLinkInConversation() {
+  const input = document.getElementById("conv-input-message");
+  if (!input) return;
+
+  const link = `https://commercial-ia-autonome.onrender.com/commande?lead_id=${activeConversationLeadId || 1}`;
+  const prompt = `\nVoici le lien sécurisé pour valider votre encaissement Mobile Money : ${link}`;
+  input.value = (input.value + prompt).trim();
+  input.focus();
 }
 
 // --- AUDIT MÉDICO-LÉGAL DES CONVERSIONS "À LA LOUPE" ---
@@ -2989,7 +3282,10 @@ async function loadHistoryFeed(isSilent = false) {
     const catConfig = {
       "PROSPECTION": { icon: "radar", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Prospection & Ads" },
       "QUALIFICATION_DUR": { icon: "brain-circuit", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Qualification DUR" },
-      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "Closing WhatsApp" },
+      "MESSENGER_FACEBOOK": { icon: "facebook", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "🔵 Messenger Facebook" },
+      "LINKEDIN_MESSAGING": { icon: "linkedin", bg: "bg-sky-50 text-sky-800 border-sky-200/60", label: "🔷 LinkedIn B2B" },
+      "EMAIL_CLOSING": { icon: "mail", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "📧 Emailing Pro" },
+      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "🟢 Closing WhatsApp" },
       "VENTE_PAIEMENT": { icon: "badge-dollar-sign", bg: "bg-amber-50 text-amber-700 border-amber-200/60", label: "Vente & Paiement" },
       "PATROUILLE": { icon: "zap", bg: "bg-rose-50 text-rose-700 border-rose-200/60", label: "Patrouille Autonome" },
       "CONFORMITE_RGPD": { icon: "shield-check", bg: "bg-teal-50 text-teal-700 border-teal-200/60", label: "Conformité RGPD" }
