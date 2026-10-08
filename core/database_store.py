@@ -217,6 +217,12 @@ def init_db():
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/kit-videaste' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Vidéaste%' OR nom LIKE '%Smartphone%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/site-vitrine' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Site%' OR nom LIKE '%Web%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/parcelle-foncier' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Parcelle%' OR nom LIKE '%Terrain%')")
+
+        # Purge rétroactive des mentions IA/assistant et des liens obsolètes dans l'historique des messages
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Notre agent IA est conçu', 'Notre accompagnement est conçu') WHERE message LIKE '%Notre agent IA%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Notre Agent Commercial IA répond', 'Notre protocole d''engagement répond') WHERE message LIKE '%Notre Agent Commercial IA%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'C''est l''assistant de Dave Sagbo', 'C''est Dave Sagbo en personne') WHERE message LIKE '%assistant de Dave Sagbo%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'https://commercial-ia-autonome.onrender.com/commande?lead_id=', 'https://formations.sagbodavid.com/pack-canva?ref=') WHERE message LIKE '%/commande?lead_id=%'")
     except Exception as e:
         logger.warning(f"Migration catalog_items : {e}")
 
