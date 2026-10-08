@@ -360,40 +360,108 @@ class OmnichannelMessenger:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Envoie un message sur le canal spécifié et consigne l'événement
-        dans le registre de messages et l'historique d'activité
+        Envoie un message sur le canal spécifié via les API officielles (Meta Graph API / WhatsApp Cloud API)
+        et consigne l'événement avec un statut de livraison 100% réel et vérifié.
         """
+        from core.meta_messenger_sync import (
+            send_messenger_message,
+            send_whatsapp_cloud_message,
+            get_stored_meta_credentials,
+            verify_meta_token
+        )
+
         channel_upper = channel.upper()
         sender_upper = sender.upper()
-
         meta = metadata or {}
-        if channel_upper == "FACEBOOK_MESSENGER" and "source_page" not in meta:
-            meta["source_page"] = "Page Facebook Dave Sagbo (Meta Graph API)"
-        elif channel_upper == "LINKEDIN" and "account" not in meta:
-            meta["account"] = "Profil Dave Sagbo B2B"
-        elif channel_upper == "EMAIL" and "sender_email" not in meta:
-            meta["sender_email"] = "commercial@davesagbo.com"
 
+        # 1. Récupération des informations complètes du prospect
+        conn = get_connection()
+        c = conn.cursor()
+        try:
+            c.execute("SELECT nom_complet, nom_lead, telephone, whatsapp, facebook_psid, email FROM crm_leads WHERE id = ?", (lead_id,))
+            lead_row = c.fetchone()
+        except Exception:
+            c.execute("SELECT nom_complet, nom_lead, telephone, whatsapp FROM crm_leads WHERE id = ?", (lead_id,))
+            lead_row = c.fetchone()
+        conn.close()
+
+        lead_name = "Prospect"
+        lead_phone = "N/A"
+        facebook_psid = None
+        email = None
+
+        if lead_row:
+            lead_name = lead_row["nom_complet"] or lead_row["nom_lead"] or f"Prospect #{lead_id}"
+            lead_phone = lead_row["whatsapp"] or lead_row["telephone"] or "N/A"
+            try:
+                facebook_psid = lead_row["facebook_psid"]
+            except Exception:
+                facebook_psid = None
+            try:
+                email = lead_row["email"]
+            except Exception:
+                email = None
+
+        delivery_status = "DELIVERED"
+        error_detail = None
+        api_result = None
+
+        # 2. Envoi réel sur le canal officiel concerné
+        if channel_upper == "FACEBOOK_MESSENGER":
+            meta["source_page"] = "Page Facebook Dave Sagbo (Meta Graph API)"
+            if facebook_psid:
+                api_result = send_messenger_message(recipient_psid=facebook_psid, text=message)
+                if api_result.get("success"):
+                    delivery_status = "DELIVERED"
+                    meta["meta_message_id"] = api_result.get("message_id")
+                else:
+                    delivery_status = "ECHEC_META"
+                    error_detail = api_result.get("error")
+                    meta["meta_error"] = error_detail
+            else:
+                meta_check = verify_meta_token()
+                if not meta_check.get("valid"):
+                    delivery_status = "NON_CONNECTE_META"
+                    error_detail = meta_check.get("message")
+                else:
+                    delivery_status = "EN_ATTENTE_PSID"
+                    error_detail = "Le prospect n'a pas encore envoyé de message direct sur la Page Facebook (PSID inconnu)."
+                meta["meta_warning"] = error_detail
+
+        elif channel_upper == "WHATSAPP":
+            creds = get_stored_meta_credentials()
+            if creds.get("whatsapp_token") and creds.get("whatsapp_phone_number_id") and lead_phone != "N/A":
+                api_result = send_whatsapp_cloud_message(recipient_phone=lead_phone, text=message)
+                if api_result.get("success"):
+                    delivery_status = "DELIVERED"
+                    meta["whatsapp_msg_id"] = api_result.get("message_id")
+                else:
+                    delivery_status = "ECHEC_WHATSAPP"
+                    error_detail = api_result.get("error")
+            else:
+                delivery_status = "EN_ATTENTE_CONNEXION_WHATSAPP"
+                error_detail = "Compte WhatsApp Cloud API non configuré ou numéro manquant."
+            if error_detail:
+                meta["whatsapp_warning"] = error_detail
+
+        elif channel_upper == "LINKEDIN":
+            meta["account"] = "Profil Dave Sagbo B2B"
+            delivery_status = "EN_ATTENTE_CONNEXION_LINKEDIN"
+            meta["linkedin_warning"] = "Compte LinkedIn non relié via API."
+
+        elif channel_upper == "EMAIL":
+            meta["sender_email"] = "commercial@davesagbo.com"
+            delivery_status = "PRET_POUR_ENVOI_EMAIL"
+
+        # 3. Consignation dans la base de messages
         msg_id = log_lead_message(
             lead_id=lead_id,
             channel=channel_upper,
             sender=sender_upper,
             message=message,
-            status="DELIVERED",
+            status=delivery_status,
             metadata=meta
         )
-
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute("SELECT nom_complet, nom_lead, telephone, whatsapp FROM crm_leads WHERE id = ?", (lead_id,))
-        lead_row = c.fetchone()
-        conn.close()
-
-        lead_name = "Prospect"
-        lead_phone = "N/A"
-        if lead_row:
-            lead_name = lead_row["nom_complet"] or lead_row["nom_lead"] or f"Prospect #{lead_id}"
-            lead_phone = lead_row["whatsapp"] or lead_row["telephone"] or "N/A"
 
         cat_map = {
             "FACEBOOK_MESSENGER": "MESSENGER_FACEBOOK",
@@ -405,15 +473,17 @@ class OmnichannelMessenger:
 
         log_activity(
             category=category,
-            action=f"Message envoyé via {SUPPORTED_CHANNELS.get(channel_upper, {}).get('label', channel_upper)}",
+            action=f"Message {delivery_status} via {SUPPORTED_CHANNELS.get(channel_upper, {}).get('label', channel_upper)}",
             lead_name=lead_name,
             lead_phone=lead_phone,
-            status="SUCCESS",
-            details=f"Canal : {channel_upper} | Émetteur : {sender_upper} | Extrait : {message[:80]}..."
+            status="SUCCESS" if delivery_status == "DELIVERED" else "INFO",
+            details=f"Canal : {channel_upper} | Statut : {delivery_status} | Erreur/Note : {error_detail or 'Aucune'} | Extrait : {message[:70]}..."
         )
 
         return {
-            "success": True,
+            "success": delivery_status == "DELIVERED",
+            "status": delivery_status,
+            "error": error_detail,
             "message_id": msg_id,
             "channel": channel_upper,
             "sender": sender_upper,

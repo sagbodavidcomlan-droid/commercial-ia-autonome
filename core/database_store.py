@@ -194,7 +194,8 @@ def init_db():
             ("nps_score", "INTEGER"),
             ("code_ambassadeur", "TEXT"),
             ("canal_source", "TEXT"),
-            ("canal_actuel", "TEXT")
+            ("canal_actuel", "TEXT"),
+            ("facebook_psid", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
             if col_name not in existing_cols:

@@ -1710,8 +1710,117 @@ async function loadSettings() {
     if (document.getElementById("setting-hubspot-token")) document.getElementById("setting-hubspot-token").value = s.hubspot_token || "";
     if (document.getElementById("setting-hubspot-portal-id")) document.getElementById("setting-hubspot-portal-id").value = s.hubspot_portal_id || "";
     if (document.getElementById("setting-crm-webhook-url")) document.getElementById("setting-crm-webhook-url").value = s.crm_webhook_url || "";
+
+    // Diagnostic automatique de santé des connexions
+    await checkConnectionsHealth();
   } catch (err) {
     console.error("Erreur chargement paramètres:", err);
+  }
+}
+
+async function checkConnectionsHealth() {
+  try {
+    const res = await fetch("/api/connections/status");
+    if (!res.ok) return;
+    const data = await res.json();
+    
+    // Badge et feedback Facebook
+    const fbBadge = document.getElementById("meta-status-badge");
+    const fbFeedback = document.getElementById("meta-connection-feedback");
+    if (fbBadge && data.facebook) {
+      if (data.facebook.valid) {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        fbBadge.innerHTML = `✓ Connecté : ${data.facebook.page_name || 'Page Facebook'}`;
+        if (fbFeedback) {
+          fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-800/50 block";
+          fbFeedback.innerHTML = `<strong>Page active :</strong> ${data.facebook.page_name} (ID: ${data.facebook.page_id})<br><span class="text-[10px] text-slate-400">Les messages échangés sont synchronisés en direct avec votre boîte de réception Facebook Messenger.</span>`;
+        }
+      } else if (data.facebook.status === "EXPIRE") {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        fbBadge.innerText = "⚠ Jeton Expiré";
+        if (fbFeedback) {
+          fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-rose-950/50 text-rose-300 border border-rose-800/60 block";
+          fbFeedback.innerHTML = `<strong>Attention :</strong> ${data.facebook.message}<br><span class="text-[10px] text-slate-400">Générez un nouveau Page Access Token dans Meta Developers et collez-le ci-dessus.</span>`;
+        }
+      } else if (data.facebook.configured) {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        fbBadge.innerText = "Erreur Jeton";
+        if (fbFeedback) {
+          fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-amber-950/40 text-amber-300 border border-amber-800/50 block";
+          fbFeedback.innerHTML = data.facebook.message || "Jeton Meta non valide.";
+        }
+      } else {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+        fbBadge.innerText = "Non configuré";
+      }
+    }
+
+    // Badge WhatsApp
+    const waBadge = document.getElementById("wa-status-badge");
+    if (waBadge && data.whatsapp) {
+      if (data.whatsapp.configured) {
+        waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        waBadge.innerText = "Token Configuré";
+      } else {
+        waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
+        waBadge.innerText = "Non configuré";
+      }
+    }
+  } catch (err) {
+    console.error("Erreur checkConnectionsHealth:", err);
+  }
+}
+
+async function testFacebookConnection() {
+  const token = document.getElementById("setting-meta-token")?.value?.trim() || "";
+  const fbBadge = document.getElementById("meta-status-badge");
+  const fbFeedback = document.getElementById("meta-connection-feedback");
+
+  if (!token) {
+    alert("Veuillez renseigner un jeton d'accès Page Meta avant de lancer le test.");
+    return;
+  }
+
+  if (fbBadge) {
+    fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse";
+    fbBadge.innerText = "Test en cours...";
+  }
+
+  try {
+    const res = await fetch("/api/connections/test-facebook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meta_token: token })
+    });
+    const data = await res.json();
+
+    if (data.valid) {
+      if (fbBadge) {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        fbBadge.innerHTML = `✓ Connecté : ${data.page_name}`;
+      }
+      if (fbFeedback) {
+        fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-800/50 block";
+        fbFeedback.innerHTML = `<strong>Succès de connexion :</strong> ${data.message}`;
+      }
+      showToast("Connexion à la Page Facebook réussie !", "success");
+    } else {
+      if (fbBadge) {
+        fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+        fbBadge.innerText = data.status === "EXPIRE" ? "⚠ Jeton Expiré" : "Échec Connexion";
+      }
+      if (fbFeedback) {
+        fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-rose-950/50 text-rose-300 border border-rose-800/60 block";
+        fbFeedback.innerHTML = `<strong>Erreur Graph API :</strong> ${data.message}`;
+      }
+      showToast(data.message || "Erreur de validation du jeton Meta", "warning");
+    }
+  } catch (err) {
+    if (fbBadge) {
+      fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400";
+      fbBadge.innerText = "Erreur Réseau";
+    }
+    showToast("Impossible de tester la connexion Meta.", "error");
   }
 }
 
@@ -1739,6 +1848,7 @@ async function saveSettings(e) {
     });
     const data = await res.json();
     alert(data.message || "Paramètres et clés API enregistrés avec succès !");
+    await checkConnectionsHealth();
   } catch (err) {
     alert("Erreur lors de l'enregistrement des paramètres.");
   }

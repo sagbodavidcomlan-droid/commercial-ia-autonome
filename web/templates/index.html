@@ -1567,18 +1567,44 @@
 
           <!-- Section 3 : Connexions Réseaux Sociaux & Canaux -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-            <!-- Meta / Facebook Ads -->
-            <div class="glass-card rounded-xl p-5 space-y-3">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">f</div>
-                <div>
-                  <h3 class="font-bold text-white text-sm">Meta Ads Library & Facebook</h3>
-                  <p class="text-[11px] text-slate-400">Extraction des publicités et commentaires actifs</p>
+            <!-- Meta / Facebook Page & Messenger -->
+            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-700/60">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-base">f</div>
+                  <div>
+                    <h3 class="font-bold text-white text-sm">Meta Facebook Page & Messenger API</h3>
+                    <p class="text-[11px] text-slate-400">Échanges directs, visibilité dans la boîte de réception Facebook & Webhooks</p>
+                  </div>
+                </div>
+                <div id="meta-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  Non testé
                 </div>
               </div>
+
               <div>
-                <label class="block text-slate-400 mb-1">Token Graph API Meta (ads_read)</label>
-                <input type="password" id="setting-meta-token" placeholder="EAAG..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
+                <label class="block text-slate-400 mb-1">Jeton d'accès Page Meta (Page Access Token)</label>
+                <div class="flex gap-2">
+                  <input type="password" id="setting-meta-token" placeholder="EAA..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+                  <button type="button" onclick="testFacebookConnection()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/30">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tester
+                  </button>
+                </div>
+              </div>
+
+              <div id="meta-connection-feedback" class="text-[11px] p-2.5 rounded-lg hidden"></div>
+
+              <!-- Paramètres Webhook Meta pour synchronisation bidirectionnelle -->
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-1.5 text-[11px]">
+                <div class="font-bold text-slate-300 flex items-center gap-1.5">
+                  <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-400"></i> Paramètres Webhook Meta Messenger
+                </div>
+                <p class="text-slate-400 text-[10px]">Pour recevoir les messages de vos prospects directement dans le CRM :</p>
+                <div class="space-y-1 text-slate-300 font-mono text-[10px]">
+                  <div><span class="text-slate-500 font-sans">URL de rappel :</span> <span class="text-indigo-300 select-all">https://commercial-ia-autonome.onrender.com/webhook/facebook</span></div>
+                  <div><span class="text-slate-500 font-sans">Jeton de vérification :</span> <span class="text-emerald-300 select-all">commercial_ia_verify_2026</span></div>
+                  <div><span class="text-slate-500 font-sans">Abonnement :</span> <span class="text-slate-300">messages, messaging_postbacks</span></div>
+                </div>
               </div>
             </div>
 
@@ -1588,31 +1614,40 @@
                 <div class="w-8 h-8 rounded-lg bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold">in</div>
                 <div>
                   <h3 class="font-bold text-white text-sm">LinkedIn Professional Engine</h3>
-                  <p class="text-[11px] text-slate-400">Social selling & notes d'invitation (<300 car)</p>
+                  <p class="text-[11px] text-slate-400">Prospection B2B réelle (Zéro prospect fictif si déconnecté)</p>
                 </div>
               </div>
               <div>
                 <label class="block text-slate-400 mb-1">Jeton d'accès LinkedIn API</label>
                 <input type="password" id="setting-linkedin-token" placeholder="AQV..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
+                <span class="text-[10px] text-slate-500 mt-1 block">Laissé vide : aucun faux lead généré dans le CRM.</span>
               </div>
             </div>
 
             <!-- WhatsApp Business -->
             <div class="glass-card rounded-xl p-5 space-y-3">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">WA</div>
-                <div>
-                  <h3 class="font-bold text-white text-sm">WhatsApp Business (WATI / Meta Cloud)</h3>
-                  <p class="text-[11px] text-slate-400">Envoi d'accroches, relances et closing 24h/24</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">WA</div>
+                  <div>
+                    <h3 class="font-bold text-white text-sm">WhatsApp Business (Meta Cloud API / WATI)</h3>
+                    <p class="text-[11px] text-slate-400">Envoi d'accroches, relances et closing 24h/24</p>
+                  </div>
+                </div>
+                <div id="wa-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                  En attente
                 </div>
               </div>
               <div>
-                <label class="block text-slate-400 mb-1">Bearer Token WATI / Meta</label>
+                <label class="block text-slate-400 mb-1">Bearer Token Meta Cloud / WATI</label>
                 <input type="password" id="setting-wati-token" placeholder="eyJhbGci..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
               </div>
               <div>
                 <label class="block text-slate-400 mb-1">Numéro WhatsApp du Directeur (Alertes)</label>
                 <input type="text" id="setting-admin-phone" value="+22997000000" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2.5 text-[10px] text-slate-400">
+                <span class="text-slate-500 font-sans">Webhook WhatsApp :</span> <span class="text-emerald-300 font-mono select-all">https://commercial-ia-autonome.onrender.com/webhook/whatsapp</span>
               </div>
             </div>
 

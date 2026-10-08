@@ -40,36 +40,19 @@ class LinkedInProspector:
 
     def search_posts_and_comments(self, query: str, limit: int = 20) -> List[Dict[str, Any]]:
         """
-        Recherche des publications et des commentaires d'utilisateurs engagés sur LinkedIn
+        Recherche des publications et des commentaires d'utilisateurs engagés sur LinkedIn.
+        Si aucun compte LinkedIn API / session n'est configuré, retourne une liste vide pour ne pas injecter de faux leads.
         """
         logger.info(f"Recherche de posts et leads LinkedIn pour la requête : '{query}'...")
         
-        # Structure type des leads extraits depuis LinkedIn
-        simulated_results = [
-            {
-                "platform": "LinkedIn",
-                "post_author": "Cabinet Recrutement Digital Cotonou",
-                "post_url": "https://www.linkedin.com/posts/example-post-101",
-                "prospect_name": "Jean-Eudes Agbossou",
-                "prospect_profile_url": "https://www.linkedin.com/in/jean-eudes-agbossou",
-                "headline": "Étudiant en Licence 3 | Passionné de Graphisme & Marketing Digital | En recherche active",
-                "comment_text": "Je suis très intéressé par cette opportunité de formation pendant ces vacances. Mon WhatsApp : +22996112233",
-                "location": "Bénin",
-                "timestamp": datetime.utcnow().isoformat()
-            },
-            {
-                "platform": "LinkedIn",
-                "post_author": "Digital Talents Dakar",
-                "post_url": "https://www.linkedin.com/posts/example-post-102",
-                "prospect_name": "Fatou Ndiaye",
-                "prospect_profile_url": "https://www.linkedin.com/in/fatou-ndiaye-design",
-                "headline": "Jeune diplômée | Débutante en Canva et Design | En quête d'indépendance",
-                "comment_text": "Infos svp ! Est-ce accessible aux débutants sans ordinateur ? Mon email : fatou@test.sn",
-                "location": "Sénégal",
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        ]
-        return simulated_results[:limit]
+        # Vérification des identifiants LinkedIn
+        has_credentials = bool(self.api_key or os.getenv("LINKEDIN_ACCESS_TOKEN"))
+        if not has_credentials:
+            logger.warning("Aucun accès API LinkedIn configuré. Zéro prospect fictif généré.")
+            return []
+
+        # En mode connecté, interroger l'API officielle LinkedIn
+        return []
 
     def extract_contact_info(self, text: str) -> Dict[str, Optional[str]]:
         """

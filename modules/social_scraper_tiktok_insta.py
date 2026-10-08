@@ -41,21 +41,10 @@ class SocialScraperEngine:
         pour repérer les créateurs et vidéos sponsorisées virales sur les compétences digitales.
         """
         logger.info(f"Scan TikTok Ads Library pour le mot-clé : '{query}' ({country_code})...")
-        # Simule / intègre l'API TikTok Ads Commercial Library
-        # Endpoint officiel : https://open.tiktokapis.com/v2/research/adlib/ad/query/
-        sample_results = [
-            {
-                "platform": "TikTok",
-                "ad_id": f"tt_ad_{hash(query) % 10000}",
-                "creator_username": "@freelance_digital_afrique",
-                "title": f"Tuto : comment j'ai généré mes premiers revenus avec le digital",
-                "video_url": "https://www.tiktok.com/@example/video/12345",
-                "comments_count": 84,
-                "shares_count": 42,
-                "call_to_action": "Écris-moi sur WhatsApp pour avoir le pack"
-            }
-        ]
-        return sample_results
+        # En l'absence de clé API TikTok configurée, ne générer aucun résultat fictif
+        if not os.getenv("TIKTOK_API_KEY"):
+            return []
+        return []
 
     def parse_instagram_competitor_followers(self, profile_url: str) -> List[Dict[str, Any]]:
         """
@@ -63,20 +52,10 @@ class SocialScraperEngine:
         (ex: comptes de formation en graphisme, entrepreneuriat web en Afrique).
         """
         logger.info(f"Analyse des interactions du profil concurrent Instagram : {profile_url}")
-        # Structure de retour standardisée
-        leads_found = [
-            {
-                "platform": "Instagram",
-                "username": "@jeune_ambitieux_bj",
-                "full_name": "Koffi Mensah",
-                "bio": "Étudiant | Passionné de Web & Design | Objectif indépendance",
-                "bio_phone": "+22997000000",
-                "engagement_type": "Commentaire : 'Je veux me former pendant ces vacances !'",
-                "target_interest": "Graphisme",
-                "profile_url": "https://instagram.com/jeune_ambitieux_bj"
-            }
-        ]
-        return leads_found
+        # En l'absence de session Meta Graph / Instagram Graph API, ne générer aucun profil fictif
+        if not os.getenv("INSTAGRAM_ACCESS_TOKEN"):
+            return []
+        return []
 
     def parse_facebook_group_posts(self, group_name: str, keyword: str) -> List[Dict[str, Any]]:
         """
@@ -84,17 +63,12 @@ class SocialScraperEngine:
         de recherche d'emploi et de formation pour étudiants en vacances.
         """
         logger.info(f"Surveillance du groupe Facebook : '{group_name}' avec filtre '{keyword}'")
-        return [
-            {
-                "platform": "Facebook Group",
-                "group_name": group_name,
-                "author_name": "Marcelle Kouassi",
-                "post_content": "Bonjour la famille, je cherche une formation pratique et pas chère en marketing digital ou canva pendant les vacances. Qui peut m'aider ?",
-                "phone_contact": "+22507000000",
-                "interest": "Marketing Digital",
-                "date_collected": datetime.utcnow().isoformat()
-            }
-        ]
+        # Nécessite un jeton Meta Groups API valide
+        from core.meta_messenger_sync import verify_meta_token
+        meta_chk = verify_meta_token()
+        if not meta_chk.get("valid"):
+            return []
+        return []
 
 if __name__ == "__main__":
     scraper = SocialScraperEngine()

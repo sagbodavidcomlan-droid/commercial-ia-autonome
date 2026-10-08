@@ -40,6 +40,13 @@ from modules.config_loader import get_active_config, set_active_domain, create_d
 from modules.ai_sales_agent import AISalesAgent
 from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
 from core.database_store import get_lead_messages, get_lead_channels
+from core.meta_messenger_sync import (
+    verify_meta_token,
+    handle_facebook_webhook_payload,
+    get_stored_meta_credentials,
+    send_messenger_message,
+    send_whatsapp_cloud_message
+)
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -195,6 +202,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_history(query)
         elif path == "/api/kpi-weekly-report":
             self.handle_api_kpi_weekly_report()
+        elif path == "/webhook/facebook":
+            self.handle_webhook_facebook_verify(query)
+        elif path == "/webhook/whatsapp":
+            self.handle_webhook_whatsapp_verify(query)
+        elif path == "/api/connections/status":
+            self.handle_api_connections_status()
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -219,8 +232,18 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "/api/sales/order",
             "/api/payments/checkout",
             "/api/payments/webhook",
-            "/api/compliance/optout"
+            "/api/compliance/optout",
+            "/webhook/facebook",
+            "/webhook/whatsapp"
         ]
+
+        # Webhooks Meta directs
+        if path == "/webhook/facebook":
+            self.handle_webhook_facebook_post(body)
+            return
+        elif path == "/webhook/whatsapp":
+            self.handle_webhook_whatsapp_post(body)
+            return
 
         # 3. Contrôle d'accès strict sur toutes les autres routes POST
         if path not in public_post_routes and path.startswith("/api/"):
@@ -228,7 +251,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 self.send_json_response({"error": "Accès refusé. Master Pass requis.", "authenticated": False}, status=401)
                 return
 
-        if path == "/api/goals":
+        if path == "/api/connections/test-facebook":
+            self.handle_api_test_facebook(body)
+            return
+        elif path == "/api/goals":
             self.handle_api_update_goals(body)
         elif path == "/api/reports/generate":
             self.handle_api_generate_report(body)
@@ -735,6 +761,105 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         conn.commit()
         conn.close()
         self.send_json_response({"success": True, "message": "Connexions et paramètres enregistrés avec succès !"})
+
+    def handle_webhook_facebook_verify(self, query):
+        """
+        Vérification du Webhook Meta Messenger (hub.mode, hub.verify_token, hub.challenge)
+        """
+        mode = query.get("hub.mode", [""])[0]
+        token = query.get("hub.verify_token", [""])[0]
+        challenge = query.get("hub.challenge", [""])[0]
+
+        creds = get_stored_meta_credentials()
+        expected_token = creds.get("webhook_verify_token", "commercial_ia_verify_2026")
+
+        if mode == "subscribe" and token == expected_token:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(challenge.encode("utf-8"))
+        else:
+            self.send_response(403)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"Verification token mismatch or invalid mode")
+
+    def handle_webhook_facebook_post(self, body):
+        """
+        Traitement des messages entrants réels de la Page Facebook via Meta Graph API
+        """
+        try:
+            results = handle_facebook_webhook_payload(body)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"EVENT_RECEIVED")
+        except Exception as e:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"EVENT_RECEIVED")
+
+    def handle_webhook_whatsapp_verify(self, query):
+        mode = query.get("hub.mode", [""])[0]
+        token = query.get("hub.verify_token", [""])[0]
+        challenge = query.get("hub.challenge", [""])[0]
+        creds = get_stored_meta_credentials()
+        expected_token = creds.get("webhook_verify_token", "commercial_ia_verify_2026")
+        if mode == "subscribe" and token == expected_token:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(challenge.encode("utf-8"))
+        else:
+            self.send_response(403)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"Forbidden")
+
+    def handle_webhook_whatsapp_post(self, body):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"EVENT_RECEIVED")
+
+    def handle_api_connections_status(self):
+        meta_status = verify_meta_token()
+        creds = get_stored_meta_credentials()
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_key, setting_value FROM system_settings")
+        s_dict = {r[0]: r[1] for r in c.fetchall()}
+        conn.close()
+
+        res = {
+            "facebook": {
+                "configured": bool(s_dict.get("meta_token")),
+                "valid": meta_status.get("valid", False),
+                "status": meta_status.get("status", "INCONNU"),
+                "page_name": meta_status.get("page_name"),
+                "page_id": meta_status.get("page_id"),
+                "message": meta_status.get("message"),
+                "webhook_url": "/webhook/facebook",
+                "verify_token": creds.get("webhook_verify_token", "commercial_ia_verify_2026")
+            },
+            "whatsapp": {
+                "configured": bool(s_dict.get("wati_token")),
+                "status": "NON_CONFIGURE" if not s_dict.get("wati_token") else "PRET",
+                "webhook_url": "/webhook/whatsapp",
+                "verify_token": creds.get("webhook_verify_token", "commercial_ia_verify_2026")
+            },
+            "linkedin": {
+                "configured": bool(s_dict.get("linkedin_token")),
+                "status": "NON_CONFIGURE" if not s_dict.get("linkedin_token") else "PRET"
+            }
+        }
+        self.send_json_response(res)
+
+    def handle_api_test_facebook(self, body):
+        token_to_test = body.get("meta_token")
+        status = verify_meta_token(token_to_test)
+        self.send_json_response(status)
 
     def handle_api_get_domains(self):
         profiles_dir = os.path.join(BASE_DIR, "config", "domain_profiles")
