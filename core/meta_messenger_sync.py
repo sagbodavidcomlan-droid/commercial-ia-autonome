@@ -75,20 +75,62 @@ def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
     try:
         url = f"{GRAPH_BASE_URL}/me"
         params = {
-            "fields": "id,name,category,link",
+            "fields": "id,name",
             "access_token": token.strip()
         }
         res = requests.get(url, params=params, timeout=10)
         data = res.json()
 
         if res.status_code == 200 and "id" in data:
+            target_id = data.get("id")
+            target_name = data.get("name")
+
+            # Vérifier si ce token est un token utilisateur ayant accès à des Pages
+            try:
+                acc_res = requests.get(f"{GRAPH_BASE_URL}/me/accounts", params={"access_token": token.strip()}, timeout=8)
+                acc_data = acc_res.json()
+                if acc_res.status_code == 200 and "data" in acc_data and len(acc_data["data"]) > 0:
+                    # C'est un jeton utilisateur : récupérer la première Page avec droit de messagerie
+                    pages = acc_data["data"]
+                    chosen_page = next((p for p in pages if "MESSAGING" in p.get("tasks", [])), pages[0])
+                    page_token = chosen_page.get("access_token")
+                    page_id = chosen_page.get("id")
+                    page_name = chosen_page.get("name")
+
+                    # Sauvegarde automatique du Page Access Token dans les paramètres
+                    conn = get_connection()
+                    c = conn.cursor()
+                    now_iso = datetime.utcnow().isoformat()
+                    c.execute("""
+                        INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                        VALUES ('meta_token', ?, ?)
+                        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at
+                    """, (page_token, now_iso))
+                    c.execute("""
+                        INSERT INTO system_settings (setting_key, setting_value, updated_at)
+                        VALUES ('meta_page_id', ?, ?)
+                        ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at
+                    """, (page_id, now_iso))
+                    conn.commit()
+                    conn.close()
+
+                    return {
+                        "valid": True,
+                        "status": "CONNECTE",
+                        "page_id": page_id,
+                        "page_name": page_name,
+                        "message": f"Connecté avec succès à la Page Facebook '{page_name}' (ID: {page_id}) avec autorisation Messenger."
+                    }
+            except Exception as e_acc:
+                logger.warning(f"Note vérification /me/accounts : {e_acc}")
+
+            # C'est directement un jeton de Page officiel
             return {
                 "valid": True,
                 "status": "CONNECTE",
-                "page_id": data.get("id"),
-                "page_name": data.get("name"),
-                "page_link": data.get("link", ""),
-                "message": f"Connecté avec succès à la Page Facebook '{data.get('name')}' (ID: {data.get('id')})"
+                "page_id": target_id,
+                "page_name": target_name,
+                "message": f"Connecté avec succès à la Page Facebook '{target_name}' (ID: {target_id}) avec autorisation Messenger."
             }
         else:
             error = data.get("error", {})
