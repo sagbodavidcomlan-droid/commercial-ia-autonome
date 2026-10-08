@@ -46,15 +46,18 @@ OBJECTIONS_KNOWLEDGE_BASE = {
 }
 
 SYSTEM_PROMPT = """Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.
-Ton rôle est d'échanger directement avec des professionnels, entrepreneurs et jeunes d'Afrique francophone motivés par l'accélération de leurs résultats.
-Consignes impératives d'identité et de communication :
-- IDENTITÉ DIRECTE : Tu es Dave Sagbo en personne, responsable en charge du projet. Tu parles toujours à la première personne ('je', 'mon équipe', 'notre solution').
-- AUCUNE MENTION D'IA OU D'ASSISTANT : Le prospect ne doit jamais savoir qu'une IA intervient. Pour lui, il échange directement avec le fondateur et responsable du projet.
-- Tonalité : Fraternelle, dynamique, bienveillante, humaine, chaleureuse et motivante (style 'Mentor & Grand frère d'Afrique francophone').
-- Langage : Simple, fluide, percutant, jamais robotique, sans jargon lourd.
-- Toujours orienté action : chaque message se termine par UNE question simple ou un appel à l'action clair.
-- Personnalisation : Utilise le prénom du prospect, fais référence à son besoin précis et valorise son ambition.
-- Clôture : Lorsque le prospect est convaincu ou demande le lien, fournis directement le lien officiel du Catalogue avec les options Mobile Money (MTN MoMo, Moov, Wave, Orange) et Carte.
+Ton rôle est d'échanger directement avec des professionnels, entrepreneurs et porteurs de projet motivés par l'accélération de leurs résultats.
+Consignes impératives d'identité et de relation client :
+- IDENTITÉ DIRECTE : Tu es Dave Sagbo, responsable du projet. Tu parles toujours avec humilité, élégance et clarté à la première personne ('je', 'mon équipe', 'notre solution').
+- AUCUNE MENTION D'IA OU D'ASSISTANT : Le prospect ne doit jamais savoir qu'une IA intervient. Pour lui, il échange directement avec le responsable en charge de la solution.
+- INTERDICTION FORMELLE : Ne JAMAIS utiliser la formule "en personne" ou des tournures présomptueuses/arrogantes. Rester humble, accessible, bienveillant et à l'écoute.
+- Tonalité : Fraternelle, professionnelle, sobre, attentive et respectueuse.
+- Langage : Simple, fluide, percutant, limpide, sans jargon technique inutile ni complications.
+- MÉTHODOLOGIE DE SETTING COMMERCIAL (APPROCHE EN 2 ÉTAPES) :
+  1. Phase Écoute & Qualification : Accueillir poliment, reformuler avec empathie le défi ou besoin du prospect, et poser UNE question ouverte pour comprendre son organisation actuelle. Ne JAMAIS envoyer de lien de paiement au premier contact.
+  2. Phase Closing & Passage à l'action : Présenter l'offre adaptée avec son lien officiel du catalogue UNIQUEMENT lorsque le prospect valide son accord ou demande expressément comment procéder au paiement (Mobile Money MTN, Moov, Wave, Orange ou Carte Bancaire).
+- Toujours orienté action : terminer par une question simple, engageante et facile à répondre.
+- Personnalisation : Utiliser le prénom du prospect, contextualiser la discussion selon son métier et valoriser son ambition.
 """
 
 import sys
@@ -106,19 +109,19 @@ class AISalesAgent:
             return None
 
         prompt = (
-            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge de la solution.\n"
-            f"Tu t'adresses directement et en personne au prospect : {target_name}.\n"
-            f"RÈGLE D'OR ABSOLUE : Tu es Dave Sagbo en personne. Tu parles à la première personne ('je', 'mon équipe', 'notre solution'). Ne mentionne JAMAIS que tu es une intelligence artificielle, un bot ou un assistant.\n"
+            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.\n"
+            f"Tu t'adresses au prospect : {target_name}.\n"
+            f"RÈGLE D'OR : Tu es Dave Sagbo, responsable du projet. Tu parles à la première personne ('je', 'mon équipe', 'notre solution'). Ne mentionne JAMAIS d'IA ni d'assistant, et ne dis JAMAIS 'en personne' ni de formule prétentieuse ou arrogante. Reste sobre, humble, chaleureux, attentif et très professionnel.\n"
             f"Profil psychologique DISC détecté : {disc_profile}.\n"
             f"Offre concernée : {product_name} au tarif de {int(product_price):,} {product_devise}.\n"
             f"Intention ou objection identifiée : {detected_objection}.\n"
-            f"Stratégie de persuasion à appliquer : {strategy}.\n"
-            + (f"Lien officiel de commande à inclure obligatoirement : {checkout_url}\n" if checkout_url else "") +
-            f"\nConsignes strictes :\n"
-            f"- Réponds directement au prospect en français dans le style direct, fraternel et professionnel (émoticônes bien dosées, phrases percutantes, chaleureux, dynamique et bienveillant).\n"
-            f"- Pas de blabla inutile, pas de formule robotique.\n"
-            f"- Mentionne la facilité de règlement Mobile Money (MTN MoMo, Moov, Wave, Orange).\n"
-            f"- Termine toujours par une question engageante ou un appel à l'action clair.\n"
+            f"Stratégie de relation & closing à appliquer : {strategy}.\n"
+            + (f"Lien officiel du catalogue à inclure obligatoirement (le prospect a demandé à commander/payer) : {checkout_url}\n" if checkout_url else "Attention : N'inclus AUCUN lien de paiement à ce stade. Reste dans l'écoute active, la reformulation empathique et la question ouverte.\n") +
+            f"\nConsignes strictes de relation client :\n"
+            f"- Réponds directement au prospect en français dans un style soigné, fraternel, humble et professionnel (émoticônes bien dosées, phrases simples et percutantes, sans jargon lourd ni promesses exagérées).\n"
+            f"- Fais preuve d'écoute active et montre que tu comprends parfaitement son contexte et son métier.\n"
+            + (f"- Mentionne la facilité de règlement Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte.\n" if checkout_url else "") +
+            f"- Termine toujours par UNE question simple, engageante et ouverte.\n"
             f"\nMessage du prospect : « {user_msg} »\n\n"
             f"Ta réponse en tant que Dave Sagbo :"
         )
@@ -155,18 +158,10 @@ class AISalesAgent:
     def generate_opening_hook(self, lead_data: Dict[str, Any]) -> str:
         """
         Génère le premier message d'accroche WhatsApp ultra-personnalisé
-        adapté au domaine actif.
+        adapté au profil et au contexte du prospect selon la méthodologie de setting commercial.
         """
-        prenom = lead_data.get("first_name") or lead_data.get("name") or "Champion"
-        interest = lead_data.get("centre_interet") or lead_data.get("interest") or self.config.get("nom_domaine", "nos opportunités")
-        nom_produit = self.config.get("offre", {}).get("nom_produit", "notre programme")
-
-        return (
-            f"Hello {prenom} ! 👋 J'espère que vous allez super bien.\n\n"
-            f"J'ai vu votre intérêt concernant **{interest}** et nos solutions autour de {nom_produit}.\n\n"
-            f"Félicitations pour cette démarche proactive ! C'est exactement le genre d'initiative qui porte ses fruits.\n\n"
-            f"Dites-moi, vous avez déjà un projet précis en tête ou vous souhaitez découvrir notre approche pour démarrer concrètement ? 😊"
-        )
+        from modules.omnichannel_messenger import omnichannel_messenger
+        return omnichannel_messenger.generate_channel_pitch(lead_data, "WHATSAPP")
 
     def handle_incoming_message(self, user_message: str, lead_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -177,14 +172,14 @@ class AISalesAgent:
             return self.simulate_interactive_turn(
                 user_message=user_message,
                 history=[],
-                persona=lead_data.get("persona") or lead_data.get("name") or "Prospect classique",
+                persona=lead_data.get("persona") or lead_data.get("nom_complet") or lead_data.get("name") or "Prospect classique",
                 product_id=lead_data.get("product_id"),
                 target_data=lead_data
             )
         except Exception as e:
             logger.error(f"Erreur handle_incoming_message : {e}")
             return {
-                "reply_message": "Merci pour votre message ! Je suis disponible pour vous détailler nos offres et répondre à toutes vos questions.",
+                "reply_message": "Merci pour votre message ! Je suis à votre écoute pour échanger sur vos objectifs et vous orienter vers la meilleure solution.",
                 "cognitive_trace": {
                     "persona": "Prospect",
                     "disc_profile": "S (Stable)",
@@ -214,10 +209,10 @@ class AISalesAgent:
         target_data = target_data or {}
 
         # Récupération sécurisée des métadonnées de la cible
-        target_name = target_data.get("target_name") or target_data.get("name") or persona or "Champion"
+        target_name = target_data.get("target_name") or target_data.get("nom_complet") or target_data.get("name") or persona or "Partenaire"
         target_channel = target_data.get("target_channel") or target_data.get("canal") or "WhatsApp Inbound"
         target_temp = target_data.get("target_temp") or target_data.get("temperature") or "Tiède"
-        target_pain = target_data.get("target_pain") or target_data.get("douleur") or "Développement d'activité"
+        target_pain = target_data.get("target_pain") or target_data.get("douleur") or target_data.get("centre_interet") or "Développement d'activité"
 
         # 1. Parsing sécurisé du product_id
         parsed_prod_id = None
@@ -241,28 +236,44 @@ class AISalesAgent:
         if parsed_prod_id:
             selected_product = next((p for p in catalog_items if p.get("id") == parsed_prod_id), None)
 
-        # b) Recherche par mots-clés spécifiques dans le message de l'utilisateur
+        # b) Recherche contextuelle sémantique dans le message ET dans le profil du lead
+        context_corpus = f"{msg_lower} {target_pain.lower()} {str(target_data.get('centre_interet', '')).lower()} {str(target_data.get('notes', '')).lower()} {str(target_data.get('poste', '')).lower()}"
+
         if not selected_product:
-            if any(w in msg_lower for w in ["site web", "site vitrine", "site internet", "création de site", "développement web", "page web", "audit digital"]):
+            if any(w in context_corpus for w in ["whatsapp", "relance", "automatisation"]):
+                selected_product = next((p for p in catalog_items if any(k in f"{p.get('nom') or ''} {p.get('categorie') or ''}".lower() for k in ["whatsapp", "automatisation"])), None)
+            elif any(w in context_corpus for w in ["auto", "prospect", "closing", "crm", "commercial", "tunnel", "ventes", "suivi"]):
+                selected_product = next((p for p in catalog_items if any(k in f"{p.get('nom') or ''} {p.get('categorie') or ''}".lower() for k in ["auto", "tunnel", "commercial", "crm"])), None)
+            elif any(w in context_corpus for w in ["site web", "site vitrine", "site internet", "création de site", "développement web", "page web", "audit digital"]):
                 selected_product = next((p for p in catalog_items if "site" in p.get("nom", "").lower() or "web" in p.get("nom", "").lower()), None)
-            elif any(w in msg_lower for w in ["graphisme", "canva", "visuel", "affiche", "flyer", "design", "étudiant"]):
+            elif any(w in context_corpus for w in ["graphisme", "canva", "visuel", "affiche", "flyer", "design", "étudiant"]):
                 selected_product = next((p for p in catalog_items if "graphisme" in p.get("nom", "").lower() or "canva" in p.get("nom", "").lower()), None)
-            elif any(w in msg_lower for w in ["vidéo", "video", "smartphone", "créateur", "youtube", "tiktok", "trépied", "micro", "kit"]):
+            elif any(w in context_corpus for w in ["vidéo", "video", "smartphone", "créateur", "youtube", "tiktok", "trépied", "micro", "kit"]):
                 selected_product = next((p for p in catalog_items if "vidéaste" in p.get("nom", "").lower() or "smartphone" in p.get("nom", "").lower() or "kit" in p.get("nom", "").lower()), None)
-            elif any(w in msg_lower for w in ["terrain", "parcelle", "titre foncier", "immobilier", "villa", "maison", "500m"]):
+            elif any(w in context_corpus for w in ["terrain", "parcelle", "titre foncier", "immobilier", "villa", "maison", "500m"]):
                 selected_product = next((p for p in catalog_items if "parcelle" in p.get("nom", "").lower() or "terrain" in p.get("nom", "").lower()), None)
-            elif any(w in msg_lower for w in ["cosmétique", "savon", "karité", "sérum", "peau", "bio"]):
+            elif any(w in context_corpus for w in ["cosmétique", "savon", "karité", "sérum", "peau", "bio"]):
                 selected_product = next((p for p in catalog_items if "cosmétique" in p.get("nom", "").lower() or "savon" in p.get("nom", "").lower()), None)
 
         # c) Si pas de match par mot-clé explicite, tenter de matcher avec les noms des produits du catalogue
         if not selected_product:
             for item in catalog_items:
                 nom_parts = [word for word in item.get("nom", "").lower().split() if len(word) > 3]
-                if any(part in msg_lower for part in nom_parts):
+                if any(part in context_corpus for part in nom_parts):
                     selected_product = item
                     break
 
-        # d) Fallback par défaut sur le premier produit du catalogue
+        # d) Résolution via l'orchestrateur omnicanal si toujours non trouvé
+        if not selected_product and target_data:
+            try:
+                from modules.omnichannel_messenger import omnichannel_messenger
+                matched_it, _ = omnichannel_messenger.get_catalog_link_for_lead(target_data)
+                if matched_it:
+                    selected_product = matched_it
+            except Exception:
+                pass
+
+        # e) Fallback par défaut sur le premier produit du catalogue
         if not selected_product and catalog_items:
             selected_product = catalog_items[0]
 

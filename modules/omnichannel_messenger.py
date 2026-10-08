@@ -127,8 +127,7 @@ class OmnichannelMessenger:
     def get_catalog_link_for_lead(self, lead: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
         """
         Détermine le produit du catalogue le plus adapté au prospect
-        et extrait son URL externe exacte configurée dans le Catalogue (url_externe).
-        Si aucune URL externe n'est configurée, repli propre sur la page catalogue de l'article.
+        selon une analyse sémantique rigoureuse de ses besoins et de son contexte.
         """
         interet = ((lead.get("centre_interet") or "") + " " + (lead.get("notes") or "") + " " + (lead.get("poste") or "")).lower()
         items = []
@@ -145,16 +144,32 @@ class OmnichannelMessenger:
             return {}, "https://commercial-ia-autonome.onrender.com/catalogue"
 
         matched_item = None
-        # Recherche par affinité sémantique
-        for item in items:
-            nom_lower = (item.get("nom") or "").lower()
-            cat_lower = (item.get("categorie") or "").lower()
-            keywords = [w for w in (nom_lower + " " + cat_lower).split() if len(w) > 3]
-            if any(kw in interet for kw in keywords):
-                matched_item = item
-                break
 
-        # Fallback si pas de mot-clé précis : produit avec url_externe existante ou premier article
+        # 1. Priorité thématique par mot-clé explicite
+        if any(w in interet for w in ["whatsapp", "relance", "automatisation"]):
+            matched_item = next((it for it in items if any(k in f"{it.get('nom') or ''} {it.get('categorie') or ''}".lower() for k in ["whatsapp", "automatisation"])), None)
+        elif any(w in interet for w in ["auto", "prospect", "closing", "crm", "commercial", "tunnel", "ventes", "suivi"]):
+            matched_item = next((it for it in items if any(k in f"{it.get('nom') or ''} {it.get('categorie') or ''}".lower() for k in ["auto", "tunnel", "commercial", "crm"])), None)
+        elif any(w in interet for w in ["graphisme", "canva", "visuel", "affiche", "flyer", "design"]):
+            matched_item = next((it for it in items if any(k in (it.get("nom", "")).lower() for k in ["canva", "graphisme"])), None)
+        elif any(w in interet for w in ["vidéo", "video", "tournage", "reels", "tiktok", "smartphone", "micro", "trépied", "créateur"]):
+            matched_item = next((it for it in items if any(k in (it.get("nom", "")).lower() for k in ["vidéaste", "smartphone", "kit"])), None)
+        elif any(w in interet for w in ["site", "web", "vitrine", "internet", "page web"]):
+            matched_item = next((it for it in items if any(k in (it.get("nom", "")).lower() for k in ["site", "web", "vitrine"])), None)
+        elif any(w in interet for w in ["terrain", "parcelle", "foncier", "immobilier", "titre"]):
+            matched_item = next((it for it in items if any(k in (it.get("nom", "")).lower() for k in ["parcelle", "terrain", "foncier"])), None)
+
+        # 2. Recherche générale par mot-clé si pas de priorité
+        if not matched_item:
+            for item in items:
+                nom_lower = (item.get("nom") or "").lower()
+                cat_lower = (item.get("categorie") or "").lower()
+                keywords = [w for w in (nom_lower + " " + cat_lower).split() if len(w) > 4]
+                if any(kw in interet for kw in keywords):
+                    matched_item = item
+                    break
+
+        # 3. Fallback : offre générale d'accompagnement ou premier article avec url_externe
         if not matched_item:
             matched_item = next((it for it in items if it.get("url_externe")), items[0])
 
@@ -166,67 +181,69 @@ class OmnichannelMessenger:
 
         return matched_item, checkout_url
 
+    def _get_empathy_note(self, interet: str) -> str:
+        """Formule une analyse empathique et valorisante de la situation du prospect"""
+        interet_lower = (interet or "").lower()
+        if any(w in interet_lower for w in ["auto", "relance", "whatsapp", "prospect", "closing", "crm", "commercial", "suivi"]):
+            return "C'est en effet un enjeu majeur : beaucoup d'opportunités de vente se perdent simplement parce qu'on manque de temps pour relancer régulièrement chaque prospect au bon moment."
+        elif any(w in interet_lower for w in ["canva", "graphisme", "visuel", "design", "affiche"]):
+            return "Aujourd'hui, une image soignée et des visuels clairs font toute la différence pour capter l'attention et valoriser ses prestations."
+        elif any(w in interet_lower for w in ["site", "web", "vitrine"]):
+            return "Avoir une vitrine en ligne claire, rassurante et accessible permet de poser les bases d'une relation de confiance avec ses futurs clients."
+        elif any(w in interet_lower for w in ["vidéo", "video", "reels", "tiktok"]):
+            return "La vidéo sur smartphone est devenue le format le plus direct et efficace pour créer un lien fort avec son audience."
+        elif any(w in interet_lower for w in ["terrain", "parcelle", "foncier"]):
+            return "La sécurité juridique et la qualité de l'emplacement sont les deux garanties indispensables pour tout investissement foncier pérenne."
+        return "C'est un point déterminant pour structurer votre activité et consolider vos résultats dans la durée."
+
     def generate_channel_pitch(self, lead: Dict[str, Any], channel: str) -> str:
         """
-        Génère une réponse ou relance humaine d'expert signée Dave Sagbo
-        avec le lien exact configuré dans le Catalogue pour le produit ciblé.
+        Génère une accroche de Setting relationnel de haut niveau signée Dave Sagbo :
+        - Salutation polie, sobre et chaleureuse (zéro présomption ni 'en personne')
+        - Écoute active et reformulation empathique du besoin du prospect
+        - Une question ouverte de qualification (zéro hard-selling ni lien prématuré)
         """
         nom = lead.get("nom_complet") or lead.get("nom_lead") or "Cher Partenaire"
         prenom = nom.split()[0]
         poste = lead.get("poste") or "Professionnel"
         interet = lead.get("centre_interet") or lead.get("notes") or "le développement de vos activités"
 
-        product_item, checkout_url = self.get_catalog_link_for_lead(lead)
-        prod_name = product_item.get("nom", "notre Solution Clé en Main")
-        prix_val = int(product_item.get("prix_vente", 15000)) if product_item else 15000
-        devise = product_item.get("devise", "FCFA") if product_item else "FCFA"
-
+        empathy_phrase = self._get_empathy_note(interet)
         channel_upper = channel.upper()
 
         if channel_upper == "FACEBOOK_MESSENGER":
             return (
-                f"Hello {prenom} ! C'est Dave Sagbo en direct de la Page. Merci pour votre message !\n\n"
-                f"Pour votre activité de {poste}, notre offre *{prod_name}* est spécialement configurée pour accélérer vos résultats sans perdre de temps.\n\n"
-                f"Voici le lien direct pour consulter la présentation complète et finaliser votre commande :\n"
-                f"👉 {checkout_url}\n\n"
-                f"💡 Paiement 100% sécurisé via Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte Bancaire.\n"
-                f"Souhaitez-vous que nous fassions un point rapide ensemble ou préférez-vous débuter directement ?"
+                f"Bonjour {prenom}, ravi d'échanger avec vous. C'est Dave Sagbo suite à votre message sur notre Page Facebook.\n\n"
+                f"J'ai bien pris connaissance de votre activité de {poste} et de votre besoin concernant : {interet}.\n"
+                f"{empathy_phrase}\n\n"
+                f"Pour vous apporter les retours les plus utiles, quel est votre objectif principal pour les prochaines semaines ?"
             )
 
         elif channel_upper == "LINKEDIN":
             return (
                 f"Bonjour {nom},\n\n"
-                f"Je suis Dave Sagbo, responsable du projet d'accélération commerciale. J'ai examiné votre profil de {poste} avec beaucoup d'attention.\n\n"
-                f"Dans votre secteur, capter et convertir des opportunités qualifiées demande une méthode éprouvée et des outils calibrés. C'est exactement l'objectif de notre offre *{prod_name}* ({prix_val:,} {devise}).\n\n"
-                f"Vous trouverez l'ensemble des spécifications et modalités d'accès ici :\n"
-                f"👉 {checkout_url}\n\n"
-                f"Seriez-vous disponible pour un échange rapide de 10 minutes ce jeudi afin d'évaluer l'impact direct sur votre activité ?"
+                f"Ravi d'échanger avec vous sur LinkedIn. C'est Dave Sagbo.\n\n"
+                f"J'ai examiné votre profil de {poste} avec attention. {empathy_phrase}\n\n"
+                f"Comment est organisée votre démarche actuellement : vous vous appuyez plutôt sur le bouche-à-oreille ou sur des démarches actives ?"
             )
 
         elif channel_upper == "EMAIL":
             return (
                 f"Bonjour {nom},\n\n"
-                f"Suite à votre prise de contact concernant votre projet de {poste}, je tenais à vous adresser personnellement les éléments clés de notre solution *{prod_name}*.\n\n"
-                f"Ce qui est inclus concrètement pour vous :\n"
-                f"1. Déploiement opérationnel clé en main adapté à vos objectifs\n"
-                f"2. Accompagnement rigoureux et suivi pas-à-pas garanti\n"
-                f"3. Garantie satisfaction contractuelle et validation simplifiée par Mobile Money\n\n"
-                f"Vous pouvez consulter la fiche technique complète et valider votre accès ici :\n"
-                f"👉 {checkout_url}\n\n"
-                f"Je reste personnellement à votre disposition pour toute question.\n\n"
+                f"Ravi d'entrer en contact avec vous. C'est Dave Sagbo, responsable du projet d'accélération commerciale.\n\n"
+                f"J'ai bien reçu votre demande concernant votre activité de {poste} et votre besoin : « {interet} ».\n"
+                f"{empathy_phrase}\n\n"
+                f"Avant de vous détailler notre accompagnement, je souhaitais simplement savoir : quel est le volume de contacts ou de demandes que vous traitez en ce moment chaque semaine ?\n\n"
                 f"Bien cordialement,\n\n"
-                f"Dave Sagbo\nResponsable du Projet & Directeur Commercial\ncontact@davesagbo.com"
+                f"Dave Sagbo\nDirecteur & Responsable Relation Client\ncontact@davesagbo.com"
             )
 
         else: # WHATSAPP
             return (
-                f"Bonjour {prenom} ! 👋 C'est Dave Sagbo en personne.\n\n"
-                f"J'ai bien pris note de votre besoin concernant *{interet}*.\n"
-                f"Notre offre *{prod_name}* ({prix_val:,} {devise}) est actuellement disponible avec activation immédiate.\n\n"
-                f"Voici votre lien d'accès direct pour valider votre commande en toute sécurité :\n"
-                f"👉 {checkout_url}\n\n"
-                f"💡 Règlement rapide & sécurisé par Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte.\n"
-                f"Avez-vous une question ou souhaitez-vous que nous validions cela ensemble ?"
+                f"Bonjour {prenom}, ravi d'échanger avec vous. C'est Dave Sagbo.\n\n"
+                f"J'ai bien noté votre message concernant : {interet}.\n"
+                f"{empathy_phrase}\n\n"
+                f"Pour que je puisse bien comprendre votre situation et vous orienter au mieux : comment gérez-vous vos échanges avec vos prospects aujourd'hui ? Est-ce que votre suivi est fait principalement manuellement ?"
             )
 
     def dispatch_lead_message(

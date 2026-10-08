@@ -217,11 +217,40 @@ def init_db():
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/kit-videaste' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Vidéaste%' OR nom LIKE '%Smartphone%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/site-vitrine' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Site%' OR nom LIKE '%Web%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/parcelle-foncier' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Parcelle%' OR nom LIKE '%Terrain%')")
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/automatisation-whatsapp' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Automatisation%' OR nom LIKE '%Relance%')")
 
-        # Purge rétroactive des mentions IA/assistant et des liens obsolètes dans l'historique des messages
+        # Insertion de l'offre dédiée Automatisation Commerciale & Closing WhatsApp si absente
+        cursor.execute("SELECT COUNT(*) FROM catalog_items WHERE nom LIKE '%Automatisation%' OR nom LIKE '%Relance%'")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+            INSERT INTO catalog_items (
+                domain_id, type, nom, sku, categorie, prix_vente, prix_fournisseur_cout,
+                devise, stock_quantite, seuil_alerte_stock, delai_livraison,
+                disponibilite_service, places_max_semaine, fiche_technique_json,
+                statut, url_externe, date_creation, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            """, (
+                "automatisation_commerciale", "service", "Système d'Automatisation & Closing WhatsApp", "SRV-AUTO-WHATSAPP-PRO",
+                "Automatisation & CRM", 75000, 15000, "FCFA", 0, 0, "Déploiement en 72h chrono",
+                "Disponible", 10,
+                json.dumps({
+                    "description_courte": "Configuration clé en main de votre tunnel de qualification, relances automatiques et encaissements Mobile Money sur WhatsApp.",
+                    "caracteristiques": ["Mise en place des flux de relance programmés", "Scripts de qualification et de closing éprouvés", "Intégration directe des paiements Mobile Money (MTN, Moov, Wave, Orange)", "Accompagnement opérationnel dédié"],
+                    "public_cible": "Entrepreneurs, commerçants, consultants, prestataires de services",
+                    "prerequis": "Compte WhatsApp actif ou WhatsApp Business",
+                    "arguments_cles": ["Élimine les relances manuelles chronophages", "Recouvre jusqu'à 70% des opportunités perdues"],
+                    "garanties": "Garantie 100% opérationnel sous 72h avec suivi personnalisé.",
+                    "lien_ressources": "https://formations.sagbodavid.com/automatisation-whatsapp"
+                }, ensure_ascii=False),
+                "Actif", "https://formations.sagbodavid.com/automatisation-whatsapp"
+            ))
+
+        # Purge rétroactive des mentions IA/assistant et des tournures théâtrales/présomptueuses
         cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Notre agent IA est conçu', 'Notre accompagnement est conçu') WHERE message LIKE '%Notre agent IA%'")
-        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Notre Agent Commercial IA répond', 'Notre protocole d''engagement répond') WHERE message LIKE '%Notre Agent Commercial IA%'")
-        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'C''est l''assistant de Dave Sagbo', 'C''est Dave Sagbo en personne') WHERE message LIKE '%assistant de Dave Sagbo%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Notre Agent Commercial IA répond', 'Notre accompagnement répond') WHERE message LIKE '%Notre Agent Commercial IA%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'C''est l''assistant de Dave Sagbo.', 'Bonjour, ravi d''échanger avec vous. C''est Dave Sagbo.') WHERE message LIKE '%assistant de Dave Sagbo%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'C''est Dave Sagbo en personne.', 'Bonjour, ravi d''échanger avec vous. C''est Dave Sagbo.') WHERE message LIKE '%en personne%'")
+        cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'Dave Sagbo en personne', 'Dave Sagbo') WHERE message LIKE '%en personne%'")
         cursor.execute("UPDATE crm_lead_messages SET message = REPLACE(message, 'https://commercial-ia-autonome.onrender.com/commande?lead_id=', 'https://formations.sagbodavid.com/pack-canva?ref=') WHERE message LIKE '%/commande?lead_id=%'")
     except Exception as e:
         logger.warning(f"Migration catalog_items : {e}")
