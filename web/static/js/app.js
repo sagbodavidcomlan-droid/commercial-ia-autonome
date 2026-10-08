@@ -3382,3 +3382,32 @@ async function loadHistoryFeed(isSilent = false) {
   }
 }
 
+async function confirmClearCRM() {
+  if (!confirm("⚠️ CONFIRMATION DE VIDAGE CRM :\n\nSouhaitez-vous réinitialiser le CRM et purger l'ensemble des prospects, conversations et fausses ventes de démonstration pour préparer le système à recevoir exclusivement de VRAIS leads ?\n\n(Le catalogue et vos règles de closing resteront intacts).")) {
+    return;
+  }
+  try {
+    const res = await fetch("/api/crm/clear", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (typeof showToast === "function") {
+        showToast("✓ CRM vidé avec succès. Mode production réelle activé !", "success");
+      } else {
+        alert("✓ CRM vidé avec succès. Mode production réelle activé !");
+      }
+      if (typeof loadLeads === "function") loadLeads("Tous");
+      if (typeof loadConversionAudit === "function") loadConversionAudit(true);
+      if (typeof loadCustomers === "function") loadCustomers();
+      if (typeof loadDirectorDashboard === "function") loadDirectorDashboard();
+    } else {
+      alert("Erreur lors du vidage CRM : " + (data.error || "Inconnue"));
+    }
+  } catch (e) {
+    alert("Erreur réseau : " + e.message);
+  }
+}
+

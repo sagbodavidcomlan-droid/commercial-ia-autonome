@@ -225,89 +225,95 @@ def init_db():
             for kw, tid, act, desc in sample_rules:
                 cursor.execute("INSERT INTO catalog_matching_rules (keywords, target_catalog_id, active, description) VALUES (?, ?, ?, ?)", (kw, tid, act, desc))
 
-        # Ingestion des leads de référence du cours s'ils n'existent pas
-        curriculum_leads = [
-            ("Gérard Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Facebook Messenger", "Relance WhatsApp & Automatisation", 85, "Tiède", "Restaurateur / Chef d'entreprise",
-             "A partagé dans une discussion professionnelle qu'il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.",
-             "Chef d'entreprise débordé par le volume de conversations entrantes sur WhatsApp.",
-             "Point de départ : constat du temps perdu en relances manuelles", "setter", "S", "MESSENGER", "MESSENGER"),
-            ("Awa Diallo", "+221770000202", "awa.design@orange.sn", "LinkedIn", "Graphisme & Canva", 78, "Tiède", "Graphiste indépendante",
-             "A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.",
-             "Graphiste talentueuse cherchant à professionnaliser son image de marque.",
-             "Point de départ : valorisation de ses créations et structuration de ses offres", "setter", "S", "LINKEDIN", "LINKEDIN"),
-            ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "WhatsApp Business", "Kit Vidéaste Smartphone", 70, "Tiède", "Créateur de contenu mobile",
-             "A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.",
-             "Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.",
-             "Point de départ : recommandation bienveillante sur la qualité de prise de vue", "setter", "S", "WHATSAPP", "WHATSAPP"),
-            ("Alain Degila", "+225070000303", "alain.degila@pme.ci", "Emailing Pro", "Audit Digital & Site Vitrine Express", 65, "Tiède", "Directeur de PME commerciale",
-             "Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.",
-             "Directeur de PME commerciale avec une visibilité web sous-optimale.",
-             "Point de départ : opportunité de crédibilité client grâce à un site vitrine", "setter", "S", "EMAIL", "EMAIL"),
-            ("Sékou Traoré", "+223700000404", "sekou.invest@groupe.ml", "LinkedIn", "Parcelle Viabilisée Titre Foncier", 90, "Chaud", "Investisseur immobilier",
-             "A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.",
-             "Investisseur sérieux et prudent recherchant la sécurité juridique absolue.",
-             "Point de départ : partage d'expertise sur la sécurisation foncière", "closer", "C", "LINKEDIN", "LINKEDIN")
-        ]
-        for nom, tel, mail, src, interet, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act in curriculum_leads:
-            cursor.execute("SELECT id FROM crm_leads WHERE nom_complet = ? OR nom_lead = ?", (nom, nom))
-            row_lead = cursor.fetchone()
-            if not row_lead:
-                cursor.execute("""
-                INSERT INTO crm_leads (
-                    nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
-                    centre_interet, score_qualification, score_dur, statut_lead, poste,
-                    declencheur_prospection, observation_source, contexte_approche,
-                    phase_actuelle, profil_disc, canal_source, canal_actuel, created_at, date_creation
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-                """, (nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
-            else:
-                cursor.execute("""
-                UPDATE crm_leads
-                SET declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
-                    source_canal = ?, canal_source = ?, canal_actuel = ?, poste = ?, centre_interet = ?
-                WHERE id = ?
-                """, (decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
+        # Vérification du mode production
+        cursor.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'crm_production_mode'")
+        prod_setting = cursor.fetchone()
+        is_production_mode = (prod_setting and prod_setting[0] == '1')
 
-        # Enrichissement contextuel des déclencheurs de prospection uniques
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET declencheur_prospection = 'A partagé dans une discussion professionnelle qu''il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.',
-            observation_source = 'Chef d''entreprise débordé par le volume de conversations entrantes sur WhatsApp.',
-            contexte_approche = 'Point de départ : constat du temps perdu en relances manuelles'
-        WHERE (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
-        """)
+        # Ingestion des leads de référence du cours UNIQUEMENT si le mode production n'est pas actif
+        if not is_production_mode:
+            curriculum_leads = [
+                ("Gérard Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Facebook Messenger", "Relance WhatsApp & Automatisation", 85, "Tiède", "Restaurateur / Chef d'entreprise",
+                 "A partagé dans une discussion professionnelle qu'il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.",
+                 "Chef d'entreprise débordé par le volume de conversations entrantes sur WhatsApp.",
+                 "Point de départ : constat du temps perdu en relances manuelles", "setter", "S", "MESSENGER", "MESSENGER"),
+                ("Awa Diallo", "+221770000202", "awa.design@orange.sn", "LinkedIn", "Graphisme & Canva", 78, "Tiède", "Graphiste indépendante",
+                 "A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.",
+                 "Graphiste talentueuse cherchant à professionnaliser son image de marque.",
+                 "Point de départ : valorisation de ses créations et structuration de ses offres", "setter", "S", "LINKEDIN", "LINKEDIN"),
+                ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "WhatsApp Business", "Kit Vidéaste Smartphone", 70, "Tiède", "Créateur de contenu mobile",
+                 "A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.",
+                 "Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.",
+                 "Point de départ : recommandation bienveillante sur la qualité de prise de vue", "setter", "S", "WHATSAPP", "WHATSAPP"),
+                ("Alain Degila", "+225070000303", "alain.degila@pme.ci", "Emailing Pro", "Audit Digital & Site Vitrine Express", 65, "Tiède", "Directeur de PME commerciale",
+                 "Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.",
+                 "Directeur de PME commerciale avec une visibilité web sous-optimale.",
+                 "Point de départ : opportunité de crédibilité client grâce à un site vitrine", "setter", "S", "EMAIL", "EMAIL"),
+                ("Sékou Traoré", "+223700000404", "sekou.invest@groupe.ml", "LinkedIn", "Parcelle Viabilisée Titre Foncier", 90, "Chaud", "Investisseur immobilier",
+                 "A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.",
+                 "Investisseur sérieux et prudent recherchant la sécurité juridique absolue.",
+                 "Point de départ : partage d'expertise sur la sécurisation foncière", "closer", "C", "LINKEDIN", "LINKEDIN")
+            ]
+            for nom, tel, mail, src, interet, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act in curriculum_leads:
+                cursor.execute("SELECT id FROM crm_leads WHERE nom_complet = ? OR nom_lead = ?", (nom, nom))
+                row_lead = cursor.fetchone()
+                if not row_lead:
+                    cursor.execute("""
+                    INSERT INTO crm_leads (
+                        nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
+                        centre_interet, score_qualification, score_dur, statut_lead, poste,
+                        declencheur_prospection, observation_source, contexte_approche,
+                        phase_actuelle, profil_disc, canal_source, canal_actuel, created_at, date_creation
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    """, (nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
+                else:
+                    cursor.execute("""
+                    UPDATE crm_leads
+                    SET declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
+                        source_canal = ?, canal_source = ?, canal_actuel = ?, poste = ?, centre_interet = ?
+                    WHERE id = ?
+                    """, (decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
 
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET declencheur_prospection = 'A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.',
-            observation_source = 'Graphiste talentueuse cherchant à professionnaliser son image de marque.',
-            contexte_approche = 'Point de départ : valorisation de ses créations et structuration de ses offres'
-        WHERE (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
-        """)
+            # Enrichissement contextuel des déclencheurs de prospection uniques
+            cursor.execute("""
+            UPDATE crm_leads 
+            SET declencheur_prospection = 'A partagé dans une discussion professionnelle qu''il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.',
+                observation_source = 'Chef d''entreprise débordé par le volume de conversations entrantes sur WhatsApp.',
+                contexte_approche = 'Point de départ : constat du temps perdu en relances manuelles'
+            WHERE (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
+            """)
 
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET declencheur_prospection = 'A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.',
-            observation_source = 'Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.',
-            contexte_approche = 'Point de départ : recommandation bienveillante sur la qualité de prise de vue'
-        WHERE (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
-        """)
+            cursor.execute("""
+            UPDATE crm_leads 
+            SET declencheur_prospection = 'A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.',
+                observation_source = 'Graphiste talentueuse cherchant à professionnaliser son image de marque.',
+                contexte_approche = 'Point de départ : valorisation de ses créations et structuration de ses offres'
+            WHERE (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
+            """)
 
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET declencheur_prospection = 'Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.',
-            observation_source = 'Directeur de PME commerciale avec une visibilité web sous-optimale.',
-            contexte_approche = 'Point de départ : opportunité de crédibilité client grâce à un site vitrine'
-        WHERE (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
-        """)
+            cursor.execute("""
+            UPDATE crm_leads 
+            SET declencheur_prospection = 'A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.',
+                observation_source = 'Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.',
+                contexte_approche = 'Point de départ : recommandation bienveillante sur la qualité de prise de vue'
+            WHERE (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
+            """)
 
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET declencheur_prospection = 'A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.',
-            observation_source = 'Investisseur sérieux et prudent recherchant la sécurité juridique absolue.',
-            contexte_approche = 'Point de départ : partage d''expertise sur la sécurisation foncière'
-        WHERE (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
-        """)
+            cursor.execute("""
+            UPDATE crm_leads 
+            SET declencheur_prospection = 'Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.',
+                observation_source = 'Directeur de PME commerciale avec une visibilité web sous-optimale.',
+                contexte_approche = 'Point de départ : opportunité de crédibilité client grâce à un site vitrine'
+            WHERE (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
+            """)
+
+            cursor.execute("""
+            UPDATE crm_leads 
+            SET declencheur_prospection = 'A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.',
+                observation_source = 'Investisseur sérieux et prudent recherchant la sécurité juridique absolue.',
+                contexte_approche = 'Point de départ : partage d''expertise sur la sécurisation foncière'
+            WHERE (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
+            """)
     except Exception as e:
         logger.warning(f"Migration crm_leads : {e}")
 
@@ -420,15 +426,16 @@ def init_db():
     if cursor.fetchone()[0] < 10:
         seed_calendar_schedule(conn)
 
-    # Ensemencement du journal d'activité si vide
-    cursor.execute("SELECT COUNT(*) FROM agent_activity_logs")
-    if cursor.fetchone()[0] == 0:
-        seed_activity_logs(conn)
+    # Ensemencement du journal d'activité si vide et hors mode production
+    if not is_production_mode:
+        cursor.execute("SELECT COUNT(*) FROM agent_activity_logs")
+        if cursor.fetchone()[0] == 0:
+            seed_activity_logs(conn)
 
-    # Ensemencement des conversations omnicanales si vide
-    cursor.execute("SELECT COUNT(*) FROM crm_lead_messages")
-    if cursor.fetchone()[0] == 0:
-        seed_omnichannel_conversations(conn)
+        # Ensemencement des conversations omnicanales si vide et hors mode production
+        cursor.execute("SELECT COUNT(*) FROM crm_lead_messages")
+        if cursor.fetchone()[0] == 0:
+            seed_omnichannel_conversations(conn)
 
     conn.close()
 
@@ -464,15 +471,22 @@ def seed_initial_data(conn):
     now_iso = datetime.utcnow().isoformat()
     today_str = date.today().isoformat()
 
+    cursor.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'crm_production_mode'")
+    prod_row = cursor.fetchone()
+    is_prod = (prod_row and prod_row[0] == '1')
+
     # 1. Objectif Directeur initial
+    init_rev = 0 if is_prod else 840000
+    init_leads = 0 if is_prod else 74
+    init_conv = 0 if is_prod else 14
     cursor.execute("""
     INSERT INTO director_goals (
         period_type, target_revenue, current_revenue, target_leads, current_leads,
         target_conversions, current_conversions, period_start, period_end, status, created_at
     ) VALUES (
-        'Mensuel (Octobre 2026)', 1500000, 840000, 120, 74, 25, 14, '2026-10-01', '2026-10-31', 'en_cours', ?
+        'Mensuel (Octobre 2026)', 1500000, ?, 120, ?, 25, ?, '2026-10-01', '2026-10-31', 'en_cours', ?
     )
-    """, (now_iso,))
+    """, (init_rev, init_leads, init_conv, now_iso))
 
     # 2. Agenda de la journée
     tasks = [
@@ -490,36 +504,38 @@ def seed_initial_data(conn):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (slot, title, desc, chan, status, out, today_str, ev_type, contact, link, now_iso))
 
-    # 3. Exemples de Leads CRM
-    sample_leads = [
-        ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "Facebook Ads Library", "Graphisme Canva", 88, "Chaud", 1, "Intéressé par le pack vacances. A demandé comment payer par MTN Mobile Money.", 0),
-        ("Awa Diallo", "+22177123456", "awa.diallo@orange.sn", "LinkedIn", "Marketing Digital", 76, "Chaud", 1, "Étudiante en master, souhaite se former au community management.", 0),
-        ("Yannick Kamga", "+23769123456", "yannick@kamga.cm", "TikTok Ads", "Freelance & Web", 65, "Tiède", 2, "A demandé un aperçu vidéo du programme.", 0),
-        ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Facebook Group", "Graphisme Canva", 94, "Converti", 1, "Paiement validé 15 000 FCFA par Wave.", 0),
-        ("Jean-Baptiste Dossou", "+22996001122", "jb.dossou@gmail.com", "WhatsApp Inbound", "Marketing", 30, "Rejeté", 0, "A envoyé STOP. Désinscrit conformément au RGPD.", 1)
-    ]
+    # En mode production, on ne génère AUCUN faux lead ni faux client
+    if not is_prod:
+        # 3. Exemples de Leads CRM
+        sample_leads = [
+            ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "Facebook Ads Library", "Graphisme Canva", 88, "Chaud", 1, "Intéressé par le pack vacances. A demandé comment payer par MTN Mobile Money.", 0),
+            ("Awa Diallo", "+22177123456", "awa.diallo@orange.sn", "LinkedIn", "Marketing Digital", 76, "Chaud", 1, "Étudiante en master, souhaite se former au community management.", 0),
+            ("Yannick Kamga", "+23769123456", "yannick@kamga.cm", "TikTok Ads", "Freelance & Web", 65, "Tiède", 2, "A demandé un aperçu vidéo du programme.", 0),
+            ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Facebook Group", "Graphisme Canva", 94, "Converti", 1, "Paiement validé 15 000 FCFA par Wave.", 0),
+            ("Jean-Baptiste Dossou", "+22996001122", "jb.dossou@gmail.com", "WhatsApp Inbound", "Marketing", 30, "Rejeté", 0, "A envoyé STOP. Désinscrit conformément au RGPD.", 1)
+        ]
 
-    for nom, phone, email, src, interet, score, statut, relances, notes, opt in sample_leads:
-        cursor.execute("""
-        INSERT INTO crm_leads (
-            nom_complet, whatsapp, email, source_contact, centre_interet, score_qualification,
-            statut_lead, nombre_relances, historique_interactions, opt_out, created_at, last_interaction
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (nom, phone, email, src, interet, score, statut, relances, notes, opt, now_iso, now_iso))
+        for nom, phone, email, src, interet, score, statut, relances, notes, opt in sample_leads:
+            cursor.execute("""
+            INSERT INTO crm_leads (
+                nom_complet, whatsapp, email, source_contact, centre_interet, score_qualification,
+                statut_lead, nombre_relances, historique_interactions, opt_out, created_at, last_interaction
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (nom, phone, email, src, interet, score, statut, relances, notes, opt, now_iso, now_iso))
 
-    # 4. Exemples de Clients
-    sample_customers = [
-        ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Pack Graphisme Pro & Canva", 15000, "Wave Mobile Money", today_str, 9, "Actif (Affilié)"),
-        ("Ibrahim Traoré", "+22670123456", "ibrahim@faso.bf", "Pack Digital Starter", 15000, "Orange Money", today_str, 10, "Top Partenaire"),
-        ("Sonia Lawson", "+22890123456", "sonia.lawson@togo.tg", "Masterclass Complète VIP", 45000, "Carte Bancaire", today_str, 8, "Sollicité")
-    ]
+        # 4. Exemples de Clients
+        sample_customers = [
+            ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Pack Graphisme Pro & Canva", 15000, "Wave Mobile Money", today_str, 9, "Actif (Affilié)"),
+            ("Ibrahim Traoré", "+22670123456", "ibrahim@faso.bf", "Pack Digital Starter", 15000, "Orange Money", today_str, 10, "Top Partenaire"),
+            ("Sonia Lawson", "+22890123456", "sonia.lawson@togo.tg", "Masterclass Complète VIP", 45000, "Carte Bancaire", today_str, 8, "Sollicité")
+        ]
 
-    for nom, phone, email, prod, montant, mode, dte, nps, amb in sample_customers:
-        cursor.execute("""
-        INSERT INTO crm_customers (
-            nom_complet, whatsapp, email, produit_achete, montant_paye, mode_paiement, date_achat, satisfaction_nps, statut_ambassadeur, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (nom, phone, email, prod, montant, mode, dte, nps, amb, now_iso))
+        for nom, phone, email, prod, montant, mode, dte, nps, amb in sample_customers:
+            cursor.execute("""
+            INSERT INTO crm_customers (
+                nom_complet, whatsapp, email, produit_achete, montant_paye, mode_paiement, date_achat, satisfaction_nps, statut_ambassadeur, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (nom, phone, email, prod, montant, mode, dte, nps, amb, now_iso))
 
     # 5. Registre RGPD
     cursor.execute("""
@@ -1017,20 +1033,28 @@ def get_catalog_matching_rules() -> List[Dict[str, Any]]:
     conn.close()
     return rules
 
-def build_closer_context(lead_id: int) -> Dict[str, Any]:
+def build_closer_context(lead_id: Optional[int] = None, lead_data: Optional[Dict[str, Any]] = None, context_text: str = "") -> Dict[str, Any]:
     """
     Interroge SQLite et injecte le catalogue courant + règles de matching
     pour la phase Closer (Section 3 du cours d'apprentissage).
+    Supporte à la fois un lead_id en base ou un dictionnaire lead_data direct.
     """
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
-    lead_row = cursor.fetchone()
-    lead_dict = {}
-    if lead_row:
-        col_names = [d[0] for d in cursor.description]
-        lead_dict = dict(zip(col_names, lead_row))
-    conn.close()
+    lead_dict = dict(lead_data) if lead_data else {}
+    if lead_id:
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+            lead_row = cursor.fetchone()
+            if lead_row:
+                col_names = [d[0] for d in cursor.description]
+                db_lead = dict(zip(col_names, lead_row))
+                # Fusionner : les données explicites priment sur celles en base
+                db_lead.update(lead_dict)
+                lead_dict = db_lead
+            conn.close()
+        except Exception:
+            pass
 
     catalog_items = get_active_catalog_items()
     rules = get_catalog_matching_rules()
@@ -1049,7 +1073,10 @@ def build_closer_context(lead_id: int) -> Dict[str, Any]:
         str(lead_dict.get("centre_interet") or ""),
         str(lead_dict.get("notes") or ""),
         str(lead_dict.get("poste") or ""),
-        str(lead_dict.get("objections") or "")
+        str(lead_dict.get("objections") or ""),
+        str(lead_dict.get("nom_complet") or ""),
+        str(lead_dict.get("nom_lead") or ""),
+        str(context_text or "")
     ]).lower()
 
     recommended_offer = None
@@ -1132,6 +1159,52 @@ def generate_weekly_kpi_report() -> Dict[str, Any]:
         kpi_report["recommandations"].append(f"{ghost_leads_to_follow} leads fantômes à relancer avec apport de valeur gratuit (J+2) ou porte de sortie (J+5).")
 
     return kpi_report
+
+def clear_crm_data() -> Dict[str, Any]:
+    """
+    Purge intégrale des données CRM (leads, messages omnicanaux, clients convertis factices, journaux d'activité)
+    pour préparer le système à recevoir exclusivement de vrais leads en production.
+    Conserve le catalogue (catalog_items) et les règles de matching (catalog_matching_rules).
+    Active le flag 'crm_production_mode' = '1' dans system_settings pour empêcher tout ré-ensemencement automatique.
+    Remet à zéro les compteurs d'objectifs de director_goals.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM crm_lead_messages")
+        del_msgs = cursor.rowcount
+        cursor.execute("DELETE FROM crm_leads")
+        del_leads = cursor.rowcount
+        cursor.execute("DELETE FROM crm_customers")
+        del_custs = cursor.rowcount
+        cursor.execute("DELETE FROM agent_activity_logs")
+        del_logs = cursor.rowcount
+
+        # Activation du mode production dans system_settings
+        cursor.execute("""
+        INSERT INTO system_settings (setting_key, setting_value, updated_at)
+        VALUES ('crm_production_mode', '1', datetime('now'))
+        ON CONFLICT(setting_key) DO UPDATE SET setting_value = '1', updated_at = datetime('now')
+        """)
+
+        # Remise à zéro des compteurs de progression dans director_goals
+        cursor.execute("""
+        UPDATE director_goals
+        SET current_revenue = 0, current_leads = 0, current_conversions = 0
+        """)
+
+        conn.commit()
+        logger.info(f"Purge CRM exécutée : {del_leads} leads, {del_custs} clients, {del_msgs} messages, {del_logs} logs supprimés.")
+        return {
+            "success": True,
+            "deleted_leads": del_leads,
+            "deleted_customers": del_custs,
+            "deleted_messages": del_msgs,
+            "deleted_activity_logs": del_logs,
+            "production_mode": True
+        }
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     init_db()

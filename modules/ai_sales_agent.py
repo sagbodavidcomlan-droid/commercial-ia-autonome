@@ -383,10 +383,9 @@ class AISalesAgent:
         Format LinkedIn : 1 note structurée professionnelle (appel 15 min).
         Format Email : AIDA complet + social proof 350+ clients.
         """
-        lead_id = lead_data.get("id") or 1
         try:
             from core.database_store import build_closer_context
-            ctx = build_closer_context(lead_id)
+            ctx = build_closer_context(lead_id=lead_data.get("id"), lead_data=lead_data)
         except Exception as e:
             logger.warning(f"Erreur build_closer_context : {e}")
             ctx = {
@@ -784,7 +783,7 @@ class AISalesAgent:
         # 2. Contexte Catalogue SQLite Dynamique
         try:
             from core.database_store import build_closer_context
-            closer_ctx = build_closer_context(lead_id)
+            closer_ctx = build_closer_context(lead_id=target_data.get("id"), lead_data=target_data, context_text=msg)
         except Exception:
             closer_ctx = {
                 "lead": target_data,

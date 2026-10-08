@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
-Autopilot 24/7 Autonomous Sales Daemon
+Autopilot 24/7 Autonomous Sales Daemon - Mode Production Réelle
 Tourne en tâche de fond 24h/24 pour :
-- Surveiller en continu les flux sociaux (Facebook Ads, LinkedIn, TikTok, Instagram)
-- Qualifier et scorer les nouveaux prospects (DUR Score & Profil DISC)
-- Initier les prises de contact WhatsApp et Emails personnalisées
-- Convertir des opportunités en ventes effectives et incrémenter le Chiffre d'Affaires
-- Synchroniser en temps réel les données vers HubSpot et l'Agenda Commercial
+- Surveiller en continu les vrais prospects du CRM
+- Appliquer rigoureusement la cadence de relance du « Juste Milieu » :
+    * Heures ouvrées strictes (08h30 - 18h30)
+    * J+2 (48h) : Relance 1 avec apport de valeur gratuit (secteur), zéro offre, zéro lien
+    * J+5 (120h) : Relance 2 avec porte de sortie respectueuse et bienveillante
+    * J+6+ : Marqué 'Froid' et arrêt définitif de toute relance
+- En mode production : AUCUN faux prospect ni fausse vente aléatoire n'est injecté
+- Synchroniser les vraies interactions vers HubSpot et le journal d'activité
 """
 
 import time
@@ -16,9 +19,10 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List
 
-from core.database_store import get_connection
+from core.database_store import get_connection, log_activity
 from core.autopilot_orchestrator import AutopilotOrchestrator
 from core.hubspot_sync import hubspot_manager
+from modules.ai_sales_agent import AISalesAgent
 
 logger = logging.getLogger("AutopilotDaemon")
 
@@ -40,7 +44,9 @@ class Autopilot24hDaemon:
         self.leads_captured_session = 0
         self.sales_converted_session = 0
         self.revenue_generated_session = 0
+        self.simulation_mode = False  # Par défaut en PRODUCTION RÉELLE
         self.orchestrator = AutopilotOrchestrator()
+        self.sales_agent = AISalesAgent()
         self.logs: List[str] = []
 
     def log_event(self, msg: str):
@@ -56,7 +62,7 @@ class Autopilot24hDaemon:
         self.is_running = True
         self.thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.thread.start()
-        self.log_event("🚀 Démon Autopilot 24/7 activé en arrière-plan.")
+        self.log_event("🚀 Démon Autopilot 24/7 activé en arrière-plan (Mode Production Réelle).")
 
     def stop(self):
         self.is_running = False
@@ -71,8 +77,23 @@ class Autopilot24hDaemon:
             return True
 
     def get_status(self) -> Dict[str, Any]:
+        is_prod = True
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'crm_production_mode'")
+            row = c.fetchone()
+            if row and row[0] == '1':
+                is_prod = True
+            elif self.simulation_mode:
+                is_prod = False
+            conn.close()
+        except Exception:
+            pass
+
         return {
             "is_running": self.is_running,
+            "mode": "PRODUCTION_REELLE" if is_prod else "SIMULATION",
             "cycles_completed": self.cycles_completed,
             "leads_captured": self.leads_captured_session,
             "sales_converted": self.sales_converted_session,
@@ -99,29 +120,163 @@ class Autopilot24hDaemon:
                     break
                 time.sleep(1)
 
+    def _is_production_mode(self) -> bool:
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'crm_production_mode'")
+            row = c.fetchone()
+            conn.close()
+            if row and row[0] == '1':
+                return True
+        except Exception:
+            pass
+        return not self.simulation_mode
+
     def _run_single_cycle(self):
         self.last_run_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.cycles_completed += 1
 
-        # 1. Vérifier si un sprint de prospection est requis
-        sprint_res = self.orchestrator.run_autopilot_sprint(batch_size=random.choice([1, 2]))
-        new_leads = sprint_res.get("leads", [])
-        self.leads_captured_session += len(new_leads)
+        if self._is_production_mode():
+            # ==================================================================
+            # MODE PRODUCTION RÉELLE : Patrouille rigoureuse des relances réelles
+            # ==================================================================
+            self._scan_and_process_real_followups()
+        else:
+            # Mode Simulation pédagogique (uniquement si activé explicitement)
+            sprint_res = self.orchestrator.run_autopilot_sprint(batch_size=random.choice([1, 2]))
+            new_leads = sprint_res.get("leads", [])
+            self.leads_captured_session += len(new_leads)
 
-        # 2. Push HubSpot en tâche de fond pour chaque nouveau lead
-        for lead in new_leads:
-            hubspot_manager.sync_lead(lead)
+            for lead in new_leads:
+                hubspot_manager.sync_lead(lead)
 
-        # 3. Moteur de Closing Autonome : opportunité de vente
-        # Avec une probabilité contrôlée, simuler ou enregistrer une conversion issue du pipeline
-        if random.random() < 0.40:
-            self._trigger_autonomous_sale()
+            if random.random() < 0.40:
+                self._trigger_autonomous_sale()
 
-        self.log_event(f"✅ Cycle #{self.cycles_completed} exécuté (+{len(new_leads)} leads). Surveillance active.")
+            self.log_event(f"⚙️ [Simulation] Cycle #{self.cycles_completed} exécuté (+{len(new_leads)} leads).")
+
+    def _scan_and_process_real_followups(self):
+        """
+        Patrouille de relance sur les vrais prospects CRM :
+        - Respect des heures ouvrées (08h30 - 18h30)
+        - J+2 (48h) : Relance 1 avec apport de valeur gratuit
+        - J+5 (120h) : Relance 2 avec porte de sortie bienveillante
+        - J+6+ (144h+) : Marqué 'Froid' et arrêt définitif
+        """
+        now = datetime.now()
+        # Respect des heures d'échanges ouvrées (08h30 - 18h30)
+        current_time_dec = now.hour + now.minute / 60.0
+        if not (8.5 <= current_time_dec <= 18.5):
+            if self.cycles_completed % 10 == 1:
+                self.log_event(f"🌙 Heures non ouvrées ({now.strftime('%H:%M')}) : relances automatiques en veille jusqu'à 08h30.")
+            return
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, nom_complet, nom_lead, telephone, whatsapp, email, source_canal,
+                   canal_source, canal_actuel, centre_interet, poste, statut_lead,
+                   phase_actuelle, nombre_relances, jours_silence, last_interaction, created_at,
+                   observation_source, contexte_approche
+            FROM crm_leads
+            WHERE opt_out = 0 AND statut_lead NOT IN ('Converti', 'Client Conclu', 'Rejeté', 'Froid')
+        """)
+        active_leads = [dict(row) for row in c.fetchall()]
+        conn.close()
+
+        if not active_leads:
+            if self.cycles_completed % 10 == 1:
+                self.log_event(f"🛡️ Patrouille #{self.cycles_completed} : 0 prospect en attente d'échéance. Base prête.")
+            return
+
+        relances_effectuees = 0
+        for lead in active_leads:
+            lead_id = lead["id"]
+            nom = lead.get("nom_complet") or lead.get("nom_lead") or "Prospect"
+            tel = lead.get("telephone") or lead.get("whatsapp") or ""
+            canal = lead.get("canal_actuel") or lead.get("canal_source") or "WHATSAPP"
+            nb_relances = lead.get("nombre_relances") or 0
+
+            # Calcul du temps écoulé
+            ref_date_str = lead.get("last_interaction") or lead.get("created_at") or now.isoformat()
+            try:
+                clean_date_str = ref_date_str.split(".")[0].replace("T", " ")
+                ref_dt = datetime.strptime(clean_date_str, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                ref_dt = now
+
+            delta_hours = (now - ref_dt).total_seconds() / 3600.0
+
+            # 1. Échéance J+2 (48h) et 0 relance envoyée
+            if delta_hours >= 48 and nb_relances == 0:
+                followup = self.sales_agent.generate_followup_message(lead, days_silent=2)
+                msg_text = followup.get("message")
+                if msg_text:
+                    conn = get_connection()
+                    c = conn.cursor()
+                    c.execute("""
+                        INSERT INTO crm_lead_messages (lead_id, channel, sender, message, status, timestamp)
+                        VALUES (?, ?, 'Dave Sagbo', ?, 'DELIVERED', datetime('now'))
+                    """, (lead_id, canal, msg_text))
+                    c.execute("""
+                        UPDATE crm_leads
+                        SET nombre_relances = 1, jours_silence = 2, last_interaction = datetime('now'),
+                            statut_lead = 'Tiède'
+                        WHERE id = ?
+                    """, (lead_id,))
+                    conn.commit()
+                    conn.close()
+
+                    log_activity("CRM", f"Relance J+2 (valeur gratuite) pour {nom}", nom, tel, "SUCCESS", "Conseil sectoriel sans offre ni lien")
+                    self.log_event(f"✉️ Relance J+2 transmise à {nom} ({canal}) : apport de valeur gratuit.")
+                    relances_effectuees += 1
+
+            # 2. Échéance J+5 (120h) et 1 relance envoyée
+            elif delta_hours >= 120 and nb_relances == 1:
+                followup = self.sales_agent.generate_followup_message(lead, days_silent=5)
+                msg_text = followup.get("message")
+                if msg_text:
+                    conn = get_connection()
+                    c = conn.cursor()
+                    c.execute("""
+                        INSERT INTO crm_lead_messages (lead_id, channel, sender, message, status, timestamp)
+                        VALUES (?, ?, 'Dave Sagbo', ?, 'DELIVERED', datetime('now'))
+                    """, (lead_id, canal, msg_text))
+                    c.execute("""
+                        UPDATE crm_leads
+                        SET nombre_relances = 2, jours_silence = 5, last_interaction = datetime('now'),
+                            statut_lead = 'Tiède'
+                        WHERE id = ?
+                    """, (lead_id,))
+                    conn.commit()
+                    conn.close()
+
+                    log_activity("CRM", f"Relance J+5 (porte de sortie) pour {nom}", nom, tel, "SUCCESS", "Message respectueux offrant porte de sortie")
+                    self.log_event(f"🚪 Relance J+5 transmise à {nom} ({canal}) : porte de sortie respectueuse.")
+                    relances_effectuees += 1
+
+            # 3. Échéance J+6+ (144h+) et 2 relances envoyées -> marquer Froid
+            elif delta_hours >= 144 and nb_relances >= 2:
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET statut_lead = 'Froid', phase_actuelle = 'froid', jours_silence = 6,
+                        last_interaction = datetime('now')
+                    WHERE id = ?
+                """, (lead_id,))
+                conn.commit()
+                conn.close()
+
+                log_activity("CRM", f"Classement Froid de {nom} (silence J+6+)", nom, tel, "INFO", "Arrêt définitif des relances.")
+                self.log_event(f"❄️ Lead {nom} classé Froid (arrêt des relances).")
+
+        self.log_event(f"✅ Patrouille #{self.cycles_completed} : {len(active_leads)} prospects surveillés, {relances_effectuees} relance(s) appliquée(s).")
 
     def _trigger_autonomous_sale(self):
         """
-        Simule la finalisation d'un achat direct via page de vente ou closing WhatsApp
+        Simule la finalisation d'un achat direct via page de vente (réservé aux tests de démo)
         """
         conn = get_connection()
         c = conn.cursor()
@@ -140,7 +295,6 @@ class Autopilot24hDaemon:
         ]
         buyer = random.choice(buyer_names)
 
-        # Créer le client
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         c.execute("""
             INSERT INTO crm_customers (
@@ -149,11 +303,9 @@ class Autopilot24hDaemon:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, 9, 'Non', ?)
         """, (buyer[0], buyer[1], buyer[2], item_nom, prix, buyer[3], now_str, now_str))
 
-        # Décrémenter le stock si produit physique
         if item_type == 'produit' and stock > 0:
             c.execute("UPDATE catalog_items SET stock_quantite = stock_quantite - 1 WHERE id = ?", (item_id,))
 
-        # Mettre à jour le CA du Directeur
         c.execute("SELECT id, current_revenue FROM director_goals ORDER BY id DESC LIMIT 1")
         row = c.fetchone()
         if row:

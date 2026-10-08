@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 # Import des moteurs métier
 from core.database_store import (
     init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs,
-    generate_weekly_kpi_report, build_closer_context
+    generate_weekly_kpi_report, build_closer_context, clear_crm_data
 )
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
@@ -296,6 +296,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_onboarding_step(body)
         elif path == "/api/crm/ambassador-invite":
             self.handle_api_ambassador_invite(body)
+        elif path == "/api/crm/clear":
+            self.handle_api_crm_clear(body)
         else:
             self.send_json_response({"error": "Route POST introuvable", "path": path}, status=404)
 
@@ -1311,6 +1313,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             log_activity("AMBASSADEUR", f"Code ambassadeur {res['code_promo']} généré pour {cust.get('nom_complet')}", cust.get("nom_complet") or "", cust.get("whatsapp") or "", "SUCCESS", f"NPS {nps}")
         self.send_json_response({"success": True, "result": res})
 
+    def handle_api_crm_clear(self, body=None):
+        res = clear_crm_data()
+        log_activity("CRM", "Purge complète des données CRM et passage en mode production réelle", "Admin", "", "SUCCESS", "Base prête pour les vrais leads")
+        self.send_json_response(res)
 
 
 def run_server(port=7860):
