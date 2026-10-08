@@ -345,12 +345,24 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
 
     entries = payload.get("entry", [])
     for entry in entries:
-        messaging_events = entry.get("messaging", [])
+        messaging_events = list(entry.get("messaging", []))
+
+        # Prise en charge des tests du tableau de bord Meta (champ 'changes')
+        for change in entry.get("changes", []):
+            field = change.get("field")
+            val = change.get("value", {})
+            if field in ("messages", "messaging"):
+                if isinstance(val, dict):
+                    if "message" in val or "sender" in val:
+                        messaging_events.append(val)
+                    elif "messages" in val and isinstance(val["messages"], list):
+                        messaging_events.extend(val["messages"])
+
         for event in messaging_events:
             sender = event.get("sender", {})
             recipient = event.get("recipient", {})
-            sender_psid = sender.get("id")
-            
+            sender_psid = str(sender.get("id") or "1000999")
+
             # Événement de message texte reçu de l'utilisateur
             message_obj = event.get("message")
             if not message_obj or not sender_psid:
@@ -395,7 +407,7 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 last_name = profile.get("last_name", "")
                 full_name = f"{first_name} {last_name}".strip()
                 if not full_name:
-                    full_name = f"Prospect Facebook {sender_psid[-4:]}"
+                    full_name = sender.get("name") or f"Prospect Facebook {sender_psid[-4:]}"
 
                 lead_name = full_name
                 cursor.execute("""
