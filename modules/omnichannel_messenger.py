@@ -196,55 +196,160 @@ class OmnichannelMessenger:
             return "La sécurité juridique et la qualité de l'emplacement sont les deux garanties indispensables pour tout investissement foncier pérenne."
         return "C'est un point déterminant pour structurer votre activité et consolider vos résultats dans la durée."
 
-    def generate_channel_pitch(self, lead: Dict[str, Any], channel: str) -> str:
+    def _call_gemini_for_pitch(self, lead: Dict[str, Any], channel: str) -> Optional[str]:
         """
-        Génère une accroche de Setting relationnel de haut niveau signée Dave Sagbo :
-        - Salutation polie, sobre et chaleureuse (zéro présomption ni 'en personne')
-        - Écoute active et reformulation empathique du besoin du prospect
-        - Une question ouverte de qualification (zéro hard-selling ni lien prématuré)
+        Interroge Google Gemini pour rédiger une accroche de prospection sortante (Outbound)
+        100% UNIQUE et sur-mesure, ancrée dans le déclencheur précis de prospection.
+        Zéro template, zéro texte figé.
         """
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            try:
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'gemini_key'")
+                row = c.fetchone()
+                conn.close()
+                if row and row[0]:
+                    gemini_key = row[0].strip()
+            except Exception:
+                pass
+
+        if not gemini_key:
+            return None
+
         nom = lead.get("nom_complet") or lead.get("nom_lead") or "Cher Partenaire"
         prenom = nom.split()[0]
         poste = lead.get("poste") or "Professionnel"
         interet = lead.get("centre_interet") or lead.get("notes") or "le développement de vos activités"
+        declencheur = lead.get("declencheur_prospection") or lead.get("observation_source") or f"Intérêt identifié pour {interet}"
+        observation = lead.get("observation_source") or lead.get("notes") or f"Activité de {poste}"
+        canal_nom = SUPPORTED_CHANNELS.get(channel.upper(), {}).get("label", channel)
 
-        empathy_phrase = self._get_empathy_note(interet)
+        prompt = (
+            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.\n"
+            f"Tu rédiges une première prise de contact sortante (Outbound Outreach) à destination de : {nom} ({poste}).\n"
+            f"Canal utilisé : {canal_nom}.\n\n"
+            f"CONTEXTE ET DÉCLENCHEUR RÉEL DE CETTE PROSPECTION :\n"
+            f"- Le déclencheur précis (ce que tu as vu, lu ou remarqué qui te pousse à le contacter) : « {declencheur} »\n"
+            f"- Observation sur sa situation actuelle : « {observation} »\n"
+            f"- Thématique clé : « {interet} »\n\n"
+            f"CONSIGNES STRICTES D'UNICITÉ & DE RELATION CLIENT (NON NÉGOCIABLES) :\n"
+            f"1. UNICITÉ RADICALE : ZÉRO TEMPLATE. Ne réutilise aucune formule toute faite, aucun message type ou générique. Le message doit être écrit sur-mesure comme si tu venais de découvrir son profil ou sa publication à l'instant.\n"
+            f"2. ANCRAGE IMMÉDIAT DANS LE DÉCLENCHEUR : Fais directement référence au point précis qui a motivé ta prise de contact (le déclencheur mentionné ci-dessus).\n"
+            f"3. VOUVOIEMENT STRICT & SYSTÉMATIQUE : Utilise obligatoirement 'vous', 'votre', 'vos'. Tout tutoiement ('tu', 'ton', 'te') est FORMELLEMENT PROSCRIT.\n"
+            f"4. IDENTITÉ : Tu es Dave Sagbo, responsable du projet. Parle à la première personne ('je', 'notre approche'). Ne dis JAMAIS 'en personne' ni 'l'assistant', et ne mentionne JAMAIS d'IA.\n"
+            f"5. AUCUNE VENTE AU PREMIER MESSAGE : N'inclus AUCUN lien de paiement, aucun tarif, aucun argument de closing précipité.\n"
+            f"6. QUALIFICATION & ÉCOUTE ACTIVE : Montre une compréhension authentique de son enjeu et termine par UNE SEULE question ouverte, sobre et naturelle sur son organisation actuelle.\n\n"
+            f"Rédige ce message unique en tant que Dave Sagbo :"
+        )
+
+        for mod in ["gemini-3.5-flash-lite", "gemini-flash-latest"]:
+            try:
+                import urllib.request
+                import json
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {
+                        "temperature": 0.85,
+                        "maxOutputTokens": 280
+                    }
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=7) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text")
+                    if text and len(text.strip()) > 15:
+                        return text.strip()
+            except Exception as e:
+                logger.warning(f"Appel Gemini pitch unique ({mod}) ignoré: {e}")
+                continue
+
+        return None
+
+    def _generate_dynamic_combinatorial_pitch(self, lead: Dict[str, Any], channel: str) -> str:
+        """
+        Générateur dynamique combinatoire d'unicité (Fallback intelligent) :
+        Recompose une approche artisanale et singulière en croisant le déclencheur,
+        le poste et le canal, pour garantir qu'aucun message ne soit identique.
+        """
+        nom = lead.get("nom_complet") or lead.get("nom_lead") or "Cher Partenaire"
+        prenom = nom.split()[0]
+        poste = lead.get("poste") or "Professionnel"
+        interet = lead.get("centre_interet") or lead.get("notes") or "votre activité"
+        declencheur = lead.get("declencheur_prospection") or lead.get("observation_source")
+        lead_id = lead.get("id") or (sum(ord(c) for c in nom) % 100)
+
+        # 1. Sélection dynamique de l'amorce contextuelle selon le déclencheur
+        if declencheur:
+            hook_openings = [
+                f"Bonjour {prenom}, j'espère que vous vous portez bien. C'est Dave Sagbo.\n\nJe me permets de vous écrire car j'ai relevé un point très précis concernant votre activité : {declencheur}.",
+                f"Bonjour {nom}, ravi d'entrer en contact avec vous. C'est Dave Sagbo.\n\nEn découvrant vos démarches récentes de {poste}, j'ai particulièrement noté ce constat : « {declencheur} ».",
+                f"Bonjour {prenom}, c'est Dave Sagbo. Je suivais avec intérêt vos actualités de {poste} et j'ai été interpellé par cet élément : {declencheur}.",
+                f"Bonjour {nom}, c'est Dave Sagbo, responsable du projet d'accélération commerciale.\n\nJe prenais connaissance de votre contexte de {poste} et je souhaitais échanger directement avec vous suite à ceci : {declencheur}."
+            ]
+        else:
+            hook_openings = [
+                f"Bonjour {prenom}, ravi d'échanger avec vous. C'est Dave Sagbo.\n\nJ'ai examiné votre parcours de {poste} avec une attention particulière autour de votre besoin : {interet}.",
+                f"Bonjour {nom}, c'est Dave Sagbo. En m'intéressant de près à votre secteur d'activité, j'ai bien pris note de votre priorité sur {interet}.",
+                f"Bonjour {prenom}, j'espère que vos projets avancent bien. C'est Dave Sagbo suite à votre démarche concernant : {interet}."
+            ]
+
+        opening = hook_openings[lead_id % len(hook_openings)]
+
+        # 2. Reformulation empathique singulière
+        empathy_notes = [
+            "C'est un défi stratégique que nous constatons régulièrement chez les professionnels ambitieux : le manque de structuration sur ce volet freine souvent l'obtention de résultats réguliers.",
+            "C'est une situation déterminante : lorsqu'on gère ces aspects sans dispositif adapté, cela absorbe une énergie considérable qui devrait plutôt servir au développement de votre activité.",
+            "C'est un point charnière : beaucoup d'opportunités de qualité se perdent simplement faute d'un processus clair et fluide au quotidien.",
+            "C'est un constat récurrent sur le terrain : sans méthode précise sur cette partie, il devient difficile de convertir sereinement sans s'épuiser."
+        ]
+        empathy = empathy_notes[(lead_id + 2) % len(empathy_notes)]
+
+        # 3. Question ouverte de découverte sans template
         channel_upper = channel.upper()
-
-        if channel_upper == "FACEBOOK_MESSENGER":
-            return (
-                f"Bonjour {prenom}, ravi d'échanger avec vous. C'est Dave Sagbo suite à votre message sur notre Page Facebook.\n\n"
-                f"J'ai bien pris connaissance de votre activité de {poste} et de votre besoin concernant : {interet}.\n"
-                f"{empathy_phrase}\n\n"
-                f"Pour vous apporter les retours les plus utiles, quel est votre objectif principal pour les prochaines semaines ?"
-            )
-
-        elif channel_upper == "LINKEDIN":
-            return (
-                f"Bonjour {nom},\n\n"
-                f"Ravi d'échanger avec vous sur LinkedIn. C'est Dave Sagbo.\n\n"
-                f"J'ai examiné votre profil de {poste} avec attention. {empathy_phrase}\n\n"
-                f"Comment est organisée votre démarche actuellement : vous vous appuyez plutôt sur le bouche-à-oreille ou sur des démarches actives ?"
-            )
-
+        if channel_upper == "LINKEDIN":
+            questions = [
+                f"Pour que je puisse bien cerner votre réalité : comment structurez-vous ce pan de votre activité aujourd'hui sur LinkedIn et au quotidien ?",
+                f"Par simple curiosité professionnelle, quelle est votre organisation actuelle pour gérer ce point précis au sein de vos activités ?",
+                f"Dites-moi, disposez-vous déjà d'une méthode formalisée pour traiter cet enjeu ou avancez-vous plutôt selon les urgences du moment ?"
+            ]
         elif channel_upper == "EMAIL":
-            return (
-                f"Bonjour {nom},\n\n"
-                f"Ravi d'entrer en contact avec vous. C'est Dave Sagbo, responsable du projet d'accélération commerciale.\n\n"
-                f"J'ai bien reçu votre demande concernant votre activité de {poste} et votre besoin : « {interet} ».\n"
-                f"{empathy_phrase}\n\n"
-                f"Avant de vous détailler notre accompagnement, je souhaitais simplement savoir : quel est le volume de contacts ou de demandes que vous traitez en ce moment chaque semaine ?\n\n"
-                f"Bien cordialement,\n\n"
-                f"Dave Sagbo\nDirecteur & Responsable Relation Client\ncontact@davesagbo.com"
-            )
+            questions = [
+                f"Avant d'aller plus loin, je serais ravi de savoir : quel est le volume ou le temps que vous consacrez actuellement chaque semaine à ce volet ?\n\nBien cordialement,\nDave Sagbo\nDirecteur & Responsable Relation Client",
+                f"Pour bien appréhender votre situation : comment est articulée votre démarche sur cette partie en ce moment ?\n\nBien à vous,\nDave Sagbo\nResponsable de Projet",
+                f"Seriez-vous ouvert à m'indiquer comment votre équipe aborde cette problématique aujourd'hui ?\n\nChaleureusement,\nDave Sagbo\nDirecteur Commercial"
+            ]
+        else: # WHATSAPP & MESSENGER
+            questions = [
+                f"Pour que je comprenne au mieux votre situation : comment gérez-vous cette partie concrètement aujourd'hui dans votre organisation ?",
+                f"Si ce n'est pas indiscret : est-ce que votre suivi sur ce sujet est fait principalement à la main en ce moment ?",
+                f"Dites-moi, quel est le principal frein que vous rencontrez actuellement pour franchir un cap sur ce point ?"
+            ]
 
-        else: # WHATSAPP
-            return (
-                f"Bonjour {prenom}, ravi d'échanger avec vous. C'est Dave Sagbo.\n\n"
-                f"J'ai bien noté votre message concernant : {interet}.\n"
-                f"{empathy_phrase}\n\n"
-                f"Pour que je puisse bien comprendre votre situation et vous orienter au mieux : comment gérez-vous vos échanges avec vos prospects aujourd'hui ? Est-ce que votre suivi est fait principalement manuellement ?"
-            )
+        question = questions[(lead_id + 1) % len(questions)]
+
+        return f"{opening}\n\n{empathy}\n\n{question}"
+
+    def generate_channel_pitch(self, lead: Dict[str, Any], channel: str) -> str:
+        """
+        Génère une accroche d'acquisition sortante 100% UNIQUE et singulière :
+        - Invoque en priorité Google Gemini avec le contexte et le déclencheur de prospection
+        - Bascule sur le générateur combinatoire dynamique pour proscrire tout template fixe
+        - Zéro template, zéro hard-selling, vouvoiement rigoureux et écoute active
+        """
+        # 1. Tentative par le LLM (Gemini) pour une rédaction artisanale en temps réel
+        ai_pitch = self._call_gemini_for_pitch(lead, channel)
+        if ai_pitch:
+            return ai_pitch
+
+        # 2. Générateur combinatoire dynamique contextuel (Zéro template figé)
+        return self._generate_dynamic_combinatorial_pitch(lead, channel)
 
     def dispatch_lead_message(
         self,

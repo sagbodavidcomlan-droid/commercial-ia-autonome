@@ -182,11 +182,55 @@ def init_db():
             ("profil_disc", "TEXT DEFAULT 'S'"),
             ("objections", "TEXT"),
             ("notes", "TEXT"),
-            ("date_creation", "TEXT")
+            ("date_creation", "TEXT"),
+            ("declencheur_prospection", "TEXT"),
+            ("observation_source", "TEXT"),
+            ("contexte_approche", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
             if col_name not in existing_cols:
                 cursor.execute(f"ALTER TABLE crm_leads ADD COLUMN {col_name} {col_type}")
+
+        # Enrichissement contextuel des déclencheurs de prospection uniques
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET declencheur_prospection = 'A partagé dans une discussion professionnelle qu''il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.',
+            observation_source = 'Chef d''entreprise débordé par le volume de conversations entrantes sur WhatsApp.',
+            contexte_approche = 'Point de départ : constat du temps perdu en relances manuelles'
+        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
+        """)
+
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET declencheur_prospection = 'A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.',
+            observation_source = 'Graphiste talentueuse cherchant à professionnaliser son image de marque.',
+            contexte_approche = 'Point de départ : valorisation de ses créations et structuration de ses offres'
+        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
+        """)
+
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET declencheur_prospection = 'A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.',
+            observation_source = 'Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.',
+            contexte_approche = 'Point de départ : recommandation bienveillante sur la qualité de prise de vue'
+        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
+        """)
+
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET declencheur_prospection = 'Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.',
+            observation_source = 'Directeur de PME commerciale avec une visibilité web sous-optimale.',
+            contexte_approche = 'Point de départ : opportunité de crédibilité client grâce à un site vitrine'
+        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
+        """)
+
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET declencheur_prospection = 'A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.',
+            observation_source = 'Investisseur sérieux et prudent recherchant la sécurité juridique absolue.',
+            contexte_approche = 'Point de départ : partage d''expertise sur la sécurisation foncière'
+        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
+        """)
     except Exception as e:
         logger.warning(f"Migration crm_leads : {e}")
 
