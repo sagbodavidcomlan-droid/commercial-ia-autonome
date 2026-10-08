@@ -185,11 +185,88 @@ def init_db():
             ("date_creation", "TEXT"),
             ("declencheur_prospection", "TEXT"),
             ("observation_source", "TEXT"),
-            ("contexte_approche", "TEXT")
+            ("contexte_approche", "TEXT"),
+            ("phase_actuelle", "TEXT DEFAULT 'setter'"),
+            ("dur_status", "TEXT"),
+            ("spin_phase", "TEXT DEFAULT 'S'"),
+            ("brief_closer", "TEXT"),
+            ("jours_silence", "INTEGER DEFAULT 0"),
+            ("nps_score", "INTEGER"),
+            ("code_ambassadeur", "TEXT"),
+            ("canal_source", "TEXT"),
+            ("canal_actuel", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
             if col_name not in existing_cols:
                 cursor.execute(f"ALTER TABLE crm_leads ADD COLUMN {col_name} {col_type}")
+
+        # Table des règles de matching sémantique catalogue (modifiables dynamiquement sans redéploiement)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS catalog_matching_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keywords TEXT NOT NULL,
+            target_catalog_id INTEGER NOT NULL,
+            active INTEGER DEFAULT 1,
+            description TEXT
+        )
+        """)
+
+        # Insertion des règles de matching de référence si table vide
+        cursor.execute("SELECT COUNT(*) FROM catalog_matching_rules")
+        if cursor.fetchone()[0] == 0:
+            sample_rules = [
+                ("relance, whatsapp, automatisation, suivi commercial, crm, closing", 7, 1, "Priorité absolue Offre #7 : Système d'Automatisation & Closing WhatsApp"),
+                ("design, graphisme, canva, visuels, affiche, flyer, étudiant", 1, 1, "Priorité absolue Offre #1 : Pack Graphisme Pro & Canva"),
+                ("vidéo, video, smartphone, micro, trépied, tournage, reels, tiktok", 2, 1, "Priorité Offre #2 : Kit Vidéaste & Créateur Smartphone Pro"),
+                ("site, web, vitrine, page web, internet, audit digital", 3, 1, "Priorité Offre #3 : Audit Digital & Conception Site Vitrine Express"),
+                ("parcelle, terrain, foncier, titre, immobilier, 500m", 4, 1, "Priorité Offre #4 : Parcelle Viabilisée Titre Foncier 500m²"),
+                ("tunnel, audit commercial, acquisition, ventes, tunnel de vente", 5, 1, "Priorité Offre #5 : Audit Commercial & Tunnel de Vente Express")
+            ]
+            for kw, tid, act, desc in sample_rules:
+                cursor.execute("INSERT INTO catalog_matching_rules (keywords, target_catalog_id, active, description) VALUES (?, ?, ?, ?)", (kw, tid, act, desc))
+
+        # Ingestion des leads de référence du cours s'ils n'existent pas
+        curriculum_leads = [
+            ("Gérard Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Facebook Messenger", "Relance WhatsApp & Automatisation", 85, "Tiède", "Restaurateur / Chef d'entreprise",
+             "A partagé dans une discussion professionnelle qu'il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.",
+             "Chef d'entreprise débordé par le volume de conversations entrantes sur WhatsApp.",
+             "Point de départ : constat du temps perdu en relances manuelles", "setter", "S", "MESSENGER", "MESSENGER"),
+            ("Awa Diallo", "+221770000202", "awa.design@orange.sn", "LinkedIn", "Graphisme & Canva", 78, "Tiède", "Graphiste indépendante",
+             "A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.",
+             "Graphiste talentueuse cherchant à professionnaliser son image de marque.",
+             "Point de départ : valorisation de ses créations et structuration de ses offres", "setter", "S", "LINKEDIN", "LINKEDIN"),
+            ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "WhatsApp Business", "Kit Vidéaste Smartphone", 70, "Tiède", "Créateur de contenu mobile",
+             "A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.",
+             "Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.",
+             "Point de départ : recommandation bienveillante sur la qualité de prise de vue", "setter", "S", "WHATSAPP", "WHATSAPP"),
+            ("Alain Degila", "+225070000303", "alain.degila@pme.ci", "Emailing Pro", "Audit Digital & Site Vitrine Express", 65, "Tiède", "Directeur de PME commerciale",
+             "Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.",
+             "Directeur de PME commerciale avec une visibilité web sous-optimale.",
+             "Point de départ : opportunité de crédibilité client grâce à un site vitrine", "setter", "S", "EMAIL", "EMAIL"),
+            ("Sékou Traoré", "+223700000404", "sekou.invest@groupe.ml", "LinkedIn", "Parcelle Viabilisée Titre Foncier", 90, "Chaud", "Investisseur immobilier",
+             "A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.",
+             "Investisseur sérieux et prudent recherchant la sécurité juridique absolue.",
+             "Point de départ : partage d'expertise sur la sécurisation foncière", "closer", "C", "LINKEDIN", "LINKEDIN")
+        ]
+        for nom, tel, mail, src, interet, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act in curriculum_leads:
+            cursor.execute("SELECT id FROM crm_leads WHERE nom_complet = ? OR nom_lead = ?", (nom, nom))
+            row_lead = cursor.fetchone()
+            if not row_lead:
+                cursor.execute("""
+                INSERT INTO crm_leads (
+                    nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
+                    centre_interet, score_qualification, score_dur, statut_lead, poste,
+                    declencheur_prospection, observation_source, contexte_approche,
+                    phase_actuelle, profil_disc, canal_source, canal_actuel, created_at, date_creation
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                """, (nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
+            else:
+                cursor.execute("""
+                UPDATE crm_leads
+                SET declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
+                    source_canal = ?, canal_source = ?, canal_actuel = ?, poste = ?, centre_interet = ?
+                WHERE id = ?
+                """, (decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
 
         # Enrichissement contextuel des déclencheurs de prospection uniques
         cursor.execute("""
@@ -197,7 +274,7 @@ def init_db():
         SET declencheur_prospection = 'A partagé dans une discussion professionnelle qu''il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.',
             observation_source = 'Chef d''entreprise débordé par le volume de conversations entrantes sur WhatsApp.',
             contexte_approche = 'Point de départ : constat du temps perdu en relances manuelles'
-        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
+        WHERE (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
         """)
 
         cursor.execute("""
@@ -205,7 +282,7 @@ def init_db():
         SET declencheur_prospection = 'A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.',
             observation_source = 'Graphiste talentueuse cherchant à professionnaliser son image de marque.',
             contexte_approche = 'Point de départ : valorisation de ses créations et structuration de ses offres'
-        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
+        WHERE (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
         """)
 
         cursor.execute("""
@@ -213,7 +290,7 @@ def init_db():
         SET declencheur_prospection = 'A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.',
             observation_source = 'Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.',
             contexte_approche = 'Point de départ : recommandation bienveillante sur la qualité de prise de vue'
-        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
+        WHERE (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
         """)
 
         cursor.execute("""
@@ -221,7 +298,7 @@ def init_db():
         SET declencheur_prospection = 'Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.',
             observation_source = 'Directeur de PME commerciale avec une visibilité web sous-optimale.',
             contexte_approche = 'Point de départ : opportunité de crédibilité client grâce à un site vitrine'
-        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
+        WHERE (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
         """)
 
         cursor.execute("""
@@ -229,7 +306,7 @@ def init_db():
         SET declencheur_prospection = 'A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.',
             observation_source = 'Investisseur sérieux et prudent recherchant la sécurité juridique absolue.',
             contexte_approche = 'Point de départ : partage d''expertise sur la sécurisation foncière'
-        WHERE (declencheur_prospection IS NULL OR declencheur_prospection = '') AND (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
+        WHERE (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
         """)
     except Exception as e:
         logger.warning(f"Migration crm_leads : {e}")
@@ -869,6 +946,192 @@ def seed_omnichannel_conversations(conn):
             """, (lead_id, f"Objectif très réaliste et accessible avec la bonne méthode ! Voici votre lien d'accès direct sur notre catalogue officiel pour valider votre commande avec paiement sécurisé Mobile Money (MTN, Moov, Wave, Orange) : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone, "payment_prompt": True})))
 
     conn.commit()
+
+def get_active_catalog_items() -> List[Dict[str, Any]]:
+    """
+    Récupère la liste de tous les articles/services actifs du catalogue SQLite.
+    Garantit une lecture 100% dynamique (aucune offre codée en dur dans les prompts).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, domain_id, type, nom, sku, categorie, prix_vente, 
+               prix_fournisseur_cout, devise, stock_quantite, delai_livraison, 
+               disponibilite_service, fiche_technique_json, statut, url_externe
+        FROM catalog_items
+        WHERE statut = 'Actif' OR statut = 'Disponible'
+        ORDER BY id ASC
+    """)
+    rows = cursor.fetchall()
+    items = []
+    for r in rows:
+        fiche = {}
+        if r[12]:
+            try:
+                fiche = json.loads(r[12])
+            except Exception:
+                fiche = {}
+        items.append({
+            "id": r[0],
+            "domain_id": r[1],
+            "type": r[2],
+            "nom": r[3],
+            "sku": r[4],
+            "categorie": r[5],
+            "prix_vente": r[6],
+            "prix_fournisseur_cout": r[7],
+            "devise": r[8],
+            "stock_quantite": r[9],
+            "delai_livraison": r[10],
+            "disponibilite_service": r[11],
+            "fiche_technique": fiche,
+            "statut": r[13],
+            "url_externe": r[14]
+        })
+    conn.close()
+    return items
+
+def get_catalog_matching_rules() -> List[Dict[str, Any]]:
+    """
+    Récupère les règles sémantiques de matching du catalogue depuis SQLite.
+    Permet de modifier les priorités d'offres sans redéploiement applicatif.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, keywords, target_catalog_id, active, description
+        FROM catalog_matching_rules
+        WHERE active = 1
+        ORDER BY id ASC
+    """)
+    rows = cursor.fetchall()
+    rules = []
+    for r in rows:
+        rules.append({
+            "id": r[0],
+            "keywords": [k.strip().lower() for k in (r[1] or "").split(",") if k.strip()],
+            "target_catalog_id": r[2],
+            "active": bool(r[3]),
+            "description": r[4]
+        })
+    conn.close()
+    return rules
+
+def build_closer_context(lead_id: int) -> Dict[str, Any]:
+    """
+    Interroge SQLite et injecte le catalogue courant + règles de matching
+    pour la phase Closer (Section 3 du cours d'apprentissage).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+    lead_row = cursor.fetchone()
+    lead_dict = {}
+    if lead_row:
+        col_names = [d[0] for d in cursor.description]
+        lead_dict = dict(zip(col_names, lead_row))
+    conn.close()
+
+    catalog_items = get_active_catalog_items()
+    rules = get_catalog_matching_rules()
+
+    # Formatage de catalogue_actuel sous forme de texte de référence
+    catalogue_str = "\n".join(
+        f"#{it['id']} {it['nom']} ({it['categorie']}) → {int(it['prix_vente']):,} {it['devise']} → {it.get('url_externe') or 'Lien officiel'}"
+        for it in catalog_items
+    )
+
+    # Résolution sémantique de l'offre recommandée via catalog_matching_rules
+    lead_corpus = " ".join([
+        str(lead_dict.get("declencheur_prospection") or ""),
+        str(lead_dict.get("observation_source") or ""),
+        str(lead_dict.get("contexte_approche") or ""),
+        str(lead_dict.get("centre_interet") or ""),
+        str(lead_dict.get("notes") or ""),
+        str(lead_dict.get("poste") or ""),
+        str(lead_dict.get("objections") or "")
+    ]).lower()
+
+    recommended_offer = None
+    # 1. Vérification par règles prioritaires
+    for rule in rules:
+        if any(kw in lead_corpus for kw in rule["keywords"]):
+            target_id = rule["target_catalog_id"]
+            matched = next((item for item in catalog_items if item["id"] == target_id), None)
+            if matched:
+                recommended_offer = matched
+                break
+
+    # 2. Si non trouvé par règle, fallback par mot-clé direct
+    if not recommended_offer and catalog_items:
+        recommended_offer = catalog_items[0]
+
+    return {
+        "lead": lead_dict,
+        "catalogue_actuel": catalogue_str,
+        "catalogue_items": catalog_items,
+        "regles_matching": rules,
+        "recommended_offer": recommended_offer
+    }
+
+def generate_weekly_kpi_report() -> Dict[str, Any]:
+    """
+    Génère l'audit hebdomadaire des KPIs commerciaux (lundi matin),
+    tel que défini dans la Section 7 du cours d'apprentissage.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM crm_leads")
+    total_leads = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT statut_lead, COUNT(*) FROM crm_leads GROUP BY statut_lead")
+    leads_by_status = dict(cursor.fetchall())
+
+    cursor.execute("SELECT phase_actuelle, COUNT(*) FROM crm_leads GROUP BY phase_actuelle")
+    leads_by_phase = dict(cursor.fetchall())
+
+    cursor.execute("SELECT source_canal, COUNT(*) FROM crm_leads GROUP BY source_canal")
+    leads_by_channel = dict(cursor.fetchall())
+
+    cursor.execute("SELECT COUNT(*) FROM crm_leads WHERE score_dur >= 60 OR dur_status LIKE '%complet%'")
+    dur_qualified = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT COUNT(*) FROM crm_leads WHERE statut_lead IN ('Client Conclu', 'Converti')")
+    conversions = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT COUNT(*) FROM crm_leads WHERE jours_silence >= 2 AND statut_lead != 'Froid'")
+    ghost_leads_to_follow = cursor.fetchone()[0] or 0
+
+    cursor.execute("SELECT COUNT(*) FROM crm_customers WHERE satisfaction_nps >= 9")
+    nps_ambassadeurs = cursor.fetchone()[0] or 0
+
+    conn.close()
+
+    dur_rate = round((dur_qualified / max(total_leads, 1)) * 100, 1)
+    conversion_rate = round((conversions / max(dur_qualified, 1)) * 100, 1)
+
+    kpi_report = {
+        "date_rapport": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "total_leads": total_leads,
+        "leads_by_status": leads_by_status,
+        "leads_by_phase": leads_by_phase,
+        "leads_by_channel": leads_by_channel,
+        "dur_qualification_rate_pct": dur_rate,
+        "conversion_rate_pct": conversion_rate,
+        "ghost_leads_en_attente": ghost_leads_to_follow,
+        "ambassadeurs_potentiels": nps_ambassadeurs,
+        "alertes_critiques": [],
+        "recommandations": []
+    }
+
+    if dur_rate < 40:
+        kpi_report["alertes_critiques"].append("Qualification DUR < 40% : allonger le diagnostic et poser des questions de qualification plus ciblées.")
+    if conversion_rate < 10 and dur_qualified > 0:
+        kpi_report["alertes_critiques"].append("Taux de conversion < 10% : allonger le délai entre les messages de closing (réduire la pression perçue).")
+    if ghost_leads_to_follow > 0:
+        kpi_report["recommandations"].append(f"{ghost_leads_to_follow} leads fantômes à relancer avec apport de valeur gratuit (J+2) ou porte de sortie (J+5).")
+
+    return kpi_report
 
 if __name__ == "__main__":
     init_db()

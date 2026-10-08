@@ -17,7 +17,10 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 # Import des moteurs métier
-from core.database_store import init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs
+from core.database_store import (
+    init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs,
+    generate_weekly_kpi_report, build_closer_context
+)
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
 from core.compliance_gdpr import ComplianceEngine
@@ -190,6 +193,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_catalog_item(path)
         elif path == "/api/history":
             self.handle_api_get_history(query)
+        elif path == "/api/kpi-weekly-report":
+            self.handle_api_kpi_weekly_report()
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -285,6 +290,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_clear_history()
         elif path == "/api/catalog/url":
             self.handle_api_update_catalog_url(body)
+        elif path == "/api/crm/ghost-followup":
+            self.handle_api_ghost_followup(body)
+        elif path == "/api/crm/onboarding-step":
+            self.handle_api_onboarding_step(body)
+        elif path == "/api/crm/ambassador-invite":
+            self.handle_api_ambassador_invite(body)
         else:
             self.send_json_response({"error": "Route POST introuvable", "path": path}, status=404)
 
@@ -1237,6 +1248,69 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         success, msg = auth_manager.change_master_pass(current_pass, new_pass)
         status = 200 if success else 400
         self.send_json_response({"success": success, "message": msg}, status=status)
+
+    def handle_api_kpi_weekly_report(self):
+        try:
+            report = generate_weekly_kpi_report()
+            self.send_json_response({"success": True, "kpi_report": report})
+        except Exception as e:
+            logger.error(f"Erreur kpi report : {e}")
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_ghost_followup(self, body):
+        lead_id = body.get("lead_id")
+        days = int(body.get("days_silent", 2))
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+        row = c.fetchone()
+        conn.close()
+        if not row:
+            self.send_json_response({"error": "Lead introuvable"}, status=404)
+            return
+        lead = dict(row)
+        res = sales_agent.generate_ghost_followup(lead, days)
+        if res.get("nouveau_statut"):
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("UPDATE crm_leads SET statut_lead = ?, jours_silence = ? WHERE id = ?", (res["nouveau_statut"], days, lead_id))
+            conn.commit()
+            conn.close()
+            log_activity("CRM", f"Relance fantôme J+{days} pour {lead.get('nom_complet') or lead.get('nom_lead')}", lead.get("nom_complet") or "", lead.get("whatsapp") or "", "SUCCESS", res.get("action_crm") or "")
+        self.send_json_response({"success": True, "result": res})
+
+    def handle_api_onboarding_step(self, body):
+        customer_id = body.get("customer_id")
+        step = body.get("step", "H+0")
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_customers WHERE id = ?", (customer_id,))
+        row = c.fetchone()
+        conn.close()
+        cust = dict(row) if row else {"nom_complet": body.get("nom", "Client"), "produit_achete": body.get("produit", "Pack Pro")}
+        res = sales_agent.generate_onboarding_step(cust, step)
+        log_activity("ONBOARDING", f"Étape {step} envoyée à {cust.get('nom_complet')}", cust.get("nom_complet") or "", cust.get("whatsapp") or "", "SUCCESS", step)
+        self.send_json_response({"success": True, "result": res})
+
+    def handle_api_ambassador_invite(self, body):
+        customer_id = body.get("customer_id")
+        nps = int(body.get("nps_score", 10))
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_customers WHERE id = ?", (customer_id,))
+        row = c.fetchone()
+        conn.close()
+        cust = dict(row) if row else {"nom_complet": body.get("nom", "Partenaire"), "id": customer_id or 1}
+        res = sales_agent.generate_ambassador_invite(cust, nps)
+        if res.get("code_promo") and customer_id:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("UPDATE crm_customers SET satisfaction_nps = ?, statut_ambassadeur = 'Actif (Code ' || ? || ')' WHERE id = ?", (nps, res["code_promo"], customer_id))
+            conn.commit()
+            conn.close()
+            log_activity("AMBASSADEUR", f"Code ambassadeur {res['code_promo']} généré pour {cust.get('nom_complet')}", cust.get("nom_complet") or "", cust.get("whatsapp") or "", "SUCCESS", f"NPS {nps}")
+        self.send_json_response({"success": True, "result": res})
+
 
 
 def run_server(port=7860):
