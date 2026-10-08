@@ -87,6 +87,36 @@ def get_stored_meta_credentials() -> Dict[str, str]:
     return credentials
 
 
+def subscribe_page_to_app(page_id: str, page_token: str) -> Dict[str, Any]:
+    """
+    Abonne automatiquement la Page Facebook aux Webhooks de l'application via Graph API.
+    POST /{page_id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks
+    """
+    if not page_id or not page_token:
+        return {"success": False, "error": "Paramètres de page manquants"}
+    try:
+        url = f"{GRAPH_BASE_URL}/{page_id}/subscribed_apps"
+        code, resp = _make_http_request(
+            url,
+            params={
+                "subscribed_fields": "messages,messaging_postbacks",
+                "access_token": page_token.strip()
+            },
+            method="POST",
+            timeout=10
+        )
+        if code == 200 and resp.get("success"):
+            logger.info(f"Page Facebook {page_id} abonnée aux webhooks avec succès.")
+            return {"success": True, "message": "Page abonnée avec succès aux webhooks"}
+        else:
+            err = resp.get("error", {}).get("message", "Abonnement non confirmé")
+            logger.warning(f"Échec abonnement webhook Page {page_id} : {err}")
+            return {"success": False, "error": err}
+    except Exception as e:
+        logger.error(f"Exception lors de l'abonnement de la Page : {e}")
+        return {"success": False, "error": str(e)}
+
+
 def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
     """
     Vérifie la validité d'un jeton d'accès Page Meta auprès de l'API Graph.
@@ -143,23 +173,30 @@ def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
                     conn.commit()
                     conn.close()
 
+                    # Abonner automatiquement la Page aux webhooks de l'application
+                    sub_res = subscribe_page_to_app(page_id, page_token)
+
                     return {
                         "valid": True,
                         "status": "CONNECTE",
                         "page_id": page_id,
                         "page_name": page_name,
-                        "message": f"Connecté avec succès à la Page Facebook '{page_name}' (ID: {page_id}) avec autorisation Messenger."
+                        "subscribed": sub_res.get("success", False),
+                        "message": f"Connecté avec succès à la Page Facebook '{page_name}' (ID: {page_id}) avec autorisation Messenger. Abonnement webhook : {sub_res.get('message', sub_res.get('error'))}."
                     }
             except Exception as e_acc:
                 logger.warning(f"Note vérification /me/accounts : {e_acc}")
 
-            # C'est directement un jeton de Page officiel
+            # C'est directement un jeton de Page officiel : abonner la Page
+            sub_res = subscribe_page_to_app(target_id, token.strip())
+
             return {
                 "valid": True,
                 "status": "CONNECTE",
                 "page_id": target_id,
                 "page_name": target_name,
-                "message": f"Connecté avec succès à la Page Facebook '{target_name}' (ID: {target_id}) avec autorisation Messenger."
+                "subscribed": sub_res.get("success", False),
+                "message": f"Connecté avec succès à la Page Facebook '{target_name}' (ID: {target_id}) avec autorisation Messenger. Abonnement webhook : {sub_res.get('message', sub_res.get('error'))}."
             }
         else:
             error = data.get("error", {})
