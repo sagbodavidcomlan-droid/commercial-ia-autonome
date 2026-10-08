@@ -20,44 +20,51 @@ logger = logging.getLogger("AISalesAgent")
 OBJECTIONS_KNOWLEDGE_BASE = {
     "prix": {
         "pattern": ["cher", "pas d'argent", "moyens", "prix élevé", "cout", "coûteux", "budget"],
-        "strategy": "Rappeler le retour sur investissement rapide (rentabilisé dès le premier client ou design vendu) et l'accès à vie.",
-        "pitch_argument": "Je comprends parfaitement ta situation ! C'est justement pour permettre aux jeunes motivés de démarrer sans se ruiner que le pack complet est actuellement à un tarif solidaire spécial vacances. Dès ton premier visuel ou ta première prestation réalisée, tu as déjà remboursé ton inscription !"
+        "strategy": "Rappeler le retour sur investissement rapide (rentabilisé dès les premières conversions ou clients acquis) et la valeur créée.",
+        "pitch_argument": "Je comprends parfaitement votre souci d'optimisation budgétaire ! C'est justement pour permettre aux entrepreneurs et porteurs de projet d'accélérer sans risque financier disproportionné que cette solution a été conçue. Dès votre première conversion ou votre premier contrat concrétisé grâce à ce dispositif, vous avez largement rentabilisé votre investissement initial !"
     },
     "technique": {
         "pattern": ["ordinateur", "pc", "compliqué", "débutant", "sans diplôme", "technique", "logiciel"],
-        "strategy": "Mettre en avant l'apprentissage pas-à-pas réalisable sur simple smartphone ou PC basique.",
-        "pitch_argument": "Rassure-toi à 100% : plus de 80% de nos apprenants partent de zéro absolu ! Tous les tutoriels sont conçus pas-à-pas, en vidéo d'écran claire. Tu peux commencer directement avec ton smartphone (sur Canva mobile) ou un ordinateur standard."
+        "strategy": "Mettre en avant l'accompagnement opérationnel pas-à-pas accessible sur simple smartphone ou ordinateur standard.",
+        "pitch_argument": "Rassurez-vous totalement : la grande majorité de nos utilisateurs démarrent sans aucune compétence technique préalable ! Tout le processus est structuré pas-à-pas avec des explications claires et directes. Vous pouvez être 100% autonome et opérationnel très rapidement."
     },
     "temps": {
         "pattern": ["temps", "occupé", "dispo", "boulot", "cours", "horaires"],
-        "strategy": "Souligner la flexibilité totale 24h/24 et l'accès illimité.",
-        "pitch_argument": "Tu avances entièrement à ton propre rythme ! Les modules vidéos sont courts (10 à 15 minutes) et disponibles 24h/24. Même avec 30 à 45 minutes par jour pendant tes pauses ou le soir, tu maîtrises les compétences en moins de 14 jours."
+        "strategy": "Souligner la flexibilité totale et le gain de temps immédiat une fois en place.",
+        "pitch_argument": "Vous avancez entièrement à votre propre rythme ! L'organisation est flexible et pensée précisément pour les professionnels dont l'emploi du temps est très chargé. Même en y consacrant 30 minutes par jour, vous obtenez des résultats mesurables sans surcharger votre quotidien."
     },
     "moyen_paiement": {
         "pattern": ["payer comment", "mobile money", "moov", "mtn", "orange", "wave", "virement", "carte bancaire"],
-        "strategy": "Rassurer sur l'intégration directe de tous les Mobile Money d'Afrique de l'Ouest et Centrale.",
-        "pitch_argument": "Le règlement est ultra-sécurisé et immédiat par Mobile Money (MTN Mobile Money, Moov Money, Orange Money, Wave) ou carte bancaire. Dès validation, ton accès privé est débloqué automatiquement sur ton WhatsApp et par email !"
+        "strategy": "Rassurer sur la validation officielle et le déblocage prioritaire immédiat.",
+        "pitch_argument": "Le règlement s'effectue directement par Mobile Money (MTN MoMo, Moov Money, Orange Money, Wave) ou carte bancaire. Dès votre commande validée, vos accès et livrables sont débloqués immédiatement !"
     },
     "confiance": {
         "pattern": ["arnaque", "vrai", "preuve", "témoignage", "peur", "sérieux", "fiable"],
         "strategy": "Fournir des preuves sociales et la garantie de satisfaction.",
-        "pitch_argument": "C'est normal d'être prudent sur internet ! Déjà plus de 350 jeunes comme toi ont suivi le programme et partagent leurs résultats concrets. Tu as un accompagnement et un groupe d'entraide actif avec David pour répondre à toutes tes questions."
+        "pitch_argument": "Il est tout à fait légitime d'être attentif et rigoureux ! Déjà plus de 350 professionnels et entrepreneurs s'appuient sur nos solutions avec des résultats concrets vérifiables. Vous bénéficiez d'un suivi personnalisé et de notre garantie d'accompagnement pour sécuriser votre réussite."
     }
 }
 
 SYSTEM_PROMPT = """Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.
 Ton rôle est d'échanger directement avec des professionnels, entrepreneurs et porteurs de projet motivés par l'accélération de leurs résultats.
 Consignes impératives d'identité et de relation client :
-- IDENTITÉ DIRECTE : Tu es Dave Sagbo, responsable du projet. Tu parles toujours avec humilité, élégance et clarté à la première personne ('je', 'mon équipe', 'notre solution').
+- IDENTITÉ DIRECTE : Tu es Dave Sagbo, responsable du projet. Tu parles toujours avec humilité, élégance, sérieux et clarté à la première personne ('je', 'mon équipe', 'notre solution').
 - AUCUNE MENTION D'IA OU D'ASSISTANT : Le prospect ne doit jamais savoir qu'une IA intervient. Pour lui, il échange directement avec le responsable en charge de la solution.
-- INTERDICTION FORMELLE : Ne JAMAIS utiliser la formule "en personne" ou des tournures présomptueuses/arrogantes. Rester humble, accessible, bienveillant et à l'écoute.
-- Tonalité : Fraternelle, professionnelle, sobre, attentive et respectueuse.
-- Langage : Simple, fluide, percutant, limpide, sans jargon technique inutile ni complications.
+- VOUVOIEMENT STRICT ET SYSTÉMATIQUE : Tu vouvoies OBLIGATOIREMENT ton interlocuteur ('vous', 'votre', 'vos', 'pourriez-vous', etc.). Le tutoiement ('tu', 'ton', 'te', 't'invite') est FORMELLEMENT PROSCRIT.
+- INTERDICTION FORMELLE : Ne JAMAIS utiliser la formule "en personne" ou des tournures présomptueuses/arrogantes. Rester humble, accessible, bienveillant, professionnel et respectueux.
+- Tonalité : Professionnelle, sobre, attentive, valorisante et orientée solutions de haut niveau.
+- Langage : Simple, limpide, précis, sans jargon technique inutile ni complications.
 - MÉTHODOLOGIE DE SETTING COMMERCIAL (APPROCHE EN 2 ÉTAPES) :
   1. Phase Écoute & Qualification : Accueillir poliment, reformuler avec empathie le défi ou besoin du prospect, et poser UNE question ouverte pour comprendre son organisation actuelle. Ne JAMAIS envoyer de lien de paiement au premier contact.
-  2. Phase Closing & Passage à l'action : Présenter l'offre adaptée avec son lien officiel du catalogue UNIQUEMENT lorsque le prospect valide son accord ou demande expressément comment procéder au paiement (Mobile Money MTN, Moov, Wave, Orange ou Carte Bancaire).
+  2. Phase Closing & Passage à l'action : Présenter l'offre adaptée avec son lien officiel du catalogue UNIQUEMENT lorsque le prospect valide son accord ou demande expressément comment procéder.
+- ARGUMENT COMMERCIAL DÉCISIF POUR LA CLÔTURE (TRANSMISSION DU LIEN) :
+  Lorsque le prospect demande à passer commande ou à régler, NE TE FONDE PAS sur des banalités logistiques de paiement (la facilité ou la sécurité du Mobile Money).
+  Articule un VRAI argument commercial décisif et percutant :
+  * Souligne le coût de l'inaction : chaque jour ou chaque prospect sans ce système représente un manque à gagner direct et des opportunités cédées à la concurrence.
+  * Rappelle le retour sur investissement direct (ROI) : cette solution est conçue pour être amortie dès les tout premiers résultats.
+  * Présente le lien officiel comme le déclencheur immédiat pour déployer la solution et commencer à engranger des résultats concrets dès aujourd'hui.
 - Toujours orienté action : terminer par une question simple, engageante et facile à répondre.
-- Personnalisation : Utiliser le prénom du prospect, contextualiser la discussion selon son métier et valoriser son ambition.
+- Personnalisation : Utiliser le prénom ou le nom du prospect, contextualiser la discussion selon son métier et valoriser son ambition.
 """
 
 import sys
@@ -111,16 +118,24 @@ class AISalesAgent:
         prompt = (
             f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.\n"
             f"Tu t'adresses au prospect : {target_name}.\n"
-            f"RÈGLE D'OR : Tu es Dave Sagbo, responsable du projet. Tu parles à la première personne ('je', 'mon équipe', 'notre solution'). Ne mentionne JAMAIS d'IA ni d'assistant, et ne dis JAMAIS 'en personne' ni de formule prétentieuse ou arrogante. Reste sobre, humble, chaleureux, attentif et très professionnel.\n"
+            f"RÈGLE IMPÉRATIVE 1 - VOUVOIEMENT STRICT : Tu dois OBLIGATOIREMENT utiliser le VOUVOIEMENT ('vous', 'votre', 'vos', 'avez-vous', etc.). Tout tutoiement ('tu', 'ton', 'te', 't'invite') est FORMELLEMENT PROSCRIT.\n"
+            f"RÈGLE IMPÉRATIVE 2 - IDENTITÉ : Tu es Dave Sagbo, responsable du projet. Tu parles à la première personne ('je', 'mon équipe', 'notre solution'). Ne mentionne JAMAIS d'IA ni d'assistant, et ne dis JAMAIS 'en personne' ni de formule prétentieuse. Reste sobre, humble, attentif, courtois et très professionnel.\n"
             f"Profil psychologique DISC détecté : {disc_profile}.\n"
             f"Offre concernée : {product_name} au tarif de {int(product_price):,} {product_devise}.\n"
             f"Intention ou objection identifiée : {detected_objection}.\n"
             f"Stratégie de relation & closing à appliquer : {strategy}.\n"
-            + (f"Lien officiel du catalogue à inclure obligatoirement (le prospect a demandé à commander/payer) : {checkout_url}\n" if checkout_url else "Attention : N'inclus AUCUN lien de paiement à ce stade. Reste dans l'écoute active, la reformulation empathique et la question ouverte.\n") +
+            + (
+                f"Lien officiel du catalogue à inclure impérativement (le prospect a demandé à commander/payer/démarrer) : {checkout_url}\n"
+                f"CONSIGNE DE CLOSING DÉCISIF SUR LE LIEN :\n"
+                f"- Ne te base SURTOUT PAS sur la facilité ou la sécurité du paiement Mobile Money.\n"
+                f"- Construis un VRAI ARGUMENT COMMERCIAL DÉCISIF pour conclure la vente : montre le coût de l'inaction (chaque prospect ou jour non relancé est une perte sèche de chiffre d'affaires et de temps), la rentabilité immédiate de cet investissement ({int(product_price):,} {product_devise}) dès les premières conversions, et invite le prospect à activer son dispositif immédiatement via ce lien pour commencer à engranger des résultats concrets sans attendre.\n"
+                if checkout_url else
+                "Attention : N'inclus AUCUN lien de paiement à ce stade. Reste dans l'écoute active, la reformulation empathique et la question ouverte de découverte.\n"
+            ) +
             f"\nConsignes strictes de relation client :\n"
-            f"- Réponds directement au prospect en français dans un style soigné, fraternel, humble et professionnel (émoticônes bien dosées, phrases simples et percutantes, sans jargon lourd ni promesses exagérées).\n"
+            f"- Respect absolu du VOUVOIEMENT ('vous', 'votre', 'vos').\n"
+            f"- Réponds directement au prospect en français dans un style soigné, clair, bienveillant, humble et professionnel.\n"
             f"- Fais preuve d'écoute active et montre que tu comprends parfaitement son contexte et son métier.\n"
-            + (f"- Mentionne la facilité de règlement Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte.\n" if checkout_url else "") +
             f"- Termine toujours par UNE question simple, engageante et ouverte.\n"
             f"\nMessage du prospect : « {user_msg} »\n\n"
             f"Ta réponse en tant que Dave Sagbo :"
@@ -337,7 +352,7 @@ class AISalesAgent:
         # Formulation de la réplique
         if ready_to_buy:
             detected_objection = "Intention d'Achat Affirmée & Demande de Clôture"
-            strategy = "Clôture immédiate avec lien sécurisé Mobile Money / Carte Bancaire"
+            strategy = "Clôture décisive axée sur le retour sur investissement et l'activation immédiate"
             closing_status = "DEAL_CLOSED"
             ext_url = (selected_product.get("url_externe") or "").strip() if selected_product else ""
             if ext_url:
@@ -348,11 +363,11 @@ class AISalesAgent:
                 checkout_url = "https://commercial-ia-autonome.onrender.com/catalogue"
 
             reply = (
-                f"Excellente décision {target_name} ! 🎉 C'est ce passage à l'action qui fait toute la différence.\n\n"
-                f"Voici votre lien d'accès direct pour finaliser votre commande de *{product_name}* ({int(product_price):,} {product_devise}) :\n"
+                f"C'est une excellente décision {target_name}. Dans votre activité, chaque opportunité non relancée représente aujourd'hui un manque à gagner direct.\n\n"
+                f"Mettre en place *{product_name}* dès maintenant, c'est vous assurer de ne plus laisser la moindre vente sur la table et de rentabiliser cet investissement de {int(product_price):,} {product_devise} dès vos toutes premières conversions.\n\n"
+                f"Pour enclencher le déploiement immédiat et bloquer vos accès prioritaires, vous pouvez valider votre commande directement ici :\n"
                 f"👉 {checkout_url}\n\n"
-                f"💡 Règlement rapide & sécurisé (Mobile Money MTN / Moov / Orange / Wave ou Carte Bancaire).\n"
-                f"Dès votre règlement validé, vos accès prioritaires et votre confirmation vous sont envoyés automatiquement !"
+                f"Dès votre validation effectuée, nous activons votre dispositif afin que vous puissiez concrétiser vos premiers résultats sans attendre. Avez-vous pu accéder à la page pour démarrer ?"
             )
 
         elif is_info_request:
