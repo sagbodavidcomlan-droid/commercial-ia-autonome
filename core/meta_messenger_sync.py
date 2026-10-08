@@ -8,7 +8,38 @@ import os
 import json
 import logging
 import sqlite3
-import requests
+import urllib.request
+import urllib.parse
+import urllib.error
+
+def _make_http_request(url, params=None, json_data=None, headers=None, method='GET', timeout=12):
+    if params:
+        clean_params = {k: v for k, v in params.items() if v is not None}
+        q = urllib.parse.urlencode(clean_params)
+        url = f'{url}?{q}' if '?' not in url else f'{url}&{q}'
+    req_headers = {'User-Agent': 'Commercial-IA-Autonome/1.0', 'Accept': 'application/json'}
+    if headers:
+        req_headers.update(headers)
+    data = None
+    if json_data is not None:
+        data = json.dumps(json_data).encode('utf-8')
+        req_headers['Content-Type'] = 'application/json'
+    req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            content = resp.read().decode('utf-8')
+            try:
+                return resp.status, json.loads(content)
+            except Exception:
+                return resp.status, {'raw': content}
+    except urllib.error.HTTPError as e:
+        try:
+            content = e.read().decode('utf-8')
+            return e.code, json.loads(content)
+        except Exception:
+            return e.code, {'error': {'message': f'HTTP {e.code}'}}
+    except Exception as e:
+        return 0, {'error': {'message': str(e)}}
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple, List
 
@@ -78,18 +109,16 @@ def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
             "fields": "id,name",
             "access_token": token.strip()
         }
-        res = requests.get(url, params=params, timeout=10)
-        data = res.json()
+        res_code, data = _make_http_request(url, params=params, timeout=10)
 
-        if res.status_code == 200 and "id" in data:
+        if res_code == 200 and "id" in data:
             target_id = data.get("id")
             target_name = data.get("name")
 
             # Vérifier si ce token est un token utilisateur ayant accès à des Pages
             try:
-                acc_res = requests.get(f"{GRAPH_BASE_URL}/me/accounts", params={"access_token": token.strip()}, timeout=8)
-                acc_data = acc_res.json()
-                if acc_res.status_code == 200 and "data" in acc_data and len(acc_data["data"]) > 0:
+                acc_code, acc_data = _make_http_request(f"{GRAPH_BASE_URL}/me/accounts", params={"access_token": token.strip()}, timeout=8)
+                if acc_code == 200 and "data" in acc_data and len(acc_data["data"]) > 0:
                     # C'est un jeton utilisateur : récupérer la première Page avec droit de messagerie
                     pages = acc_data["data"]
                     chosen_page = next((p for p in pages if "MESSAGING" in p.get("tasks", [])), pages[0])
@@ -147,7 +176,7 @@ def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
                 "error_message": err_msg,
                 "message": f"Jeton Meta expiré ou invalide ({err_msg}). Veuillez générer un nouveau Page Access Token dans Meta for Developers."
             }
-    except requests.RequestException as e:
+    except Exception as e:
         return {
             "valid": False,
             "status": "CONNEXION_IMPOSSIBLE",
@@ -172,9 +201,9 @@ def get_facebook_profile(psid: str, token: Optional[str] = None) -> Dict[str, An
             "fields": "first_name,last_name,profile_pic,locale",
             "access_token": token.strip()
         }
-        res = requests.get(url, params=params, timeout=8)
-        if res.status_code == 200:
-            return res.json()
+        res_code, data = _make_http_request(url, params=params, timeout=8)
+        if res_code == 200:
+            return data
     except Exception as e:
         logger.warning(f"Erreur récupération profil Facebook pour PSID {psid} : {e}")
 
@@ -225,10 +254,9 @@ def send_messenger_message(recipient_psid: str, text: str, token: Optional[str] 
     }
 
     try:
-        res = requests.post(url, json=payload, headers=headers, params=params, timeout=12)
-        res_data = res.json()
+        res_code, res_data = _make_http_request(url, params=params, json_data=payload, headers=headers, method="POST", timeout=12)
 
-        if res.status_code == 200 and "message_id" in res_data:
+        if res_code == 200 and "message_id" in res_data:
             logger.info(f"Message Messenger envoyé avec succès au PSID {recipient_psid} (ID: {res_data.get('message_id')})")
             return {
                 "success": True,
@@ -248,7 +276,7 @@ def send_messenger_message(recipient_psid: str, text: str, token: Optional[str] 
                 "error": err_msg,
                 "details": error
             }
-    except requests.RequestException as e:
+    except Exception as e:
         logger.error(f"Exception réseau lors de l'envoi Messenger : {e}")
         return {
             "success": False,
@@ -290,9 +318,8 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
     }
 
     try:
-        res = requests.post(url, json=payload, headers=headers, timeout=12)
-        res_data = res.json()
-        if res.status_code in (200, 201) and "messages" in res_data:
+        res_code, res_data = _make_http_request(url, headers=headers, json_data=payload, method="POST", timeout=12)
+        if res_code in (200, 201) and "messages" in res_data:
             wamid = res_data["messages"][0].get("id")
             return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": wamid}
         else:
