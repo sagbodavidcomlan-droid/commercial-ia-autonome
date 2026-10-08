@@ -1159,9 +1159,9 @@
             <div class="px-4 py-2 bg-blue-50/70 border-b border-blue-100/80 flex items-center justify-between text-xs text-slate-700" id="conv-channel-info-banner">
               <div class="flex items-center gap-2 truncate">
                 <i data-lucide="shield-check" class="w-3.5 h-3.5 text-[#0062ff] shrink-0"></i>
-                <span class="font-medium text-slate-600 truncate" id="conv-channel-account-text">Compte émetteur : Page Facebook Dave Sagbo</span>
+                <span class="font-medium text-slate-600 truncate" id="conv-channel-account-text">Émetteur : Dave Sagbo • Responsable du Projet</span>
               </div>
-              <span class="text-[10px] font-bold text-[#0062ff] shrink-0" id="conv-channel-tone-badge">IA Autonome Active</span>
+              <span class="text-[10px] font-bold text-[#0062ff] shrink-0" id="conv-channel-tone-badge">Dave Sagbo en Direct</span>
             </div>
 
             <!-- Fil des messages (Chat Feed) -->
@@ -1169,15 +1169,21 @@
               <!-- Rempli par JavaScript -->
             </div>
 
-            <!-- Zone de Saisie & Actions Rapides IA -->
+            <!-- Zone de Saisie & Actions Rapides Dave Sagbo -->
             <div class="p-3 sm:p-4 bg-white border-t border-slate-200 space-y-2.5">
-              <div class="flex items-center justify-between gap-2">
+              <!-- Indicateur de produit lié au Catalogue -->
+              <div id="conv-linked-product-bar" class="text-[11px] text-slate-600 bg-slate-100/80 px-2.5 py-1.5 rounded-lg flex items-center justify-between border border-slate-200 gap-2">
+                <span class="truncate"><i data-lucide="package" class="w-3 h-3 inline text-slate-500 mr-1"></i>Offre Catalogue : <strong id="conv-product-name" class="text-slate-900">...</strong></span>
+                <span id="conv-product-link" class="text-[#0062ff] font-semibold text-[10px] truncate max-w-[280px]">...</span>
+              </div>
+
+              <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-1.5">
-                  <button onclick="generateAiConversationReply()" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> 🪄 Générer Relance IA
+                  <button onclick="generateAiConversationReply()" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition" title="Générer une réponse de vente percutante et chaleureuse signée Dave Sagbo">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> 🪄 Réponse Dave Sagbo
                   </button>
-                  <button onclick="insertCheckoutLinkInConversation()" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition">
-                    <i data-lucide="credit-card" class="w-3.5 h-3.5"></i> Lien Paiement Mobile Money
+                  <button onclick="insertCheckoutLinkInConversation()" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition" title="Insérer le lien exact de paiement/commande configuré dans le Catalogue">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> 🔗 Insérer Lien Catalogue
                   </button>
                 </div>
                 <span class="text-[11px] text-slate-400 font-medium" id="conv-active-channel-label">Canal : Messenger</span>

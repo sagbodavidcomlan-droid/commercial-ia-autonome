@@ -245,7 +245,7 @@ class AutopilotOrchestrator:
         log_activity(
             category="PATROUILLE",
             action="Sprint de prospection autonome achevé",
-            lead_name="Agent Commercial IA",
+            lead_name="Dave Sagbo (Système Autonome)",
             lead_phone="N/A",
             status="SUCCESS",
             details=f"{len(processed_leads)} prospects qualifiés et intégrés dans le CRM en {duration}s"

@@ -1380,16 +1380,27 @@ async function openLeadConversation(leadId, channel = null) {
 
     const chInfo = data.channel_info || {};
     if (bannerText) {
-      bannerText.textContent = `Compte émetteur : ${chInfo.account_info || chInfo.label || data.active_channel}`;
+      bannerText.textContent = `Émetteur : Dave Sagbo • Responsable du Projet (${chInfo.label || data.active_channel})`;
     }
     if (toneBadge) {
-      toneBadge.textContent = `Tonalité : ${chInfo.tone || 'Persuasion IA'}`;
+      toneBadge.textContent = "Dave Sagbo en Direct";
     }
     if (activeLabel) {
       activeLabel.textContent = `Canal : ${chInfo.label || data.active_channel}`;
     }
     if (inputMsg) {
-      inputMsg.placeholder = `Écrire un message à ${lead.nom_complet} sur ${chInfo.label || data.active_channel}...`;
+      inputMsg.placeholder = `Écrire à ${lead.nom_complet} en tant que Dave Sagbo sur ${chInfo.label || data.active_channel}...`;
+    }
+
+    // Affichage du produit du catalogue lié
+    const prodNameEl = document.getElementById("conv-product-name");
+    const prodLinkEl = document.getElementById("conv-product-link");
+    if (prodNameEl) {
+      prodNameEl.textContent = data.product ? `${data.product.nom} (${Number(data.product.prix_vente).toLocaleString()} ${data.product.devise})` : "Catalogue Général";
+    }
+    if (prodLinkEl) {
+      prodLinkEl.textContent = data.checkout_url || "/catalogue";
+      prodLinkEl.title = data.checkout_url || "";
     }
 
     // Affichage des messages
@@ -1473,15 +1484,15 @@ function renderConversationMessages(messages, leadName) {
     } else {
       return `
         <div class="flex items-start gap-2.5 max-w-[85%] ml-auto flex-row-reverse">
-          <div class="w-7 h-7 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
-            IA
+          <div class="w-7 h-7 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs ring-2 ring-blue-100">
+            DS
           </div>
           <div class="space-y-1 text-right">
             <div class="p-3 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-md shadow-blue-500/10 leading-relaxed text-left whitespace-pre-wrap">
               ${escapeHtml(m.message)}
             </div>
             <div class="text-[10px] text-slate-400 pr-1 font-medium flex items-center justify-end gap-1">
-              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Agent Commercial IA</span> • <span>✓✓</span>
+              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Dave Sagbo • Responsable du Projet</span> • <span>✓✓</span>
             </div>
           </div>
         </div>
@@ -1559,7 +1570,7 @@ async function generateAiConversationReply() {
   if (!input) return;
 
   try {
-    input.value = "Génération de la relance IA en cours...";
+    input.value = "Rédaction de la réponse Dave Sagbo en cours...";
     const res = await fetch("/api/crm/leads/conversation/generate-ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1572,13 +1583,13 @@ async function generateAiConversationReply() {
     if (data.success && data.suggested_message) {
       input.value = data.suggested_message;
       input.focus();
-      showToast(`Relance IA générée pour ${activeConversationChannel} !`, "success");
+      showToast(`Réponse Dave Sagbo générée pour ${activeConversationChannel} !`, "success");
     } else {
       input.value = "";
       showToast("Impossible de générer la suggestion.", "error");
     }
   } catch (err) {
-    console.error("Erreur suggestion IA :", err);
+    console.error("Erreur suggestion Dave Sagbo :", err);
     if (input) input.value = "";
   }
 }
@@ -1587,10 +1598,23 @@ function insertCheckoutLinkInConversation() {
   const input = document.getElementById("conv-input-message");
   if (!input) return;
 
-  const link = `https://commercial-ia-autonome.onrender.com/commande?lead_id=${activeConversationLeadId || 1}`;
-  const prompt = `\nVoici le lien sécurisé pour valider votre encaissement Mobile Money : ${link}`;
-  input.value = (input.value + prompt).trim();
+  let link = activeConversationData?.checkout_url;
+  if (!link || link.includes("/commande?lead_id=")) {
+    const prod = activeConversationData?.product;
+    if (prod && prod.url_externe) {
+      link = prod.url_externe;
+    } else if (prod && prod.id) {
+      link = `https://commercial-ia-autonome.onrender.com/catalogue#item-${prod.id}`;
+    } else {
+      link = "https://commercial-ia-autonome.onrender.com/catalogue";
+    }
+  }
+
+  const prodName = activeConversationData?.product?.nom || "votre commande";
+  const prompt = `Voici votre lien officiel pour valider ${prodName} :\n👉 ${link}\n(Règlement immédiat & sécurisé par Mobile Money MTN, Moov, Wave, Orange ou Carte Bancaire)`;
+  input.value = (input.value ? input.value + "\n\n" + prompt : prompt).trim();
   input.focus();
+  showToast("Lien officiel du Catalogue inséré avec succès !", "success");
 }
 
 // --- AUDIT MÉDICO-LÉGAL DES CONVERSIONS "À LA LOUPE" ---

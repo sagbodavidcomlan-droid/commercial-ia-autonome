@@ -120,7 +120,7 @@ class LinkedInProspector:
         return (
             f"Merci pour la connexion {prenom} ! 🙌\n\n"
             f"J'ai vu que tu cherches à te former rapidement et concrètement pour générer tes premiers revenus avec le digital.\n\n"
-            f"David SAGBO a mis en place un pack pratique spécial vacances (Canva, Marketing, Freelance) conçu pour les débutants, rentable dès ta 1ère prestation.\n\n"
+            f"J'ai mis en place un pack pratique spécial vacances (Canva, Marketing, Freelance) conçu pour les débutants, rentable dès ta 1ère prestation.\n\n"
             f"Tu as WhatsApp ? Je peux t'y envoyer la vidéo de démonstration gratuite de 12 min pour que tu voies par toi-même."
         )
 

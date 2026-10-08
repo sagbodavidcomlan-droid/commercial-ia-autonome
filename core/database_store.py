@@ -205,12 +205,18 @@ def init_db():
     except Exception as e:
         logger.warning(f"Migration agenda_tasks : {e}")
 
-    # Migration catalog_items pour url_externe
+    # Migration catalog_items pour url_externe et assignation des liens officiels
     try:
         cursor.execute("PRAGMA table_info(catalog_items)")
         cat_cols = [c[1] for c in cursor.fetchall()]
         if "url_externe" not in cat_cols:
             cursor.execute("ALTER TABLE catalog_items ADD COLUMN url_externe TEXT")
+        
+        # Remplissage par défaut des liens du catalogue pour chaque produit si non renseigné
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/pack-canva' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Canva%' OR nom LIKE '%Graphisme%')")
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/kit-videaste' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Vidéaste%' OR nom LIKE '%Smartphone%')")
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/site-vitrine' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Site%' OR nom LIKE '%Web%')")
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/parcelle-foncier' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Parcelle%' OR nom LIKE '%Terrain%')")
     except Exception as e:
         logger.warning(f"Migration catalog_items : {e}")
 
@@ -388,7 +394,8 @@ def seed_catalog_data(conn):
                 "garanties": "Satisfait ou remboursé sous 7 jours sans condition.",
                 "lien_ressources": "https://drive.google.com/drive/folders/demo-pack-canva"
             }, ensure_ascii=False),
-            "Actif"
+            "Actif",
+            "https://formations.sagbodavid.com/pack-canva"
         ),
         (
             "formation_digitale", "produit", "Kit Vidéaste & Créateur Smartphone Pro", "KIT-VLOG-SMARTPHONE-01",
@@ -406,7 +413,8 @@ def seed_catalog_data(conn):
                 "garanties": "Garantie échange à neuf 12 mois.",
                 "lien_ressources": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32"
             }, ensure_ascii=False),
-            "Actif"
+            "Actif",
+            "https://formations.sagbodavid.com/kit-videaste"
         ),
         (
             "agence_web_marketing", "service", "Audit Digital & Conception Site Vitrine Express", "SRV-WEB-AUDIT-EXPRESS",
@@ -424,7 +432,8 @@ def seed_catalog_data(conn):
                 "garanties": "Garantie 100% opérationnel avec support technique illimité pendant 3 mois.",
                 "lien_ressources": "https://demo.agence-web.local"
             }, ensure_ascii=False),
-            "Actif"
+            "Actif",
+            "https://formations.sagbodavid.com/site-vitrine"
         ),
         (
             "immobilier_terrains", "produit", "Parcelle Viabilisée Titre Foncier (500m²)", "LOT-TERRAIN-TF-500M",
@@ -442,7 +451,8 @@ def seed_catalog_data(conn):
                 "garanties": "Garantie d'éviction notariée et bornage contradictoire certifié.",
                 "lien_ressources": "https://maps.google.com/?q=6.3703,2.3912"
             }, ensure_ascii=False),
-            "Actif"
+            "Actif",
+            "https://formations.sagbodavid.com/parcelle-foncier"
         )
     ]
 
@@ -452,11 +462,11 @@ def seed_catalog_data(conn):
             domain_id, type, nom, sku, categorie, prix_vente, prix_fournisseur_cout,
             devise, stock_quantite, seuil_alerte_stock, delai_livraison,
             disponibilite_service, places_max_semaine, fiche_technique_json,
-            statut, date_creation, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            statut, url_externe, date_creation, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             item[0], item[1], item[2], item[3], item[4], item[5], item[6], item[7],
-            item[8], item[9], item[10], item[11], item[12], item[13], item[14],
+            item[8], item[9], item[10], item[11], item[12], item[13], item[14], item[15],
             now_iso, now_iso
         ))
 
@@ -687,12 +697,12 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'FACEBOOK_MESSENGER', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour, j'ai vu votre publicité Facebook sur l'automatisation commerciale. Est-ce adapté pour mon activité ({poste}) ?", t1, json.dumps({"source_page": "Page Facebook Dave Sagbo", "ad_id": "meta_act_89201"})))
+            """, (lead_id, f"Bonjour, j'ai vu votre publication Facebook sur l'accélération des ventes. Est-ce adapté pour mon activité ({poste}) ?", t1, json.dumps({"source_page": "Page Facebook Dave Sagbo", "ad_id": "meta_act_89201"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom} ! Ravi de vous lire. Absolument ! Notre agent IA est conçu pour qualifier automatiquement vos prospects, calculer leur budget et envoyer directement le bon de commande sans que vous perdiez de temps.", t2, json.dumps({"source_page": "Page Facebook Dave Sagbo", "model": "Agent Commercial IA"})))
+            """, (lead_id, f"Bonjour {nom} ! Ravi de vous lire. Absolument ! Notre accompagnement est calibré pour votre activité ({poste}) afin d'accélérer vos ventes et sécuriser vos encaissements Mobile Money sans perdre de temps.", t2, json.dumps({"source_page": "Page Facebook Dave Sagbo", "model": "Dave Sagbo"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -702,7 +712,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'DELIVERED', ?)
-            """, (lead_id, f"L'agent génère des liens de paiement instantanés FedaPay/MTN MoMo/Moov Money. Le client valide sur son téléphone en 30 secondes et vous recevez les fonds directement. Vous pouvez tester dès maintenant ici : https://commercial-ia-autonome.onrender.com/catalogue", t4, json.dumps({"source_page": "Page Facebook Dave Sagbo", "intent": "CLOSING_PAYMENT"})))
+            """, (lead_id, f"Nous intégrons directement les liens de paiement sécurisés FedaPay / MTN MoMo / Moov Money. Le client valide sur son téléphone en 30 secondes et vous encaissez instantanément. Vous pouvez tester dès maintenant notre catalogue officiel ici : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"source_page": "Page Facebook Dave Sagbo", "intent": "CLOSING_PAYMENT"})))
 
         # 2. Échanges LinkedIn (pour leads LinkedIn ou index 2)
         elif "linkedin" in source or lead_id % 4 == 2:
@@ -714,7 +724,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Hello {nom} ! Ravi d'être connecté sur LinkedIn. J'ai vu votre profil de {poste}. Nous accompagnons les décideurs à automatiser leur prospection B2B sans risque de restriction grâce à une vélocité contrôlée par IA.", t1, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)", "inmail_type": "Connection_Followup"})))
+            """, (lead_id, f"Hello {nom} ! Ravi d'être connecté sur LinkedIn. J'ai vu votre profil de {poste}. J'accompagne les décideurs et entrepreneurs à automatiser et développer leur prospection B2B de manière pérenne et ciblée.", t1, json.dumps({"linkedin_account": "Dave Sagbo (Directeur & Fondateur)", "inmail_type": "Connection_Followup"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -724,7 +734,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Notre algorithme calcule un score DUR (Douleur, Urgence, Reconnaissance de valeur) en analysant les réponses du lead. Seuls les décideurs avec un score >= 65/100 sont synchronisés dans votre agenda avec lien Google Meet.", t3, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
+            """, (lead_id, f"Notre méthode calcule un score DUR (Douleur, Urgence, Reconnaissance de valeur) en analysant précisément les besoins du contact. Seuls les décideurs avec un score >= 65/100 sont synchronisés dans votre agenda avec lien Google Meet.", t3, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -740,17 +750,17 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un audit rapide de votre secteur.\n\nEn moyenne, 73% des leads qualifiés sont perdus faute d'une réponse sous 5 minutes. Notre Agent Commercial IA répond en moins de 90 secondes, 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nL'Équipe Commerciale Dave Sagbo", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "lead@entreprise.com"})))
+            """, (lead_id, f"Bonjour {nom},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un constat clé de votre secteur.\n\nEn moyenne, 73% des opportunités qualifiées sont perdues faute d'une réponse rapide sous 5 minutes. Nous mettons en place un protocole d'engagement immédiat 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nDave Sagbo\nResponsable du Projet & Directeur Commercial", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "lead@entreprise.com"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre agent sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "lead@entreprise.com"})))
+            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre accompagnement sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "lead@entreprise.com"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'DELIVERED', ?)
-            """, (lead_id, f"Bonjour {nom},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction technique ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
+            """, (lead_id, f"Bonjour {nom},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
 
         # 4. Échanges WhatsApp Business
         else:
@@ -767,7 +777,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom} ! Bienvenue sur la ligne officielle Dave Sagbo 🚀\nPourriez-vous me préciser quel est votre objectif principal pour ce mois ?", t2, json.dumps({"phone": phone, "type": "interactive_prompt"})))
+            """, (lead_id, f"Bonjour {nom} ! Bienvenue sur ma ligne directe 🚀 C'est Dave Sagbo.\nPourriez-vous me préciser quel est votre objectif principal pour ce mois ?", t2, json.dumps({"phone": phone, "type": "interactive_prompt"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -777,7 +787,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
-            """, (lead_id, f"Objectif très réaliste avec nos scripts de persuasion validés ! Voici le lien direct pour finaliser votre commande avec paiement sécurisé Mobile Money : https://commercial-ia-autonome.onrender.com/commande?lead_id={lead_id}", t4, json.dumps({"phone": phone, "payment_prompt": True})))
+            """, (lead_id, f"Objectif très réaliste et accessible avec la bonne méthode ! Voici votre lien d'accès direct sur notre catalogue officiel pour valider votre commande avec paiement sécurisé Mobile Money (MTN, Moov, Wave, Orange) : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone, "payment_prompt": True})))
 
     conn.commit()
 

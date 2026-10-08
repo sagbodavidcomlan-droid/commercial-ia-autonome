@@ -11,7 +11,7 @@ import os
 import json
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from core.database_store import (
     get_connection,
     log_lead_message,
@@ -124,58 +124,109 @@ class OmnichannelMessenger:
 
         return available
 
+    def get_catalog_link_for_lead(self, lead: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
+        """
+        Détermine le produit du catalogue le plus adapté au prospect
+        et extrait son URL externe exacte configurée dans le Catalogue (url_externe).
+        Si aucune URL externe n'est configurée, repli propre sur la page catalogue de l'article.
+        """
+        interet = ((lead.get("centre_interet") or "") + " " + (lead.get("notes") or "") + " " + (lead.get("poste") or "")).lower()
+        items = []
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, nom, prix_vente, devise, url_externe, categorie, type FROM catalog_items WHERE statut = 'Actif' ORDER BY id ASC")
+            items = [dict(r) for r in cursor.fetchall()]
+            conn.close()
+        except Exception as e:
+            logger.error(f"Erreur lecture catalog_items : {e}")
+
+        if not items:
+            return {}, "https://commercial-ia-autonome.onrender.com/catalogue"
+
+        matched_item = None
+        # Recherche par affinité sémantique
+        for item in items:
+            nom_lower = (item.get("nom") or "").lower()
+            cat_lower = (item.get("categorie") or "").lower()
+            keywords = [w for w in (nom_lower + " " + cat_lower).split() if len(w) > 3]
+            if any(kw in interet for kw in keywords):
+                matched_item = item
+                break
+
+        # Fallback si pas de mot-clé précis : produit avec url_externe existante ou premier article
+        if not matched_item:
+            matched_item = next((it for it in items if it.get("url_externe")), items[0])
+
+        ext_url = (matched_item.get("url_externe") or "").strip()
+        if ext_url:
+            checkout_url = ext_url
+        else:
+            checkout_url = f"https://commercial-ia-autonome.onrender.com/catalogue#item-{matched_item['id']}"
+
+        return matched_item, checkout_url
+
     def generate_channel_pitch(self, lead: Dict[str, Any], channel: str) -> str:
         """
-        Génère une réponse ou relance IA hautement persuasive adaptée au canal
+        Génère une réponse ou relance humaine d'expert signée Dave Sagbo
+        avec le lien exact configuré dans le Catalogue pour le produit ciblé.
         """
         nom = lead.get("nom_complet") or lead.get("nom_lead") or "Cher Partenaire"
         prenom = nom.split()[0]
-        poste = lead.get("poste") or "Entrepreneur"
-        interet = lead.get("centre_interet") or lead.get("notes") or "l'accélération commerciale"
-        domaine = self.config.get("nom_domaine", "Business")
-        offre = self.config.get("offre", {}).get("nom_produit", "Solution Pro")
-        lead_id = lead.get("id", 1)
+        poste = lead.get("poste") or "Professionnel"
+        interet = lead.get("centre_interet") or lead.get("notes") or "le développement de vos activités"
+
+        product_item, checkout_url = self.get_catalog_link_for_lead(lead)
+        prod_name = product_item.get("nom", "notre Solution Clé en Main")
+        prix_val = int(product_item.get("prix_vente", 15000)) if product_item else 15000
+        devise = product_item.get("devise", "FCFA") if product_item else "FCFA"
 
         channel_upper = channel.upper()
 
         if channel_upper == "FACEBOOK_MESSENGER":
             return (
-                f"Hello {prenom} ! Merci pour votre intérêt sur notre Page Facebook. "
-                f"Pour votre activité de {poste}, notre agent IA gère automatiquement les prospects qui commentent vos posts "
-                f"et leur envoie directement votre lien d'encaissement Mobile Money.\n\n"
-                f"Voulez-vous tester la démo en direct ou préférez-vous recevoir les tarifs détaillés ici ?"
+                f"Hello {prenom} ! C'est Dave Sagbo en direct de la Page. Merci pour votre message !\n\n"
+                f"Pour votre activité de {poste}, notre offre *{prod_name}* est spécialement configurée pour accélérer vos résultats sans perdre de temps.\n\n"
+                f"Voici le lien direct pour consulter la présentation complète et finaliser votre commande :\n"
+                f"👉 {checkout_url}\n\n"
+                f"💡 Paiement 100% sécurisé via Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte Bancaire.\n"
+                f"Souhaitez-vous que nous fassions un point rapide ensemble ou préférez-vous débuter directement ?"
             )
 
         elif channel_upper == "LINKEDIN":
             return (
                 f"Bonjour {nom},\n\n"
-                f"J'ai pris connaissance de votre profil de {poste}. Dans votre secteur, la prospection manuelle consomme en moyenne 14 heures par semaine pour des taux de conversion inférieurs à 8%.\n\n"
-                f"Notre technologie Swarm IA qualifie les décideurs sur LinkedIn et sécurise les échanges avec une cadence humaine anti-ban.\n\n"
-                f"Seriez-vous ouvert à un rapide échange de 10 minutes ce jeudi pour voir comment l'appliquer à vos objectifs ?"
+                f"Je suis Dave Sagbo, responsable du projet d'accélération commerciale. J'ai examiné votre profil de {poste} avec beaucoup d'attention.\n\n"
+                f"Dans votre secteur, capter et convertir des opportunités qualifiées demande une méthode éprouvée et des outils calibrés. C'est exactement l'objectif de notre offre *{prod_name}* ({prix_val:,} {devise}).\n\n"
+                f"Vous trouverez l'ensemble des spécifications et modalités d'accès ici :\n"
+                f"👉 {checkout_url}\n\n"
+                f"Seriez-vous disponible pour un échange rapide de 10 minutes ce jeudi afin d'évaluer l'impact direct sur votre activité ?"
             )
 
         elif channel_upper == "EMAIL":
             return (
                 f"Bonjour {nom},\n\n"
-                f"Suite à votre prise de contact concernant {interet}, je tenais à vous transmettre les éléments clés de notre accompagnement {domaine}.\n\n"
-                f"Points forts de notre solution :\n"
-                f"1. Prise en charge 24/7 des prospects entrants sous 90 secondes\n"
-                f"2. Qualification stricte par scoring DUR (Douleur, Urgence, Solvabilité)\n"
-                f"3. Intégration directe des paiements Mobile Money (MTN, Moov, Wave, Orange)\n\n"
-                f"Vous pouvez consulter la fiche technique et démarrer votre pilote de 14 jours ici :\n"
-                f"👉 https://commercial-ia-autonome.onrender.com/catalogue\n\n"
-                f"Restant à votre entière disposition,\n\n"
-                f"Dave Sagbo\nDirecteur Commercial & Automatisation"
+                f"Suite à votre prise de contact concernant votre projet de {poste}, je tenais à vous adresser personnellement les éléments clés de notre solution *{prod_name}*.\n\n"
+                f"Ce qui est inclus concrètement pour vous :\n"
+                f"1. Déploiement opérationnel clé en main adapté à vos objectifs\n"
+                f"2. Accompagnement rigoureux et suivi pas-à-pas garanti\n"
+                f"3. Garantie satisfaction contractuelle et validation simplifiée par Mobile Money\n\n"
+                f"Vous pouvez consulter la fiche technique complète et valider votre accès ici :\n"
+                f"👉 {checkout_url}\n\n"
+                f"Je reste personnellement à votre disposition pour toute question.\n\n"
+                f"Bien cordialement,\n\n"
+                f"Dave Sagbo\nResponsable du Projet & Directeur Commercial\ncontact@davesagbo.com"
             )
 
         else: # WHATSAPP
             return (
-                f"Bonjour {prenom} ! 👋 C'est l'assistant de Dave Sagbo.\n"
-                f"J'ai bien noté votre besoin concernant {interet}.\n"
-                f"Le pack {offre} est actuellement disponible avec activation immédiate en 48h.\n\n"
-                f"Voici votre lien d'encaissement sécurisé Mobile Money : "
-                f"https://commercial-ia-autonome.onrender.com/commande?lead_id={lead_id}\n\n"
-                f"Souhaitez-vous que je vous assiste pour la finalisation ?"
+                f"Bonjour {prenom} ! 👋 C'est Dave Sagbo en personne.\n\n"
+                f"J'ai bien pris note de votre besoin concernant *{interet}*.\n"
+                f"Notre offre *{prod_name}* ({prix_val:,} {devise}) est actuellement disponible avec activation immédiate.\n\n"
+                f"Voici votre lien d'accès direct pour valider votre commande en toute sécurité :\n"
+                f"👉 {checkout_url}\n\n"
+                f"💡 Règlement rapide & sécurisé par Mobile Money (MTN MoMo, Moov, Wave, Orange) ou Carte.\n"
+                f"Avez-vous une question ou souhaitez-vous que nous validions cela ensemble ?"
             )
 
     def dispatch_lead_message(

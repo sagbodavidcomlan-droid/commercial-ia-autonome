@@ -580,6 +580,17 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         messages = get_lead_messages(lead_id, active_channel)
 
         suggested_pitch = omnichannel_messenger.generate_channel_pitch(lead, active_channel)
+        product_item, checkout_url = omnichannel_messenger.get_catalog_link_for_lead(lead)
+
+        catalog_products = []
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT id, nom, prix_vente, devise, url_externe FROM catalog_items WHERE statut = 'Actif' ORDER BY id ASC")
+            catalog_products = [dict(r) for r in c.fetchall()]
+            conn.close()
+        except Exception:
+            pass
 
         self.send_json_response({
             "success": True,
@@ -595,6 +606,15 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "statut": lead.get("statut_lead") or "Tiède",
                 "notes": lead.get("notes") or lead.get("centre_interet") or ""
             },
+            "product": {
+                "id": product_item.get("id"),
+                "nom": product_item.get("nom", "Solution Recommandée"),
+                "prix_vente": product_item.get("prix_vente", 15000),
+                "devise": product_item.get("devise", "FCFA"),
+                "url_externe": product_item.get("url_externe") or ""
+            },
+            "checkout_url": checkout_url,
+            "catalog_products": catalog_products,
             "active_channel": active_channel,
             "channel_info": SUPPORTED_CHANNELS.get(active_channel, {}),
             "available_channels": available_channels,

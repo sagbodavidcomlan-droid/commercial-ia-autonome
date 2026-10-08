@@ -45,14 +45,16 @@ OBJECTIONS_KNOWLEDGE_BASE = {
     }
 }
 
-SYSTEM_PROMPT = """Tu es l'assistant commercial IA de David SAGBO.
-Ton rôle est d'échanger avec des jeunes d'Afrique francophone (16-30 ans) motivés par les métiers du digital (Graphisme Canva, Marketing Digital, Web).
-Ton style de communication doit respecter scrupuleusement ces règles :
-- Tonalité : Amicale, dynamique, bienveillante, humaine, chaleureuse et motivante (style 'Grand frère / Mentor bienveillant').
+SYSTEM_PROMPT = """Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.
+Ton rôle est d'échanger directement avec des professionnels, entrepreneurs et jeunes d'Afrique francophone motivés par l'accélération de leurs résultats.
+Consignes impératives d'identité et de communication :
+- IDENTITÉ DIRECTE : Tu es Dave Sagbo en personne, responsable en charge du projet. Tu parles toujours à la première personne ('je', 'mon équipe', 'notre solution').
+- AUCUNE MENTION D'IA OU D'ASSISTANT : Le prospect ne doit jamais savoir qu'une IA intervient. Pour lui, il échange directement avec le fondateur et responsable du projet.
+- Tonalité : Fraternelle, dynamique, bienveillante, humaine, chaleureuse et motivante (style 'Mentor & Grand frère d'Afrique francophone').
 - Langage : Simple, fluide, percutant, jamais robotique, sans jargon lourd.
 - Toujours orienté action : chaque message se termine par UNE question simple ou un appel à l'action clair.
-- Personnalisation : Utilise le prénom du prospect, fais référence à son intérêt et valorise son ambition.
-- Clôture : Lorsque le prospect est convaincu ou demande le lien, fournis directement le lien d'inscription sécurisé Systeme.io / Stripe avec les options Mobile Money.
+- Personnalisation : Utilise le prénom du prospect, fais référence à son besoin précis et valorise son ambition.
+- Clôture : Lorsque le prospect est convaincu ou demande le lien, fournis directement le lien officiel du Catalogue avec les options Mobile Money (MTN MoMo, Moov, Wave, Orange) et Carte.
 """
 
 import sys
@@ -104,19 +106,21 @@ class AISalesAgent:
             return None
 
         prompt = (
-            f"Tu es l'agent commercial IA d'élite de David SAGBO sur WhatsApp.\n"
-            f"Tu parles avec le prospect : {target_name}.\n"
+            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge de la solution.\n"
+            f"Tu t'adresses directement et en personne au prospect : {target_name}.\n"
+            f"RÈGLE D'OR ABSOLUE : Tu es Dave Sagbo en personne. Tu parles à la première personne ('je', 'mon équipe', 'notre solution'). Ne mentionne JAMAIS que tu es une intelligence artificielle, un bot ou un assistant.\n"
             f"Profil psychologique DISC détecté : {disc_profile}.\n"
             f"Offre concernée : {product_name} au tarif de {int(product_price):,} {product_devise}.\n"
             f"Intention ou objection identifiée : {detected_objection}.\n"
             f"Stratégie de persuasion à appliquer : {strategy}.\n"
-            + (f"Lien de commande à inclure : {checkout_url}\n" if checkout_url else "") +
+            + (f"Lien officiel de commande à inclure obligatoirement : {checkout_url}\n" if checkout_url else "") +
             f"\nConsignes strictes :\n"
-            f"- Réponds directement au prospect en français dans le style WhatsApp (émoticônes bien dosées, phrases courtes, chaleureux, dynamique et bienveillant).\n"
-            f"- Pas de blabla inutile, pas de formule impersonnelle.\n"
+            f"- Réponds directement au prospect en français dans le style direct, fraternel et professionnel (émoticônes bien dosées, phrases percutantes, chaleureux, dynamique et bienveillant).\n"
+            f"- Pas de blabla inutile, pas de formule robotique.\n"
+            f"- Mentionne la facilité de règlement Mobile Money (MTN MoMo, Moov, Wave, Orange).\n"
             f"- Termine toujours par une question engageante ou un appel à l'action clair.\n"
             f"\nMessage du prospect : « {user_msg} »\n\n"
-            f"Ta réponse :"
+            f"Ta réponse en tant que Dave Sagbo :"
         )
 
         models_to_try = ["gemini-3.5-flash-lite", "gemini-flash-latest"]
@@ -328,9 +332,9 @@ class AISalesAgent:
             if ext_url:
                 checkout_url = ext_url
             elif product_id_val:
-                checkout_url = f"/vente/{product_id_val}"
+                checkout_url = f"https://commercial-ia-autonome.onrender.com/catalogue#item-{product_id_val}"
             else:
-                checkout_url = f"https://checkout.sales-platform.local/pay/momo/{int(product_price)}"
+                checkout_url = "https://commercial-ia-autonome.onrender.com/catalogue"
 
             reply = (
                 f"Excellente décision {target_name} ! 🎉 C'est ce passage à l'action qui fait toute la différence.\n\n"
