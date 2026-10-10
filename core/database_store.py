@@ -531,6 +531,15 @@ def init_db():
         expires_at TEXT
     )
     """)
+
+    # 12. Table de statut et télémétrie du Poller
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS agent_status (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide
@@ -1569,6 +1578,85 @@ def clean_test_leads() -> Dict[str, Any]:
         }
     finally:
         conn.close()
+
+
+def get_crm_stats() -> Dict[str, Any]:
+    """Calcule les statistiques et compteurs exacts pour chaque filtre CRM."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        # Total
+        c.execute("SELECT COUNT(*) FROM crm_leads")
+        total = c.fetchone()[0] or 0
+
+        # Chauds
+        c.execute("SELECT COUNT(*) FROM crm_leads WHERE LOWER(statut_lead) = 'chaud' OR LOWER(temperature) = 'chaud'")
+        chauds = c.fetchone()[0] or 0
+
+        # Convertis
+        c.execute("SELECT COUNT(*) FROM crm_leads WHERE LOWER(statut_lead) = 'converti' OR LOWER(temperature) = 'converti'")
+        convertis = c.fetchone()[0] or 0
+
+        # Tièdes
+        c.execute("SELECT COUNT(*) FROM crm_leads WHERE LOWER(statut_lead) = 'tiède' OR LOWER(temperature) = 'tiède' OR LOWER(statut_lead) = 'tiede' OR LOWER(temperature) = 'tiede'")
+        tiedes = c.fetchone()[0] or 0
+
+        # Froids
+        c.execute("SELECT COUNT(*) FROM crm_leads WHERE LOWER(statut_lead) = 'froid' OR LOWER(temperature) = 'froid'")
+        froids = c.fetchone()[0] or 0
+
+        # Inactifs > 48h
+        c.execute("""
+            SELECT COUNT(*) FROM crm_leads 
+            WHERE (last_contact_at IS NOT NULL AND julianday('now') - julianday(last_contact_at) >= 2)
+               OR (last_contact_at IS NULL AND updated_at IS NOT NULL AND julianday('now') - julianday(updated_at) >= 2)
+        """)
+        inactifs_48h = c.fetchone()[0] or 0
+
+        # Diagnostic complet sans offre matchée
+        c.execute("""
+            SELECT COUNT(*) FROM crm_leads 
+            WHERE diagnostic_complet = 1 
+              AND (offre_matchee_id IS NULL OR offre_matchee_id = '' OR offre_matchee_id = '0')
+        """)
+        diag_sans_offre = c.fetchone()[0] or 0
+
+        # Rejetés / RGPD / opt-out
+        c.execute("""
+            SELECT COUNT(*) FROM crm_leads 
+            WHERE LOWER(statut_lead) LIKE '%rejet%' 
+               OR LOWER(temperature) LIKE '%rejet%' 
+               OR LOWER(statut_lead) LIKE '%rgpd%' 
+               OR LOWER(temperature) LIKE '%rgpd%' 
+               OR opt_out = 1
+        """)
+        rejetes = c.fetchone()[0] or 0
+
+        # Score DUR Moyen
+        c.execute("SELECT AVG(COALESCE(score_dur, score_qualification, 0)) FROM crm_leads")
+        row = c.fetchone()
+        dur_moyen = round(row[0]) if row and row[0] is not None else 0
+
+        return {
+            "total": total,
+            "chauds": chauds,
+            "convertis": convertis,
+            "tiedes": tiedes,
+            "froids": froids,
+            "inactifs_48h": inactifs_48h,
+            "diag_sans_offre": diag_sans_offre,
+            "rejetes": rejetes,
+            "dur_moyen": dur_moyen
+        }
+    except Exception as e:
+        logger.error(f"Erreur get_crm_stats : {e}")
+        return {
+            "total": 0, "chauds": 0, "convertis": 0, "tiedes": 0, "froids": 0,
+            "inactifs_48h": 0, "diag_sans_offre": 0, "rejetes": 0, "dur_moyen": 0
+        }
+    finally:
+        conn.close()
+
 
 
 if __name__ == "__main__":

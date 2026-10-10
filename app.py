@@ -19,7 +19,8 @@ from typing import Optional, Dict, Any, List
 # Import des moteurs métier
 from core.database_store import (
     init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs,
-    generate_weekly_kpi_report, build_closer_context, clear_crm_data, archive_before_delete
+    generate_weekly_kpi_report, build_closer_context, clear_crm_data, archive_before_delete,
+    get_crm_stats
 )
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
@@ -592,6 +593,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
     def handle_api_get_leads(self, query):
         status_filter = query.get("status", [None])[0]
         search_query = (query.get("q", [None])[0] or query.get("search", [None])[0] or "").strip()
+        include_envelope = query.get("envelope", ["0"])[0] == "1" or query.get("with_stats", ["0"])[0] == "1"
         conn = get_connection()
         c = conn.cursor()
         
@@ -602,6 +604,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 sql += " AND (last_contact_at IS NOT NULL AND julianday('now') - julianday(last_contact_at) >= 2)"
             elif status_filter == "diag_sans_offre":
                 sql += " AND diagnostic_complet = 1 AND (offre_matchee_id IS NULL OR offre_matchee_id = '' OR offre_matchee_id = '0')"
+            elif status_filter == "Rejeté":
+                sql += " AND (LOWER(statut_lead) LIKE '%rejet%' OR LOWER(temperature) LIKE '%rejet%' OR LOWER(statut_lead) LIKE '%rgpd%' OR LOWER(temperature) LIKE '%rgpd%' OR opt_out = 1)"
             else:
                 sql += " AND (statut_lead = ? OR temperature = ?)"
                 params.extend([status_filter, status_filter])
@@ -614,7 +618,18 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         c.execute(sql, tuple(params))
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
-        self.send_json_response(rows)
+
+        stats = get_crm_stats()
+
+        if include_envelope:
+            self.send_json_response({
+                "leads": rows,
+                "count": len(rows),
+                "total": stats.get("total", len(rows)),
+                "stats": stats
+            })
+        else:
+            self.send_json_response(rows)
 
     def handle_api_crm_bulk_action(self, body):
         action = body.get("action")

@@ -1119,11 +1119,14 @@ function setLeadStatusFilter(status) {
   const chips = ["Tous", "Chaud", "Converti", "Tiède", "Froid", "48h_inactif", "diag_sans_offre", "Rejeté"];
   chips.forEach(s => {
     const btn = document.getElementById(`filter-chip-${s}`);
+    const badge = document.getElementById(`tab-count-${s}`);
     if (btn) {
       if (s === status) {
-        btn.className = "px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition";
+        btn.className = "px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition inline-flex items-center gap-1.5 whitespace-nowrap active";
+        if (badge) badge.className = "tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0062ff] font-bold";
       } else {
-        btn.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition";
+        btn.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap";
+        if (badge) badge.className = "tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold";
       }
     }
   });
@@ -1165,10 +1168,20 @@ async function loadLeads(statusFilter = null) {
       crmCurrentStatusFilter = statusFilter;
     }
     
-    // Chargement complet pour filtrage instantané client-side
-    const res = await fetch("/api/crm/leads?status=Tous");
-    crmLeadsData = await res.json();
-    if (!Array.isArray(crmLeadsData)) crmLeadsData = [];
+    // Chargement complet avec enveloppe statistique pour filtrage instantané client-side
+    const res = await fetch("/api/crm/leads?status=Tous&envelope=1");
+    const jsonResp = await res.json();
+
+    if (jsonResp && jsonResp.leads && Array.isArray(jsonResp.leads)) {
+      crmLeadsData = jsonResp.leads;
+      if (jsonResp.stats) {
+        updateTabCountsFromStats(jsonResp.stats);
+      }
+    } else if (Array.isArray(jsonResp)) {
+      crmLeadsData = jsonResp;
+    } else {
+      crmLeadsData = [];
+    }
 
     // Nettoyer les sélections non valides
     const currentIds = new Set(crmLeadsData.map(l => l.id));
@@ -1190,6 +1203,25 @@ async function loadLeads(statusFilter = null) {
   }
 }
 
+function updateTabCountsFromStats(stats) {
+  if (!stats) return;
+  const countMap = {
+    "Tous": stats.total ?? crmLeadsData.length,
+    "Chaud": stats.chauds ?? 0,
+    "Converti": stats.convertis ?? 0,
+    "Tiède": stats.tiedes ?? 0,
+    "Froid": stats.froids ?? 0,
+    "48h_inactif": stats.inactifs_48h ?? 0,
+    "diag_sans_offre": stats.diag_sans_offre ?? 0,
+    "Rejeté": stats.rejetes ?? 0
+  };
+
+  Object.entries(countMap).forEach(([key, val]) => {
+    const el = document.getElementById(`tab-count-${key}`);
+    if (el) el.innerText = val;
+  });
+}
+
 async function loadAgentPollerStatus() {
   try {
     const res = await fetch("/api/agent/status");
@@ -1204,30 +1236,37 @@ async function loadAgentPollerStatus() {
     const rate5mEl = document.getElementById("poller-rate-5m");
     const statusBadge = document.getElementById("poller-status-badge");
 
-    if (lastRunEl && data.derniere_ronde) {
-      lastRunEl.innerHTML = `Dernière ronde d'inspection : <strong class="text-slate-700">${formatRelativeTime(data.derniere_ronde)}</strong>`;
+    const labelText = data.last_poll_label || (data.derniere_ronde ? formatRelativeTime(data.derniere_ronde) : "Il y a quelques instants");
+    if (lastRunEl) {
+      lastRunEl.innerHTML = `Dernière ronde d'inspection : <strong class="text-slate-700">${labelText}</strong>`;
     }
     if (todayCountEl) todayCountEl.innerText = data.conversations_traitees_aujourd_hui || 0;
+    
+    const pendingCount = (data.pending_count !== undefined) ? data.pending_count : (data.en_attente_maintenant || 0);
     if (pendingCountEl) {
-      pendingCountEl.innerText = data.en_attente_maintenant || 0;
-      if (data.en_attente_maintenant > 0) {
+      pendingCountEl.innerText = pendingCount;
+      if (pendingCount > 0) {
         pendingCountEl.className = "text-sm font-black text-rose-600";
         if (pendingBoxEl) pendingBoxEl.className = "px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 shadow-2xs";
       } else {
         pendingCountEl.className = "text-sm font-black text-slate-800";
-        if (pendingBoxEl) pendingBoxEl.className = "px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs";
+        if (pendingBoxEl) pendingBoxEl.className = "px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs";
       }
     }
     if (avgTimeEl) avgTimeEl.innerText = `${data.temps_reponse_moyen_minutes || 2.4} min`;
     if (rate5mEl) rate5mEl.innerText = `${data.taux_reponse_sous_5min || 95}%`;
 
     if (statusBadge) {
-      if (data.statut === "actif") {
+      const pollerStatut = data.poller_statut || data.statut || "actif";
+      if (pollerStatut === "actif") {
         statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)`;
         statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
-      } else {
-        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> En pause`;
+      } else if (pollerStatut === "retard") {
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> Ronde Différée`;
         statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200";
+      } else {
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactif`;
+        statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200";
       }
     }
   } catch (e) {
@@ -1483,16 +1522,31 @@ function applyLeadsFilterAndRender() {
 
   if (filtered.length === 0) {
     const isSearching = crmCurrentSearchTerm.length > 0;
+    const filterLabel = crmCurrentStatusFilter;
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" class="p-8 text-center text-slate-500">
-          <div class="max-w-xs mx-auto space-y-2">
-            <i data-lucide="search-x" class="w-8 h-8 text-slate-400 mx-auto"></i>
-            <div class="font-bold text-slate-700">Aucun prospect trouvé</div>
-            <p class="text-xs text-slate-400">
-              ${isSearching ? `Aucun résultat pour "<strong>${escapeHtml(crmCurrentSearchTerm)}</strong>".` : `Aucun prospect pour le filtre "${escapeHtml(crmCurrentStatusFilter)}".`}
+        <td colspan="9" class="p-12 text-center text-slate-500 bg-white">
+          <div class="max-w-md mx-auto space-y-3">
+            <div class="text-4xl select-none">📭</div>
+            <div class="font-bold text-base text-slate-800">
+              ${isSearching ? 'Aucun résultat trouvé' : `Aucun lead dans "${escapeHtml(filterLabel)}"`}
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              ${isSearching 
+                ? `Aucun contact ne correspond au terme "<strong>${escapeHtml(crmCurrentSearchTerm)}</strong>". Vérifiez l'orthographe ou réinitialisez la recherche.`
+                : `Il n'y a actuellement aucun prospect dans la catégorie <strong>${escapeHtml(filterLabel)}</strong>. Tous les contacts sont à jour ou classés dans d'autres étapes.`
+              }
             </p>
-            ${isSearching ? `<button onclick="clearLeadSearch()" class="mt-2 text-xs font-bold text-[#0062ff] hover:underline">Effacer la recherche</button>` : ''}
+            <div class="pt-2 flex items-center justify-center gap-2">
+              ${isSearching 
+                ? `<button onclick="clearLeadSearch()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">Effacer la recherche</button>`
+                : ''}
+              ${crmCurrentStatusFilter !== 'Tous' 
+                ? `<button onclick="setLeadStatusFilter('Tous')" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0062ff] hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition">
+                     <span>Voir tous les leads (${crmLeadsData.length})</span>
+                   </button>` 
+                : ''}
+            </div>
           </div>
         </td>
       </tr>

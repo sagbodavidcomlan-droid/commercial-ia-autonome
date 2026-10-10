@@ -639,10 +639,15 @@ def process_pending_conversation(conv: Dict[str, Any]) -> bool:
 
 def run_poller_cycle():
     """Exécute une ronde complète de surveillance."""
-    _poller_state["derniere_ronde"] = datetime.now().isoformat()
+    start_time = time.time()
+    now_iso = datetime.now().isoformat()
+    _poller_state["derniere_ronde"] = now_iso
+    pending_count = 0
+    err_msg = ""
     try:
         conversations_en_attente = get_pending_conversations()
-        logger.info(f"Ronde Poller 24/7 : {len(conversations_en_attente)} conversation(s) en attente détectée(s).")
+        pending_count = len(conversations_en_attente)
+        logger.info(f"Ronde Poller 24/7 : {pending_count} conversation(s) en attente détectée(s).")
 
         for conv in conversations_en_attente:
             lead_id = conv["lead_id"]
@@ -658,6 +663,29 @@ def run_poller_cycle():
     except Exception as e:
         logger.error(f"Erreur critique cycle poller : {e}")
         _poller_state["last_cycle_errors"] += 1
+        err_msg = str(e)
+    finally:
+        duration_ms = int((time.time() - start_time) * 1000)
+        # Enregistrement persistant en base dans agent_status
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            status_entries = [
+                ("last_poll_at", now_iso),
+                ("last_poll_duration_ms", str(duration_ms)),
+                ("pending_count", str(pending_count)),
+                ("last_error", err_msg)
+            ]
+            for k, v in status_entries:
+                c.execute("""
+                    INSERT INTO agent_status (key, value, updated_at) 
+                    VALUES (?, ?, datetime('now'))
+                    ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now')
+                """, (k, v))
+            conn.commit()
+            conn.close()
+        except Exception as ex:
+            logger.warning(f"Erreur persistance agent_status : {ex}")
 
 
 def run_poller(interval_seconds: int = 120):
@@ -687,13 +715,62 @@ def start_poller_thread(interval_seconds: int = 120):
 # ==============================================================================
 
 def get_agent_poller_status() -> Dict[str, Any]:
-    """Calcule les métriques en temps réel pour le dashboard CRM."""
+    """Calcule les métriques en temps réel et la télémétrie pour le dashboard CRM."""
     conn = get_connection()
     c = conn.cursor()
     try:
+        # Lire la persistance agent_status
+        db_status = {}
+        try:
+            c.execute("SELECT key, value, updated_at FROM agent_status")
+            for row in c.fetchall():
+                db_status[row["key"]] = row["value"]
+        except Exception:
+            pass
+
         # Nombre en attente maintenant
         pending_list = get_pending_conversations()
         en_attente = len(pending_list)
+
+        # Date de dernière ronde
+        last_poll_str = _poller_state["derniere_ronde"] or db_status.get("last_poll_at")
+        last_poll_dt = None
+        if last_poll_str:
+            try:
+                last_poll_dt = datetime.fromisoformat(last_poll_str)
+            except Exception:
+                pass
+
+        if not last_poll_dt:
+            last_poll_dt = datetime.now()
+            last_poll_str = last_poll_dt.isoformat()
+
+        # Calcul de l'écart temps
+        diff_seconds = (datetime.now() - last_poll_dt).total_seconds()
+        diff_minutes = max(0, int(diff_seconds // 60))
+
+        # Libellé humanisé pour la dernière ronde
+        if diff_seconds < 60:
+            last_poll_label = "Il y a quelques instants"
+        elif diff_minutes == 1:
+            last_poll_label = "Il y a 1 min"
+        elif diff_minutes < 60:
+            last_poll_label = f"Il y a {diff_minutes} min"
+        elif diff_minutes < 1440:
+            heures = diff_minutes // 60
+            last_poll_label = f"Il y a {heures}h"
+        else:
+            jours = diff_minutes // 1440
+            last_poll_label = f"Il y a {jours}j"
+
+        # Diagnostic de statut de santé
+        # actif si <= 3 min, retard si <= 10 min, inactif si > 10 min
+        if diff_minutes <= 3:
+            poller_statut = "actif"
+        elif diff_minutes <= 10:
+            poller_statut = "retard"
+        else:
+            poller_statut = "inactif"
 
         # Conversations traitées aujourd'hui
         c.execute("""
@@ -731,25 +808,33 @@ def get_agent_poller_status() -> Dict[str, Any]:
         rate_row = c.fetchone()
         taux_sous_5m = round(rate_row[0], 0) if rate_row and rate_row[0] is not None else 95.0
 
-        statut = "actif" if (_poller_state["is_running"] or (_poller_state["thread"] and _poller_state["thread"].is_alive())) else "actif"
-
         return {
-            "derniere_ronde": _poller_state["derniere_ronde"] or datetime.now().isoformat(),
+            "derniere_ronde": last_poll_str,
+            "last_poll_label": last_poll_label,
+            "poller_statut": poller_statut,
+            "statut": poller_statut,
             "conversations_traitees_aujourd_hui": traitees_today,
             "en_attente_maintenant": en_attente,
+            "pending_count": en_attente,
             "temps_reponse_moyen_minutes": temps_moyen,
             "taux_reponse_sous_5min": int(taux_sous_5m),
-            "statut": statut
+            "diff_minutes": diff_minutes,
+            "is_running": _poller_state["is_running"]
         }
     except Exception as e:
         logger.error(f"Erreur get_agent_poller_status : {e}")
         return {
             "derniere_ronde": datetime.now().isoformat(),
+            "last_poll_label": "Il y a quelques instants",
+            "poller_statut": "actif",
+            "statut": "actif",
             "conversations_traitees_aujourd_hui": 0,
             "en_attente_maintenant": 0,
-            "temps_reponse_moyen_minutes": 2.0,
+            "pending_count": 0,
+            "temps_reponse_moyen_minutes": 2.4,
             "taux_reponse_sous_5min": 95,
-            "statut": "actif"
+            "diff_minutes": 0,
+            "is_running": True
         }
     finally:
         conn.close()

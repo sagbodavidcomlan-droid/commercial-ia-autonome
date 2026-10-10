@@ -1073,15 +1073,16 @@
         </div>
 
         <!-- BANNIÈRE ÉTAT EN TEMPS RÉEL DE L'AGENT IA (POLLER 24/7) -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-blue-200/80 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-white shadow-xs">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center gap-3.5">
-              <div class="w-11 h-11 rounded-2xl bg-[#0062ff]/10 text-[#0062ff] flex items-center justify-center font-black text-lg shrink-0 shadow-xs border border-blue-200/60">
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-200/90 bg-white shadow-xs">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <!-- Identité & Statut Agent -->
+            <div class="flex items-center gap-3.5 min-w-[280px]">
+              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black text-xl shrink-0 shadow-2xs border border-blue-100">
                 🤖
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="text-sm font-black text-slate-900">AGENT IA — ÉTAT EN TEMPS RÉEL</h3>
+                  <h3 class="text-sm font-black text-slate-900 tracking-tight">AGENT IA COMMERCIAL</h3>
                   <span id="poller-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)
                   </span>
@@ -1092,26 +1093,30 @@
               </div>
             </div>
 
-            <!-- Stats temps réel du Poller -->
-            <div class="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
-              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Traités aujourd'hui</span>
+            <!-- Séparateur visuel desktop -->
+            <div class="hidden lg:block w-px h-10 bg-slate-200"></div>
+
+            <!-- Stats temps réel du Poller + Bouton déclencheur explicite -->
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-xs">
+              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Traités aujourd'hui</span>
                 <span class="text-sm font-black text-slate-800" id="poller-today-count">0</span>
               </div>
-              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs" id="poller-pending-box">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">En attente active</span>
+              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs" id="poller-pending-box">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">En attente active</span>
                 <span class="text-sm font-black text-slate-800" id="poller-pending-count">0</span>
               </div>
-              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Temps réponse moyen</span>
+              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Temps moyen</span>
                 <span class="text-sm font-black text-[#0062ff]" id="poller-avg-time">2.4 min</span>
               </div>
-              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Taux &lt; 5 min</span>
+              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Taux &lt; 5 min</span>
                 <span class="text-sm font-black text-emerald-600" id="poller-rate-5m">95%</span>
               </div>
-              <button onclick="triggerPollerInspection()" class="p-2 rounded-xl bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-xs font-bold transition shadow-2xs" title="Lancer une ronde d'inspection manuelle immédiate">
-                <i data-lucide="play-circle" class="w-4 h-4"></i>
+              <button onclick="triggerPollerInspection()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-xs font-bold transition shadow-2xs" title="Lancer une ronde d'inspection manuelle immédiate">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Lancer ronde</span>
               </button>
             </div>
           </div>
@@ -1149,15 +1154,15 @@
         <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE ==================== -->
         <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 shadow-sm space-y-0 relative">
           <!-- Barre d'outils de Recherche & Filtres Avancés -->
-          <div class="p-4 bg-white border-b border-slate-200 flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
+          <div class="p-4 bg-white border-b border-slate-200 flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
             <!-- Champ de Recherche Rapide -->
-            <div class="relative flex-1 min-w-[280px] max-w-xl">
+            <div class="relative flex-1 min-w-[280px] max-w-md">
               <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
               <input 
                 id="crm-lead-search" 
                 type="text" 
                 oninput="handleLeadSearchInput(this.value)"
-                placeholder="Rechercher par nom, téléphone (+229...), WhatsApp, email, douleur, offre..." 
+                placeholder="Rechercher nom, téléphone, WhatsApp, email, douleur, offre..." 
                 class="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 placeholder-slate-400 transition"
               />
               <button 
@@ -1169,22 +1174,48 @@
               </button>
             </div>
 
-            <!-- Filtres par Statut et Compteur -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs flex-wrap" id="crm-status-chips">
-                <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition">Tous</button>
-                <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-semibold transition">Chauds 🔥</button>
-                <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-emerald-800 font-semibold transition">Clients ✅</button>
-                <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-800 font-semibold transition">Tièdes</button>
-                <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-800 font-semibold transition">Froids</button>
-                <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition">Sans contact 48h ⚠️</button>
-                <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-indigo-800 font-semibold transition">Diagnostic sans offre 🎯</button>
-                <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition">Rejetés / RGPD</button>
+            <!-- Filtres par Statut sur une seule ligne défilable et Compteur -->
+            <div class="flex items-center gap-3 overflow-hidden w-full xl:w-auto justify-between xl:justify-end">
+              <div class="filter-bar-wrapper flex-1 xl:flex-initial overflow-x-auto py-1 scrollbar-none" style="overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">
+                <div class="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs" id="crm-status-chips">
+                  <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Tous</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0062ff] font-bold" id="tab-count-Tous">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Chauds 🔥</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Chaud">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-emerald-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Clients ✅</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Converti">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Tièdes</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Tiède">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Froids</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Froid">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Sans contact 48h ⚠️</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-48h_inactif">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-indigo-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Diagnostic sans offre 🎯</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-diag_sans_offre">0</span>
+                  </button>
+                  <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <span>Rejetés / RGPD</span>
+                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Rejeté">0</span>
+                  </button>
+                </div>
               </div>
 
-              <!-- Compteur dynamique -->
-              <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 whitespace-nowrap">
-                Chargement...
+              <!-- Compteur contextuel -->
+              <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 whitespace-nowrap shrink-0">
+                0 leads
               </div>
             </div>
           </div>
