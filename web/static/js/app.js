@@ -1458,6 +1458,30 @@ function formatRelativeTime(dateStr) {
   }
 }
 
+function getLeadFullName(l) {
+  if (!l) return "Prospect";
+  const p = (l.prenom || "").trim();
+  const n = (l.nom || "").trim();
+  if (p && n) return `${p} ${n}`;
+  if (p || n) return (p || n);
+  if (l.nom_complet && !l.nom_complet.toLowerCase().includes("prospect")) return l.nom_complet.trim();
+  if (l.nom_lead && !l.nom_lead.toLowerCase().includes("prospect")) return l.nom_lead.trim();
+  return l.nom_complet || l.nom_lead || `Prospect #${l.id || 'Nouveau'}`;
+}
+
+function getLeadInitials(l) {
+  if (!l) return "P";
+  const p = (l.prenom || "").trim();
+  const n = (l.nom || "").trim();
+  if (p && n) return (p[0] + n[0]).toUpperCase();
+  const full = getLeadFullName(l).replace(/[^a-zA-ZÀ-ÿ0-9 ]/g, "").trim();
+  const parts = full.split(/\s+/);
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return (parts[0] ? parts[0][0] : "P").toUpperCase();
+}
+
 function applyLeadsFilterAndRender() {
   const tbody = document.getElementById("crm-leads-tbody");
   const counterEl = document.getElementById("crm-leads-counter");
@@ -1493,7 +1517,7 @@ function applyLeadsFilterAndRender() {
   // Filtrage instantané par mot-clé de recherche
   if (crmCurrentSearchTerm) {
     filtered = filtered.filter(l => {
-      const nom = String(l.prenom ? `${l.prenom} ${l.nom || ''}` : (l.nom_complet || l.nom_lead || "")).toLowerCase();
+      const nom = String(getLeadFullName(l)).toLowerCase();
       const phone = String(l.whatsapp || l.telephone || "").toLowerCase();
       const email = String(l.email || "").toLowerCase();
       const douleur = String(l.douleur_identifiee || "").toLowerCase();
@@ -1574,13 +1598,7 @@ function applyLeadsFilterAndRender() {
         const isSelected = selectedLeadIds.has(leadId);
 
         // 1. Nom & Canal (Badges de canal SVG Simple Icons)
-        let fullName = "";
-        if (l.prenom || l.nom) {
-          fullName = `${l.prenom || ""} ${l.nom || ""}`.trim();
-        }
-        if (!fullName) {
-          fullName = l.nom_complet || l.nom_lead || `Prospect #${leadId}`;
-        }
+        const fullName = getLeadFullName(l);
 
         const canalSource = String(l.canal_source || l.source_contact || l.source_canal || "messenger").toLowerCase();
         const canalIdStr = l.canal_id ? String(l.canal_id) : "";
@@ -1679,8 +1697,12 @@ function applyLeadsFilterAndRender() {
             </td>
 
             <!-- Col 1 : Lead -->
-            <td class="min-w-[140px]">
-              <div class="font-extrabold text-slate-900">${escapeHtml(fullName)}</div>
+            <td class="min-w-[150px]">
+              <div class="font-extrabold text-slate-900 flex items-center gap-1.5">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-blue-600 shrink-0"></i>
+                <span class="truncate">${escapeHtml(fullName)}</span>
+              </div>
+              <div class="text-[11px] text-slate-500 font-medium truncate mt-0.5" title="${escapeHtml(l.poste || 'Prospect')}">${escapeHtml(l.poste || 'Prospect')}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 ${canalBadge}
                 <span class="text-[10px] text-slate-400" title="Création">${escapeHtml(dateCreationStr)}</span>
@@ -1966,9 +1988,21 @@ function openLeadEditModal(leadId) {
 
   const modal = document.getElementById("modal-lead-edit");
   document.getElementById("edit-lead-id").value = lead.id;
-  document.getElementById("edit-lead-modal-title").innerText = `Modifier #${lead.id} - ${lead.prenom || lead.nom || lead.nom_complet || 'Prospect'}`;
-  document.getElementById("edit-lead-prenom").value = lead.prenom || "";
-  document.getElementById("edit-lead-nom").value = lead.nom || "";
+
+  let pName = (lead.prenom || "").trim();
+  let lName = (lead.nom || "").trim();
+  if (!pName && !lName) {
+    const rawName = (lead.nom_complet || lead.nom_lead || "").trim();
+    if (rawName && !rawName.toLowerCase().includes("prospect")) {
+      const parts = rawName.split(/\s+/);
+      pName = parts[0] || "";
+      lName = parts.slice(1).join(" ") || "";
+    }
+  }
+  const displayTitleName = (pName || lName) ? `${pName} ${lName}`.trim() : (lead.nom_complet || `Lead #${lead.id}`);
+  document.getElementById("edit-lead-modal-title").innerText = `Modifier #${lead.id} - ${displayTitleName}`;
+  document.getElementById("edit-lead-prenom").value = pName;
+  document.getElementById("edit-lead-nom").value = lName;
   document.getElementById("edit-lead-whatsapp").value = lead.whatsapp || lead.telephone || "";
   document.getElementById("edit-lead-email").value = lead.email || "";
   document.getElementById("edit-lead-linkedin").value = lead.linkedin_url || "";
@@ -1981,6 +2015,11 @@ function openLeadEditModal(leadId) {
   document.getElementById("edit-lead-notes").value = lead.notes || "";
 
   if (modal) modal.classList.remove("hidden");
+  try {
+    if (window.lucide && typeof lucide.createIcons === "function") {
+      lucide.createIcons();
+    }
+  } catch (_) {}
 }
 
 function closeLeadEditModal() {
@@ -2103,12 +2142,12 @@ async function openLeadConversation(leadId, channel = null) {
     const durEl = document.getElementById("conv-modal-dur-badge");
     const contactEl = document.getElementById("conv-modal-contact-details");
 
-    if (nameEl) nameEl.textContent = lead.nom_complet;
+    const fullLeadName = getLeadFullName(lead);
+    if (nameEl) nameEl.textContent = fullLeadName;
     if (avatarEl) {
-      const parts = lead.nom_complet.split(" ");
-      avatarEl.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+      avatarEl.textContent = getLeadInitials(lead);
     }
-    if (statusEl) statusEl.textContent = lead.statut;
+    if (statusEl) statusEl.textContent = lead.statut || lead.temperature || "Tiède";
     if (durEl) durEl.textContent = `DUR: ${lead.score_dur}/100`;
     if (contactEl) {
       const coordStr = lead.telephone || lead.email || (lead.facebook_psid ? `Messenger PSID: ${lead.facebook_psid}` : 'Contact en ligne');
@@ -2510,11 +2549,10 @@ function renderDrawerLeadHeader(lead) {
   const durUEl = document.getElementById("drawer-dur-u");
   const durREl = document.getElementById("drawer-dur-r");
 
-  const fullName = lead.nom_complet || (lead.prenom ? `${lead.prenom} ${lead.nom || ''}` : lead.nom_lead || 'Prospect');
+  const fullName = getLeadFullName(lead);
   if (nameEl) nameEl.textContent = fullName;
   if (avatarEl) {
-    const parts = fullName.trim().split(" ");
-    avatarEl.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+    avatarEl.textContent = getLeadInitials(lead);
   }
 
   // Statut
@@ -2787,7 +2825,7 @@ function createKanbanCardElement(lead) {
   card.setAttribute("draggable", "true");
   card.setAttribute("data-lead-id", lead.id);
 
-  const fullName = lead.nom_complet || (lead.prenom ? `${lead.prenom} ${lead.nom || ''}` : lead.nom_lead || 'Prospect');
+  const fullName = getLeadFullName(lead);
   const canal = lead.source_contact || lead.canal_source || lead.source || "Messenger";
   const score = Math.min(100, Math.max(0, Number(lead.score_dur || lead.score_qualification || 0)));
   const statut = lead.statut_lead || lead.temperature || "Froid";

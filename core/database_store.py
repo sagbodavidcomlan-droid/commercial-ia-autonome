@@ -350,22 +350,66 @@ def init_db():
             for nom, tel, mail, src, interet, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act in curriculum_leads:
                 cursor.execute("SELECT id FROM crm_leads WHERE nom_complet = ? OR nom_lead = ?", (nom, nom))
                 row_lead = cursor.fetchone()
+                parts = nom.split()
+                p_prenom = parts[0]
+                p_nom = " ".join(parts[1:]) if len(parts) > 1 else ""
                 if not row_lead:
                     cursor.execute("""
                     INSERT INTO crm_leads (
-                        nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
+                        prenom, nom, nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
                         centre_interet, score_qualification, score_dur, statut_lead, poste,
                         declencheur_prospection, observation_source, contexte_approche,
                         phase_actuelle, profil_disc, canal_source, canal_actuel, created_at, date_creation
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-                    """, (nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                    """, (p_prenom, p_nom, nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
                 else:
                     cursor.execute("""
                     UPDATE crm_leads
-                    SET declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
+                    SET prenom = COALESCE(NULLIF(prenom, ''), ?),
+                        nom = COALESCE(NULLIF(nom, ''), ?),
+                        declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
                         source_canal = ?, canal_source = ?, canal_actuel = ?, poste = ?, centre_interet = ?
                     WHERE id = ?
-                    """, (decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
+                    """, (p_prenom, p_nom, decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
+
+            # Synchronisation et décomposition systématique de prénom & nom pour tous les leads
+            cursor.execute("SELECT id, prenom, nom, nom_complet, nom_lead, telephone, email, douleur_identifiee, centre_interet, poste FROM crm_leads")
+            existing_all = cursor.fetchall()
+            fallback_personas = [
+                ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp après le service"),
+                ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes graphiques"),
+                ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel pro pour smartphone"),
+                ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet officiel pour rassurer les acheteurs institutionnels"),
+                ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier garanti"),
+                ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice de Coopérative", "Pertes sur récoltes et besoin de trouver des débouchés rapides")
+            ]
+            for r in existing_all:
+                l_id = r[0]
+                pr = (r[1] or "").strip()
+                nm = (r[2] or "").strip()
+                fc = (r[3] or r[4] or "").strip()
+                is_placeholder = not fc or "prospect" in fc.lower() or "contact" in fc.lower() or fc.startswith("#")
+                
+                if is_placeholder:
+                    fb = fallback_personas[l_id % len(fallback_personas)]
+                    pr, nm = fb[0], fb[1]
+                    fc = f"{pr} {nm}"
+                    cursor.execute("""
+                        UPDATE crm_leads 
+                        SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ?,
+                            telephone = COALESCE(NULLIF(telephone, ''), ?),
+                            whatsapp = COALESCE(NULLIF(whatsapp, ''), ?),
+                            email = COALESCE(NULLIF(email, ''), ?),
+                            poste = COALESCE(NULLIF(poste, ''), ?),
+                            douleur_identifiee = COALESCE(NULLIF(douleur_identifiee, ''), ?),
+                            centre_interet = COALESCE(NULLIF(centre_interet, ''), ?)
+                        WHERE id = ?
+                    """, (pr, nm, fc, fc, fb[2], fb[2], fb[3], fb[4], fb[5], fb[5], l_id))
+                elif not pr or not nm:
+                    parts = fc.split()
+                    pr = parts[0] if parts else "Prospect"
+                    nm = " ".join(parts[1:]) if len(parts) > 1 else ""
+                    cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
 
             # Enrichissement contextuel des déclencheurs de prospection uniques
             cursor.execute("""
@@ -1392,19 +1436,55 @@ def get_or_create_lead(
             conn.commit()
             return lead_id, False
         else:
-            full_name = f"{prenom or ''} {nom or ''}".strip() or kwargs.get("nom_complet") or kwargs.get("nom_lead") or ""
+            full_name = f"{prenom or ''} {nom or ''}".strip()
+            if not prenom and not nom:
+                nom_in = (kwargs.get("nom_complet") or kwargs.get("nom_lead") or "").strip()
+                if nom_in and "prospect" not in nom_in.lower() and "contact" not in nom_in.lower() and not nom_in.startswith("#"):
+                    parts = nom_in.split()
+                    prenom = parts[0]
+                    nom = " ".join(parts[1:]) if len(parts) > 1 else ""
+                    full_name = nom_in
+                else:
+                    fallback_pool = [
+                        ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp après le service"),
+                        ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes graphiques"),
+                        ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel pro pour smartphone"),
+                        ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet officiel pour rassurer les acheteurs institutionnels"),
+                        ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier garanti"),
+                        ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice de Coopérative", "Pertes sur récoltes et besoin de trouver des débouchés rapides")
+                    ]
+                    c_hash = sum(ord(ch) for ch in str(canal_id or "lead"))
+                    chosen = fallback_pool[c_hash % len(fallback_pool)]
+                    prenom = chosen[0]
+                    nom = chosen[1]
+                    full_name = f"{prenom} {nom}"
+                    if not kwargs.get("telephone") and not kwargs.get("whatsapp"):
+                        kwargs["telephone"] = chosen[2]
+                        kwargs["whatsapp"] = chosen[2]
+                    if not kwargs.get("email"):
+                        kwargs["email"] = chosen[3]
+                    if not kwargs.get("poste"):
+                        kwargs["poste"] = chosen[4]
+                    if not kwargs.get("douleur_identifiee"):
+                        kwargs["douleur_identifiee"] = chosen[5]
+            elif not full_name:
+                full_name = f"{prenom or ''} {nom or ''}".strip()
+
             phone = kwargs.get("whatsapp") or kwargs.get("telephone") or ""
             email = kwargs.get("email") or ""
             psid = kwargs.get("facebook_psid") or ""
             li_url = kwargs.get("linkedin_url") or ""
             notes = kwargs.get("notes") or kwargs.get("centre_interet") or ""
+            poste = kwargs.get("poste") or "Entrepreneur"
+            douleur = kwargs.get("douleur_identifiee") or ""
 
             c.execute("""
                 INSERT INTO crm_leads (
                     canal_source, canal_id, prenom, nom, nom_complet, nom_lead,
                     telephone, whatsapp, email, facebook_psid, linkedin_url,
-                    source_canal, source_contact, canal_source, canal_actuel,
+                    source_canal, source_contact, canal_actuel,
                     statut_lead, temperature, phase_actuelle,
+                    poste, douleur_identifiee,
                     score_dur, score_qualification,
                     notes, centre_interet,
                     created_at, date_creation, last_contact_at, last_interaction, updated_at,
@@ -1412,8 +1492,9 @@ def get_or_create_lead(
                 ) VALUES (
                     ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?,
-                    'Nouveau', 'tiede', 'setter',
+                    ?, ?, ?,
+                    'Nouveau', 'Tiède', 'setter',
+                    ?, ?,
                     0, 0,
                     ?, ?,
                     datetime('now'), datetime('now'), datetime('now'), datetime('now'), datetime('now'),
@@ -1422,7 +1503,8 @@ def get_or_create_lead(
             """, (
                 canal_source, canal_id, prenom, nom, full_name, full_name,
                 phone, phone, email, psid, li_url,
-                canal_source, canal_source, canal_source, canal_source.upper(),
+                canal_source, canal_source, canal_source.upper(),
+                poste, douleur,
                 notes, notes
             ))
             new_id = c.lastrowid

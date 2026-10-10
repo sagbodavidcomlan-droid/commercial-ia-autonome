@@ -742,6 +742,20 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 fields.append("temperature = ?")
                 params.append(body["statut_lead"])
 
+            prenom_in = body.get("prenom")
+            nom_in = body.get("nom")
+            if (prenom_in or nom_in) and "nom_complet" not in body:
+                full_str = f"{prenom_in or ''} {nom_in or ''}".strip()
+                if full_str:
+                    fields.extend(["nom_complet = ?", "nom_lead = ?"])
+                    params.extend([full_str, full_str])
+            elif "nom_complet" in body and not prenom_in and not nom_in:
+                parts = (body["nom_complet"] or "").split()
+                p_p = parts[0] if parts else ""
+                n_p = " ".join(parts[1:]) if len(parts) > 1 else ""
+                fields.extend(["prenom = ?", "nom = ?", "nom_lead = ?"])
+                params.extend([p_p, n_p, body["nom_complet"]])
+
             if not fields:
                 self.send_json_response({"error": "Aucun champ à mettre à jour."}, status=400)
                 return
@@ -810,11 +824,26 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         except Exception:
             pass
 
+        pr = (lead.get("prenom") or "").strip()
+        nm = (lead.get("nom") or "").strip()
+        if not pr and not nm:
+            nc = lead.get("nom_complet") or lead.get("nom_lead") or ""
+            if nc and "prospect" not in nc.lower():
+                parts = nc.split()
+                pr = parts[0]
+                nm = " ".join(parts[1:]) if len(parts) > 1 else ""
+        if not pr and not nm:
+            pr = "Prospect"
+            nm = f"#{lead_id}"
+        full_display_name = f"{pr} {nm}".strip() if (pr and nm) else (lead.get("nom_complet") or lead.get("nom_lead") or f"Prospect #{lead_id}")
+
         self.send_json_response({
             "success": True,
             "lead": {
                 "id": lead["id"],
-                "nom_complet": lead.get("nom_complet") or lead.get("nom_lead") or f"Prospect #{lead_id}",
+                "prenom": pr,
+                "nom": nm,
+                "nom_complet": full_display_name,
                 "telephone": lead.get("whatsapp") or lead.get("telephone") or (f"FB:{lead.get('facebook_psid')[-6:]}" if lead.get("facebook_psid") else ""),
                 "email": lead.get("email") or "",
                 "facebook_psid": lead.get("facebook_psid") or "",
@@ -826,7 +855,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "statut": lead.get("statut_lead") or "Tiède",
                 "temperature": lead.get("temperature") or lead.get("statut_lead") or "Tiède",
                 "douleur_identifiee": lead.get("douleur_identifiee") or "",
-                "offre_matchee": lead.get("offre_matchee") or "",
+                "offre_matchee": lead.get("offre_matchee") or lead.get("offre_proposee") or "",
                 "diagnostic_complet": lead.get("diagnostic_complet", 0),
                 "conversation_count": lead.get("conversation_count", 1),
                 "notes": lead.get("notes") or lead.get("centre_interet") or ""
