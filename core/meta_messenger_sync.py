@@ -607,10 +607,12 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 "source_canal": "Facebook Messenger",
                 "centre_interet": user_text,
                 "notes": user_text,
-                "facebook_psid": sender_psid
+                "facebook_psid": sender_psid,
+                "diagnostic_complet": lead_row["diagnostic_complet"] if lead_row else 0,
+                "diagnostic_questions_count": (lead_row["diagnostic_questions_count"] if lead_row and "diagnostic_questions_count" in lead_row.keys() else 0) or 0
             }
 
-            # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours)
+            # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours + Règle 10)
             from modules.ai_sales_agent import AISalesAgent
             ai_agent = AISalesAgent()
             reply_text = ai_agent.generate_conversational_reply(
@@ -620,9 +622,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 lead_data=lead_data
             )
 
-            # Synchronisation automatique de la qualification et de l'offre recommandée au CRM
-            if "automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower():
-                try:
+            # Incrémenter le compteur de questions de diagnostic si on n'a pas encore clos
+            is_closing_msg = ("automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower())
+            try:
+                if is_closing_msg:
+                    matched_off = "Offre #5 : Audit Commercial & Tunnel de Vente Express (50 000 FCFA)" if "audit-commercial" in reply_text.lower() else "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
                     cursor.execute("""
                         UPDATE crm_leads 
                         SET diagnostic_complet = 1,
@@ -633,10 +637,17 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                             offre_matchee = ?,
                             phase_actuelle = 'closer'
                         WHERE id = ?
-                    """, ("Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)", lead_id))
+                    """, (matched_off, lead_id))
                     conn.commit()
-                except Exception as e_upd:
-                    logger.warning(f"Note mise à jour état CRM après closing : {e_upd}")
+                else:
+                    cursor.execute("""
+                        UPDATE crm_leads
+                        SET diagnostic_questions_count = COALESCE(diagnostic_questions_count, 0) + 1
+                        WHERE id = ?
+                    """, (lead_id,))
+                    conn.commit()
+            except Exception as e_upd:
+                logger.warning(f"Note mise à jour état CRM diagnostic / closing : {e_upd}")
 
             # Vérifier si l'IA est en mode 100% Autonome ou en mode Pause / Supervision
             from core.autopilot_daemon import is_autopilot_active
@@ -888,7 +899,9 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     "telephone": formatted_phone,
                     "source_canal": "WhatsApp Business",
                     "centre_interet": user_text,
-                    "notes": user_text
+                    "notes": user_text,
+                    "diagnostic_complet": lead_row["diagnostic_complet"] if lead_row else 0,
+                    "diagnostic_questions_count": (lead_row["diagnostic_questions_count"] if lead_row and "diagnostic_questions_count" in lead_row.keys() else 0) or 0
                 }
 
                 from modules.ai_sales_agent import AISalesAgent
@@ -900,9 +913,11 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     lead_data=lead_data
                 )
 
-                # Synchronisation automatique de la qualification au CRM si offre close
-                if "automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower():
-                    try:
+                # Synchronisation automatique de la qualification au CRM si offre close ou incrément diagnostic
+                is_closing_msg = ("automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower())
+                try:
+                    if is_closing_msg:
+                        matched_off = "Offre #5 : Audit Commercial & Tunnel de Vente Express (50 000 FCFA)" if "audit-commercial" in reply_text.lower() else "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
                         cursor.execute("""
                             UPDATE crm_leads 
                             SET diagnostic_complet = 1,
@@ -913,10 +928,17 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                                 offre_matchee = ?,
                                 phase_actuelle = 'closer'
                             WHERE id = ?
-                        """, ("Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)", lead_id))
+                        """, (matched_off, lead_id))
                         conn.commit()
-                    except Exception as e_upd:
-                        logger.warning(f"Note mise à jour état CRM après closing WhatsApp : {e_upd}")
+                    else:
+                        cursor.execute("""
+                            UPDATE crm_leads
+                            SET diagnostic_questions_count = COALESCE(diagnostic_questions_count, 0) + 1
+                            WHERE id = ?
+                        """, (lead_id,))
+                        conn.commit()
+                except Exception as e_upd:
+                    logger.warning(f"Note mise à jour état CRM diagnostic / closing WhatsApp : {e_upd}")
 
                 # Vérifier si l'IA est en mode Autonome
                 from core.autopilot_daemon import is_autopilot_active

@@ -54,6 +54,13 @@ RÈGLES ABSOLUES ET INVARIABLES :
 7. Tonalité : sobre, humble, empathique, percutante — zéro bavardage, zéro jargon, zéro formule corporate.
 8. Ne jamais révéler être une IA. Ne pas confirmer, ne pas nier si la question est posée directement.
 9. Ne jamais justifier l'envoi d'un lien par le moyen de paiement.
+10. SORTIE DU DIAGNOSTIC & LIMITE ABSOLUE (NON NÉGOCIABLE) :
+    - Dès que le diagnostic est complet (problème concret nommé, actif et décideur identifié) : ARRÊT IMMÉDIAT DES QUESTIONS. Interdiction formelle de continuer à creuser ou de faire du conseil/coaching gratuit déguisé.
+    - LIMITE ABSOLUE : maximum 8 questions de diagnostic au total, quelle que soit la profondeur du problème. Au-delà, le prospect se fatigue. Si après 8 questions un problème principal est identifié → clore et proposer l'offre immédiatement. Si aucun problème n'est identifiable après 8 questions → proposer l'audit commercial (offre #5) comme point de départ.
+    - Quand le diagnostic est terminé :
+      * Message de transition : valide le diagnostic en 1 phrase + nomme ce que ça lui coûte chaque semaine de ne pas régler ça (coût de l'inaction).
+      * Message d'offre : présente directement l'offre matchée avec son lien officiel.
+      * ZÉRO script gratuit, zéro question supplémentaire. Directement vers l'offre.
 
 PHASE SETTER — actif si Phase_Actuelle = "setter" :
 - Mission unique : obtenir le droit de continuer la conversation, pas vendre.
@@ -239,7 +246,7 @@ class AISalesAgent:
             f"Rédige ta réponse en tant que Dave Sagbo (100% vouvoiement strict, zéro 'en personne', zéro 'assistant', zéro tutoiement) :"
         )
 
-        models_to_try = ["gemini-3.5-flash-lite", "gemini-flash-latest"]
+        models_to_try = ["gemini-3.5-flash", "gemini-flash-latest"]
         for mod in models_to_try:
             try:
                 import urllib.request
@@ -916,6 +923,119 @@ class AISalesAgent:
             }
         }
 
+    def is_diagnostic_complete(
+        self,
+        lead_id: int,
+        history: list,
+        user_message: str,
+        lead_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Détermine si le diagnostic guidé est complet selon la méthode DUR :
+        1. Problème concret identifié et confirmé
+        2. Actif et décideur identifiés (DUR validé)
+        3. Plafond strict : 8 questions posées par Dave au maximum.
+        """
+        agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
+        agent_count = len(agent_msgs)
+        user_msgs = [m for m in history if m.get("sender") in ("USER", "LEAD")]
+
+        diagnostic_count = 0
+        if lead_data and lead_data.get("diagnostic_questions_count") is not None:
+            try:
+                diagnostic_count = int(lead_data.get("diagnostic_questions_count", 0))
+            except (ValueError, TypeError):
+                diagnostic_count = 0
+        if diagnostic_count <= 0:
+            diagnostic_count = agent_count
+
+        msg_clean = (user_message or "").strip().lower()
+        last_agent = (agent_msgs[-1].get("message", "") if agent_msgs else "").lower()
+
+        # Profil 1 : Outbound / Prospection LinkedIn / Messages avec faible taux de retour
+        all_conv_text = " ".join([m.get("message", "").lower() for m in history] + [msg_clean])
+        is_linkedin_outreach = (
+            any(k in all_conv_text for k in ["linkedin", "prospection directe", "organique", "outreach", "messages personnalisés"])
+            and any(k in all_conv_text for k in ["taux de retour", "faible", "répondent pas", "peu de réponse", "retour reste faible"])
+        ) or (
+            any(k in last_agent for k in ["taux de retour", "réponses", "accroche", "présentation"])
+            and any(k in msg_clean for k in ["présentation", "faible", "personnalisé", "taux", "oui", "exactement", "c'est ça"])
+        )
+
+        # Profil 2 : Prix annoncé trop tôt / absence de qualification
+        is_price_question = any(w in last_agent for w in ["prix", "tarif", "avant d'annoncer", "avant de donner", "avant le prix"])
+        states_price_problem = (
+            any(w in msg_clean for w in ["tarif", "prix"])
+            and any(w in msg_clean for w in ["direct", "tout de suite", "dès le début", "sans poser", "sans question", "pas de question", "d'emblée"])
+        )
+        is_price_direct = (
+            states_price_problem
+            or (is_price_question and any(w in msg_clean for w in ["non", "pas de question", "direct", "tout de suite", "dès le début", "trop cher", "directement"]))
+            or (any(w in msg_clean for w in ["trop cher", "cher", "prix trop", "valeur perçue"]) and any(w in last_agent for w in ["question", "bloque", "niveau", "prix"]))
+        )
+
+        # Profil 3 : Audience / Trafic / Conversion bloquée
+        is_traffic_conversion = (
+            any(k in all_conv_text for k in ["pas assez de trafic", "trafic qualifié", "conversion"])
+            and any(w in msg_clean for w in ["oui", "exactement", "c'est ça", "bloque", "coince", "faible"])
+        )
+
+        # Vérification si diagnostic déjà marqué complet en base
+        already_complete = bool(lead_data and lead_data.get("diagnostic_complet") == 1)
+
+        # Règle de plafond strict : maximum 8 questions de diagnostic
+        hit_ceiling = (diagnostic_count >= 8 or agent_count >= 8)
+
+        is_complete = False
+        diagnostic_type = "OUTREACH"
+        douleur_identifiee = ""
+        matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
+        offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+
+        if is_linkedin_outreach:
+            is_complete = True
+            diagnostic_type = "OUTREACH_LINKEDIN"
+            douleur_identifiee = "Prospection LinkedIn avec messages d'accroche centrés sur soi générant un faible taux de réponse"
+            matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
+            offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+        elif is_price_direct:
+            is_complete = True
+            diagnostic_type = "PRIX_DIRECT"
+            douleur_identifiee = "Annonce du tarif avant qualification et construction de la valeur perçue"
+            matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
+            offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+        elif already_complete:
+            is_complete = True
+            diagnostic_type = "ALREADY_COMPLETE"
+            douleur_identifiee = lead_data.get("douleur_identifiee") or "Blocage d'acquisition et de closing identifié"
+        elif hit_ceiling:
+            is_complete = True
+            if "linkedin" in all_conv_text or "prospection" in all_conv_text:
+                diagnostic_type = "OUTREACH_LINKEDIN"
+                douleur_identifiee = "Taux de retour de prospection faible et manque de rentabilité du temps investi"
+                matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
+                offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+            elif any(w in all_conv_text for w in ["prix", "tarif", "cher"]):
+                diagnostic_type = "PRIX_DIRECT"
+                douleur_identifiee = "Annonce du tarif avant valorisation de la proposition de valeur"
+                matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
+                offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+            else:
+                diagnostic_type = "AUDIT_COMMERCIAL"
+                douleur_identifiee = "Absence de clarté sur le goulot d'étranglement commercial principal après diagnostic"
+                matched_offer = "Offre #5 : Audit Commercial & Tunnel de Vente Express (50 000 FCFA)"
+                offer_url = "https://formations.sagbodavid.com/audit-commercial"
+
+        return {
+            "is_complete": is_complete,
+            "diagnostic_type": diagnostic_type,
+            "hit_ceiling": hit_ceiling,
+            "diagnostic_count": diagnostic_count,
+            "douleur_identifiee": douleur_identifiee,
+            "matched_offer": matched_offer,
+            "offer_url": offer_url
+        }
+
     # ==========================================================================
     # MOTEUR CONVERSATIONNEL TEMPS RÉEL (4 RÈGLES D'OR OFFICIELLES)
     # ==========================================================================
@@ -928,10 +1048,10 @@ class AISalesAgent:
     ) -> str:
         """
         Génère une réponse conversationnelle experte en respectant rigoureusement
-        les règles d'or du cours d'apprentissage.
+        les règles d'or du cours d'apprentissage et la règle 10 de sortie de diagnostic.
         """
         import re
-        from core.database_store import get_lead_messages
+        from core.database_store import get_lead_messages, get_connection
 
         history = get_lead_messages(lead_id)
         agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
@@ -944,6 +1064,31 @@ class AISalesAgent:
         last_agent_msg = agent_msgs[-1].get("message", "") if agent_msgs else ""
         last_agent_lower = last_agent_msg.lower()
 
+        # Évaluation diagnostique DUR et plafond de questions
+        diag_res = self.is_diagnostic_complete(lead_id, history, user_message, lead_data)
+        is_diagnostic_confirmed = diag_res["is_complete"]
+
+        # Si le diagnostic est complet, synchroniser immédiatement crm_leads
+        if is_diagnostic_confirmed and lead_id:
+            try:
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET diagnostic_complet = 1,
+                        phase_actuelle = 'closer',
+                        douleur_identifiee = COALESCE(douleur_identifiee, ?),
+                        offre_matchee = ?,
+                        score_dur = 85,
+                        statut_lead = 'Chaud',
+                        temperature = 'Chaud'
+                    WHERE id = ?
+                """, (diag_res["douleur_identifiee"], diag_res["matched_offer"], lead_id))
+                conn.commit()
+                conn.close()
+            except Exception as e_db:
+                logger.warning(f"Note synchronisation crm_leads sortie diagnostic : {e_db}")
+
         # Détection de signaux de confusion / "je ne sais pas"
         confusion_signals = [
             "ne sais pas", "sais pas", "comment l'identifier", "comment savoir",
@@ -951,131 +1096,132 @@ class AISalesAgent:
             "comment trouver", "je sais pas trop", "je ne comprends pas"
         ]
         is_confusion = any(s in msg_lower for s in confusion_signals)
-
-        # Détection des étapes clés du diagnostic guidé
-        is_price_question = any(w in last_agent_lower for w in ["prix", "tarif", "avant d'annoncer", "avant de donner", "avant le prix"])
         is_levels_question = any(w in last_agent_lower for w in ["trois niveaux", "3 niveaux", "lequel de ces trois", "lequel vous parle", "blocage se situe"])
 
-        # Détection explicite que le problème diagnostiqué est le prix annoncé trop tôt ou l'absence de qualification
-        states_price_problem = (
-            any(w in msg_lower for w in ["tarif", "prix"]) and any(w in msg_lower for w in ["direct", "tout de suite", "dès le début", "sans poser", "sans question", "pas de question", "d'emblée"])
-        )
-
-        # Confirmation du diagnostic (Sortie +1 et Sortie +2 obligatoires) :
-        # Le prospect valide le problème (Non à la qualification avant prix, annonce le prix direct, ou confirme valeur perçue)
-        is_diagnostic_confirmed = (
-            states_price_problem
-            or (is_price_question and any(w in msg_lower for w in ["non", "pas de question", "direct", "tout de suite", "dès le début", "trop cher", "directement"]))
-            or (any(w in msg_lower for w in ["trop cher", "cher", "prix trop", "valeur perçue"]) and any(w in last_agent_lower for w in ["question", "bloque", "niveau", "prix"]))
-            or (lead_data and lead_data.get("diagnostic_complet") == 1)
-        )
-
-        # 1. Tentative par Inférence Gemini avec Prompt Spécialisé Conversationnel
-        gemini_key = self._get_gemini_key()
         reply_text = None
 
         if is_diagnostic_confirmed:
-            # Circuit déterministe d'élite immédiat conforme au cours :
-            # Sortie +1 (Coût de l'inaction) + Sortie +2 (Offre matchée #7 avec lien officiel)
-            reply_text = (
-                "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
-                "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
-                "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
-                "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
-            )
-        elif gemini_key:
-            history_formatted = []
-            for h in history[-6:]:
-                speaker = "Dave" if h.get("sender") == "AGENT" else "Prospect"
-                history_formatted.append(f"{speaker}: {h.get('message')}")
-            history_str = "\n".join(history_formatted) if history_formatted else "(Début de l'échange)"
-
-            gemini_prompt = (
-                f"{SYSTEM_PROMPT}\n\n"
-                f"=== CONTEXTE CONVERSATIONNEL EN DIRECT ===\n"
-                f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
-                f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
-                f"Historique récent des échanges :\n{history_str}\n\n"
-                f"Dernier message reçu du prospect : « {msg_clean} »\n\n"
-                f"CONSIGNES CRITIQUES POUR CETTE RÉPONSE :\n"
-            )
-
-            if is_first_turn:
-                gemini_prompt += (
-                    f"- Il s'agit du TOUT PREMIER message de Dave. Commence sobrement par « Bonjour, c'est Dave Sagbo. »\n"
-                    f"- Pose UNE SEULE question simple avec choix concret (2-3 options concrètes).\n"
-                    f"- LONGUEUR : 2 à 3 lignes maximum.\n"
+            # Circuit déterministe d'élite immédiat conforme à la Règle 10 :
+            # Sortie +1 (Validation du diagnostic + Coût de l'inaction)
+            # Sortie +2 (Offre matchée avec lien direct officiel)
+            if diag_res["diagnostic_type"] == "OUTREACH_LINKEDIN":
+                reply_text = (
+                    "Votre problème est clair : vous avez la régularité, le bon message, le bon CTA — mais votre accroche parle de vous avant de parler d'eux. Chaque semaine sans changer ça, c'est du temps de prospection qui ne convertit pas.\n\n"
+                    "On a un système qui règle exactement ça — scripts d'accroche, séquences de relance automatisées, méthode pour décrocher 3x plus de réponses sur LinkedIn sans augmenter votre temps. Voici comment y accéder : "
+                    f"{diag_res['offer_url']}"
+                )
+            elif diag_res["diagnostic_type"] == "AUDIT_COMMERCIAL":
+                reply_text = (
+                    "Votre problème est identifié : vous déployez beaucoup d'énergie commerciale sans avoir de visibilité sur l'étape exacte où vos prospects décrochent. Chaque semaine sans corriger ce goulot d'étranglement, ce sont des opportunités perdues.\n\n"
+                    "Nous réalisons un diagnostic complet et rapide de votre tunnel pour pointer immédiatement ce qu'il faut débloquer. Voici les détails pour lancer votre audit : "
+                    f"{diag_res['offer_url']}"
                 )
             else:
-                gemini_prompt += (
-                    f"- ATTENTION : C'est le message #{agent_count + 1} de la conversation (2e message ou plus).\n"
-                    f"- INTERDICTION STRICTE de dire « Bonjour » ou « Bonsoir ».\n"
-                    f"- INTERDICTION STRICTE de te présenter (« C'est Dave Sagbo ») ou de rappeler ton nom.\n"
-                    f"- INTERDICTION STRICTE de mettre une formule de politesse finale ou signature (« Bien cordialement », « Bien à vous », « Dave Sagbo »).\n"
-                    f"- INTERDICTION STRICTE de donner des scripts gratuits ou de faire du conseil/coaching gratuit.\n"
-                    f"- Réponds DIRECTEMENT en 2 à 3 lignes maximum.\n"
+                reply_text = (
+                    "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
+                    "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
+                    "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
+                    f"C'est ce qu'on déploie ici : {diag_res['offer_url']}"
+                )
+        else:
+            # 1. Inférence Gemini avec Règle 10 et max 8 questions
+            gemini_key = self._get_gemini_key()
+            if gemini_key:
+                history_formatted = []
+                for h in history[-6:]:
+                    speaker = "Dave" if h.get("sender") == "AGENT" else "Prospect"
+                    history_formatted.append(f"{speaker}: {h.get('message')}")
+                history_str = "\n".join(history_formatted) if history_formatted else "(Début de l'échange)"
+
+                gemini_prompt = (
+                    f"{SYSTEM_PROMPT}\n\n"
+                    f"=== CONTEXTE CONVERSATIONNEL EN DIRECT ===\n"
+                    f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
+                    f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+                    f"Historique récent des échanges :\n{history_str}\n\n"
+                    f"Dernier message reçu du prospect : « {msg_clean} »\n\n"
+                    f"CONSIGNES CRITIQUES POUR CETTE RÉPONSE :\n"
                 )
 
-            if is_confusion:
-                gemini_prompt += (
-                    f"- Le prospect dit qu'il ne sait pas ou demande comment identifier son blocage.\n"
-                    f"- INTERDICTION ABSOLUE de lui renvoyer la question (« comment procédez-vous habituellement ? »).\n"
-                    f"- LANCE UN DIAGNOSTIC GUIDÉ : pose une question binaire (oui/non) ou propose un choix entre les 3 niveaux types :\n"
-                    f"  « En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance. Lequel de ces trois vous parle le plus ? »\n"
-                )
-            elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième"]):
-                gemini_prompt += (
-                    f"- Le prospect a choisi le niveau 2 (les gens regardent mais ne passent pas à l'acte).\n"
-                    f"- Pose la question clinique de qualification : est-ce qu'il pose des questions pour comprendre leur besoin avant d'annoncer son tarif, ou s'il donne le prix directement ?\n"
-                )
-            else:
-                gemini_prompt += (
-                    f"- Une seule question finale, à choix entre 2-3 options concrètes ou fermée. Jamais de question ouverte abstraite.\n"
-                )
-
-            gemini_prompt += "\nRédige la réponse exacte de Dave Sagbo :"
-
-            for mod in ["gemini-3.5-flash-lite", "gemini-flash-latest"]:
-                try:
-                    import urllib.request
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
-                    payload = {
-                        "contents": [{"parts": [{"text": gemini_prompt}]}],
-                        "generationConfig": {
-                            "temperature": 0.65,
-                            "maxOutputTokens": 200
-                        }
-                    }
-                    req = urllib.request.Request(
-                        url,
-                        data=json.dumps(payload).encode("utf-8"),
-                        headers={"Content-Type": "application/json"}
+                if is_first_turn:
+                    gemini_prompt += (
+                        f"- Il s'agit du TOUT PREMIER message de Dave. Commence sobrement par « Bonjour, c'est Dave Sagbo. »\n"
+                        f"- Pose UNE SEULE question simple avec choix concret (2-3 options concrètes).\n"
+                        f"- LONGUEUR : 2 à 3 lignes maximum.\n"
                     )
-                    with urllib.request.urlopen(req, timeout=4) as resp:
-                        data = json.loads(resp.read().decode("utf-8"))
-                        t = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text")
-                        if t and len(t.strip()) > 10:
-                            reply_text = t.strip()
-                            break
-                except Exception as e:
-                    logger.warning(f"Appel Gemini conversationnel ({mod}) : {e}")
+                else:
+                    gemini_prompt += (
+                        f"- ATTENTION : C'est le message #{agent_count + 1} de la conversation (2e message ou plus).\n"
+                        f"- INTERDICTION STRICTE de dire « Bonjour » ou « Bonsoir ».\n"
+                        f"- INTERDICTION STRICTE de te présenter (« C'est Dave Sagbo ») ou de rappeler ton nom.\n"
+                        f"- INTERDICTION STRICTE de mettre une formule de politesse finale ou signature (« Bien cordialement », « Bien à vous », « Dave Sagbo »).\n"
+                        f"- INTERDICTION STRICTE de donner des scripts gratuits ou de faire du conseil/coaching gratuit.\n"
+                        f"- Réponds DIRECTEMENT en 2 à 3 lignes maximum.\n"
+                    )
 
-        # 2. Fallback d'élite calibré sur le cours d'apprentissage officiel
-        if not reply_text:
-            if is_confusion:
-                reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
-            elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième", "conversion"]):
-                reply_text = "C'est très clair. Quand ils vous écrivent, est-ce que vous leur posez des questions pour comprendre leur besoin avant d'annoncer votre tarif, ou vous donnez le prix directement ?"
-            elif is_first_turn:
-                if any(w in msg_lower for w in ["service", "offre", "propos", "savoir plus", "faire"]):
-                    reply_text = "Bonjour, c'est Dave Sagbo. Vous avez du mal à convertir votre audience en clients, c'est ça ? Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
+                if is_confusion:
+                    gemini_prompt += (
+                        f"- Le prospect dit qu'il ne sait pas ou demande comment identifier son blocage.\n"
+                        f"- INTERDICTION ABSOLUE de lui renvoyer la question (« comment procédez-vous habituellement ? »).\n"
+                        f"- LANCE UN DIAGNOSTIC GUIDÉ : pose une question binaire (oui/non) ou propose un choix entre les 3 niveaux types :\n"
+                        f"  « En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance. Lequel de ces trois vous parle le plus ? »\n"
+                    )
+                elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième"]):
+                    gemini_prompt += (
+                        f"- Le prospect a choisi le niveau 2 (les gens regardent mais ne passent pas à l'acte).\n"
+                        f"- Pose la question clinique de qualification : est-ce qu'il pose des questions pour comprendre leur besoin avant d'annoncer son tarif, ou s'il donne le prix directement ?\n"
+                    )
                 else:
-                    reply_text = "Bonjour, c'est Dave Sagbo. Quel est le principal défi commercial que vous souhaitez surmonter en ce moment ?"
-            else:
-                if any(w in msg_lower for w in ["client", "réseau", "visibilité", "audience", "bloque", "coince"]):
-                    reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
+                    gemini_prompt += (
+                        f"- Une seule question finale, à choix entre 2-3 options concrètes ou fermée. Jamais de question ouverte abstraite.\n"
+                    )
+
+                gemini_prompt += "\nRédige la réponse exacte de Dave Sagbo :"
+
+                for mod in ["gemini-3.5-flash", "gemini-flash-latest"]:
+                    try:
+                        import urllib.request
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                        payload = {
+                            "contents": [{"parts": [{"text": gemini_prompt}]}],
+                            "generationConfig": {
+                                "temperature": 0.65,
+                                "maxOutputTokens": 300,
+                                "thinkingConfig": {"thinkingBudget": 0}
+                            }
+                        }
+                        req = urllib.request.Request(
+                            url,
+                            data=json.dumps(payload).encode("utf-8"),
+                            headers={"Content-Type": "application/json"}
+                        )
+                        with urllib.request.urlopen(req, timeout=5) as resp:
+                            data = json.loads(resp.read().decode("utf-8"))
+                            cand = data.get("candidates", [{}])[0]
+                            parts = cand.get("content", {}).get("parts", [{}])
+                            t = parts[0].get("text") if parts else None
+                            if t and len(t.strip()) > 10:
+                                reply_text = t.strip()
+                                break
+                    except Exception as e:
+                        logger.warning(f"Appel Gemini conversationnel ({mod}) : {e}")
+
+            # 2. Fallback d'élite calibré sur le cours d'apprentissage officiel
+            if not reply_text:
+                if is_confusion:
+                    reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
+                elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième", "conversion"]):
+                    reply_text = "C'est très clair. Quand ils vous écrivent, est-ce que vous leur posez des questions pour comprendre leur besoin avant d'annoncer votre tarif, ou vous donnez le prix directement ?"
+                elif is_first_turn:
+                    if any(w in msg_lower for w in ["service", "offre", "propos", "savoir plus", "faire"]):
+                        reply_text = "Bonjour, c'est Dave Sagbo. Vous avez du mal à convertir votre audience en clients, c'est ça ? Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
+                    else:
+                        reply_text = "Bonjour, c'est Dave Sagbo. Quel est le principal défi commercial que vous souhaitez surmonter en ce moment ?"
                 else:
-                    reply_text = "C'est bien noté. Est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
+                    if any(w in msg_lower for w in ["client", "réseau", "visibilité", "audience", "bloque", "coince"]):
+                        reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
+                    else:
+                        reply_text = "C'est bien noté. Est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
 
         # 3. Post-traitement et durcissement des 4 règles
         cleaned = reply_text.strip()
@@ -1096,12 +1242,23 @@ class AISalesAgent:
         ]
         if is_diagnostic_confirmed or any(c in cleaned.lower() for c in forbidden_drift_cues):
             if any(c in cleaned.lower() for c in forbidden_drift_cues) or not ("formations.sagbodavid.com" in cleaned):
-                cleaned = (
-                    "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
-                    "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
-                    "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
-                    "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
-                )
+                if diag_res["diagnostic_type"] == "OUTREACH_LINKEDIN":
+                    cleaned = (
+                        "Votre problème est clair : vous avez la régularité, le bon message, le bon CTA — mais votre accroche parle de vous avant de parler d'eux. Chaque semaine sans changer ça, c'est du temps de prospection qui ne convertit pas.\n\n"
+                        "On a un système qui règle exactement ça — scripts d'accroche, séquences de relance automatisées, méthode pour décrocher 3x plus de réponses sur LinkedIn sans augmenter votre temps. Voici comment y accéder : https://formations.sagbodavid.com/automatisation-whatsapp"
+                    )
+                elif diag_res["diagnostic_type"] == "AUDIT_COMMERCIAL":
+                    cleaned = (
+                        "Votre problème est identifié : vous déployez beaucoup d'énergie commerciale sans avoir de visibilité sur l'étape exacte où vos prospects décrochent. Chaque semaine sans corriger ce goulot d'étranglement, ce sont des opportunités perdues.\n\n"
+                        "Nous réalisons un diagnostic complet et rapide de votre tunnel pour pointer immédiatement ce qu'il faut débloquer. Voici les détails pour lancer votre audit : https://formations.sagbodavid.com/audit-commercial"
+                    )
+                else:
+                    cleaned = (
+                        "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
+                        "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
+                        "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
+                        "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
+                    )
 
         cleaned = cleaned.replace("en personne", "").replace("En personne", "")
         cleaned = cleaned.replace("l'assistant de Dave", "Dave").replace("l'assistant", "le responsable")

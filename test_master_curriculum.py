@@ -279,7 +279,79 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertIn("formations.sagbodavid.com", rep4, "Doit présenter le lien officiel de l'offre (Sortie +2)")
         log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep4)
 
-    def test_11_crm_lead_deduplication_and_contact_extraction(self):
+    def test_12_linkedin_outreach_diagnostic_and_eight_turn_ceiling(self):
+        """
+        Vérifie la résolution du bug de diagnostic guidé du 2026-10-10 17:50 :
+        1. Détection du profil Prospection LinkedIn / faible taux de retour / messages d'accroche.
+        2. Arrêt immédiat dès la confirmation du problème (sans drift ni coaching gratuit).
+        3. Transition directe vers Offre #7 (75 000 FCFA) avec lien officiel.
+        4. Respect absolu du plafond de 8 questions max.
+        """
+        from core.database_store import get_connection, log_lead_message
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO crm_leads (nom_complet, source_canal, statut_lead, date_creation) VALUES ('Test LinkedIn Outreach', 'Facebook Messenger', 'Nouveau', datetime('now'))")
+        lead_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Reproduction de l'échange exact du 2026-10-10 17:50
+        dialogue = [
+            ("LEAD", "Bonjour, pouvez-vous m'en dire plus sur vos services pour développer mon entreprise ?"),
+            ("AGENT", "Bonjour, c'est Dave Sagbo. Pour que je puisse vous guider efficacement, votre principal frein actuel concerne plutôt la recherche de clients ou la gestion de vos opérations ?"),
+            ("LEAD", "obtention de nouveau client"),
+            ("AGENT", "Pour trouver ces nouveaux clients, vous utilisez plutôt la prospection directe ou du contenu sur les réseaux sociaux ?"),
+            ("LEAD", "rs"),
+            ("AGENT", "Sur ces plateformes, vous publiez plutôt des formats courts ou des articles de fond ?"),
+            ("LEAD", "formats courts"),
+            ("AGENT", "Ces formats courts génèrent-ils des interactions régulières, ou les vues peinent-elles à se transformer en prospects qualifiés ?"),
+            ("LEAD", "pas assez de trafic qualifié"),
+            ("AGENT", "Pour attirer ce trafic qualifié, misez-vous sur la publicité payante ou sur la prospection organique ?"),
+            ("LEAD", "prospection organique"),
+            ("AGENT", "Combien d'heures par jour consacrez-vous à cette prospection organique ?"),
+            ("LEAD", "moins de 2 heures"),
+            ("AGENT", "Sur quelle plateforme concentrez-vous cette prospection organique : LinkedIn, Instagram ou Facebook ?"),
+            ("LEAD", "linkedin"),
+            ("AGENT", "Sur LinkedIn, vous envoyez des messages personnalisés ou des demandes de connexion simples ?"),
+            ("LEAD", "messages personnalisés"),
+            ("AGENT", "Vos messages personnalisés reçoivent-ils des réponses régulières, ou le taux de retour reste-t-il faible ?"),
+            ("LEAD", "le taux de retour reste faible"),
+            ("AGENT", "Dans ces messages, vous parlez plutôt de votre offre dès le début ou vous commencez par une question sur leur situation ?"),
+            ("LEAD", "présentation")
+        ]
+
+        for sender, text in dialogue:
+            log_lead_message(lead_id, "FACEBOOK_MESSENGER", sender, text)
+
+        # Génération de la réponse suite à "présentation"
+        rep = self.agent.generate_conversational_reply(lead_id, "présentation", "FACEBOOK_MESSENGER")
+
+        # 1. Vérification de l'arrêt immédiat des questions
+        self.assertNotIn("?", rep, "Le diagnostic doit s'arrêter immédiatement sans poser de question supplémentaire")
+
+        # 2. Vérification de l'absence de coaching gratuit / script gratuit
+        self.assertNotIn("voici un script", rep.lower())
+        self.assertNotIn("voici un exemple", rep.lower())
+
+        # 3. Vérification du message de transition : problème clair + coût de l'inaction (MSG +1)
+        self.assertIn("votre problème est clair", rep.lower())
+        self.assertIn("ne convertit pas", rep.lower())
+        self.assertIn("chaque semaine", rep.lower())
+
+        # 4. Vérification de l'offre matchée : Offre #7 + Lien officiel (MSG +2)
+        self.assertIn("https://formations.sagbodavid.com/automatisation-whatsapp", rep)
+
+        # 5. Vérification de la mise à jour en base de données CRM
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT diagnostic_complet, phase_actuelle, offre_matchee, douleur_identifiee FROM crm_leads WHERE id = ?", (lead_id,))
+        row = c.fetchone()
+        conn.close()
+
+        self.assertEqual(row[0], 1, "diagnostic_complet doit être égal à 1")
+        self.assertEqual(row[1], "closer", "phase_actuelle doit être 'closer'")
+        self.assertIn("75 000", str(row[2]), "Offre matchée doit être l'Offre #7")
+        self.assertIsNotNone(row[3], "La douleur identifiée doit être enregistrée")
         """
         Vérifie la déduplication stricte des leads CRM et l'extraction automatique des coordonnées :
         1. Deux messages reçus avec le même facebook_psid ne créent qu'une SEULE ligne dans crm_leads.

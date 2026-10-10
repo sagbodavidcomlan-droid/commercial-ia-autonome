@@ -206,6 +206,7 @@ def init_db():
             ("offre_matchee", "TEXT"),
             ("diagnostic_complet", "INTEGER DEFAULT 0"),
             ("diagnostic_etape", "TEXT DEFAULT 'none'"),
+            ("diagnostic_questions_count", "INTEGER DEFAULT 0"),
             ("conversation_count", "INTEGER DEFAULT 1"),
             ("last_contact_at", "TEXT")
         ]
