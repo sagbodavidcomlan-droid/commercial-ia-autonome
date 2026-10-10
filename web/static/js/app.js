@@ -1716,6 +1716,7 @@ async function loadSettings() {
 
     // Diagnostic automatique de santé des connexions
     await checkConnectionsHealth();
+    await checkWhatsAppBridgeStatus();
   } catch (err) {
     console.error("Erreur chargement paramètres:", err);
   }
@@ -1860,6 +1861,128 @@ async function saveSettings(e) {
     await checkConnectionsHealth();
   } catch (err) {
     alert("Erreur lors de l'enregistrement des paramètres.");
+  }
+}
+
+// --- GESTION PASSERELLE WHATSAPP QR CODE DIRECTE ---
+let waQrPollInterval = null;
+
+async function checkWhatsAppBridgeStatus() {
+  try {
+    const res = await fetch("/api/whatsapp/status");
+    if (!res.ok) return;
+    const data = await res.json();
+    const dot = document.getElementById("wa-bridge-dot");
+    const text = document.getElementById("wa-bridge-text");
+    const waBadge = document.getElementById("wa-status-badge");
+
+    if (data.status === "CONNECTED") {
+      if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+      if (text) text.innerHTML = `<span class="text-emerald-400 font-bold">Connecté</span> au numéro : <strong class="text-white">+${data.number}</strong>`;
+      if (waBadge) {
+        waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        waBadge.innerText = `✓ WhatsApp Actif (+${data.number})`;
+      }
+    } else if (data.status === "SCAN_QR") {
+      if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse";
+      if (text) text.innerHTML = `<span class="text-amber-400 font-semibold">QR Code disponible</span> — En attente de scan sur votre téléphone`;
+    } else {
+      if (dot) dot.className = "w-2 h-2 rounded-full bg-slate-500 inline-block";
+      if (text) text.innerText = "Passerelle non connectée (Cliquez sur 'Scanner QR Code')";
+    }
+  } catch (e) {
+    console.error("Erreur checkWhatsAppBridgeStatus:", e);
+  }
+}
+
+async function openWhatsAppQrModal() {
+  const modal = document.getElementById("modal-whatsapp-qr");
+  if (modal) modal.classList.remove("hidden");
+  await refreshWhatsAppQr();
+  if (waQrPollInterval) clearInterval(waQrPollInterval);
+  waQrPollInterval = setInterval(pollWhatsAppQrStatus, 3000);
+}
+
+function closeWhatsAppQrModal() {
+  const modal = document.getElementById("modal-whatsapp-qr");
+  if (modal) modal.classList.add("hidden");
+  if (waQrPollInterval) {
+    clearInterval(waQrPollInterval);
+    waQrPollInterval = null;
+  }
+  checkWhatsAppBridgeStatus();
+}
+
+async function refreshWhatsAppQr() {
+  const loading = document.getElementById("wa-qr-loading");
+  const img = document.getElementById("wa-qr-image");
+  const connectedDiv = document.getElementById("wa-qr-connected");
+  const statusText = document.getElementById("wa-qr-status-text");
+  const btnLogout = document.getElementById("btn-wa-logout");
+
+  if (loading) loading.classList.remove("hidden");
+  if (img) img.classList.add("hidden");
+  if (connectedDiv) connectedDiv.classList.add("hidden");
+  if (statusText) statusText.innerText = "Génération du QR Code...";
+
+  try {
+    const res = await fetch("/api/whatsapp/qr");
+    const data = await res.json();
+
+    if (data.status === "CONNECTED" || data.connected) {
+      if (loading) loading.classList.add("hidden");
+      if (connectedDiv) connectedDiv.classList.remove("hidden");
+      const numSpan = document.getElementById("wa-connected-number");
+      if (numSpan) numSpan.innerText = `Numéro lié : +${data.number || ""}`;
+      if (statusText) statusText.innerText = "✅ Session active. Vos prospects reçoivent les réponses de Dave Sagbo.";
+      if (btnLogout) btnLogout.classList.remove("hidden");
+    } else if (data.qrDataUrl) {
+      if (loading) loading.classList.add("hidden");
+      if (img) {
+        img.src = data.qrDataUrl;
+        img.classList.remove("hidden");
+      }
+      if (statusText) statusText.innerText = "Scannez ce QR Code avec WhatsApp sur votre téléphone.";
+      if (btnLogout) btnLogout.classList.add("hidden");
+    } else {
+      if (statusText) statusText.innerText = data.message || "En attente du QR Code...";
+    }
+  } catch (err) {
+    if (statusText) statusText.innerText = "Erreur de connexion à la passerelle WhatsApp.";
+  }
+}
+
+async function pollWhatsAppQrStatus() {
+  try {
+    const res = await fetch("/api/whatsapp/status");
+    const data = await res.json();
+    if (data.status === "CONNECTED") {
+      const loading = document.getElementById("wa-qr-loading");
+      const img = document.getElementById("wa-qr-image");
+      const connectedDiv = document.getElementById("wa-qr-connected");
+      const statusText = document.getElementById("wa-qr-status-text");
+      const btnLogout = document.getElementById("btn-wa-logout");
+
+      if (loading) loading.classList.add("hidden");
+      if (img) img.classList.add("hidden");
+      if (connectedDiv) connectedDiv.classList.remove("hidden");
+      const numSpan = document.getElementById("wa-connected-number");
+      if (numSpan) numSpan.innerText = `Numéro : +${data.number}`;
+      if (statusText) statusText.innerText = "🎉 Connecté avec succès ! L'agent est opérationnel 24h/24.";
+      if (btnLogout) btnLogout.classList.remove("hidden");
+      checkWhatsAppBridgeStatus();
+    }
+  } catch (e) {}
+}
+
+async function disconnectWhatsApp() {
+  if (!confirm("Voulez-vous vraiment déconnecter votre WhatsApp de l'agent IA ?")) return;
+  try {
+    await fetch("/api/whatsapp/logout", { method: "POST" });
+    alert("Session WhatsApp réinitialisée.");
+    refreshWhatsAppQr();
+  } catch (e) {
+    alert("Erreur lors de la déconnexion.");
   }
 }
 

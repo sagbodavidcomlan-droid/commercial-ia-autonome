@@ -326,11 +326,33 @@ def send_messenger_message(recipient_psid: str, text: str, token: Optional[str] 
 
 def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional[str] = None, phone_number_id: Optional[str] = None) -> Dict[str, Any]:
     """
-    Envoie un message WhatsApp via l'API Cloud officielle de WhatsApp (Meta).
+    Envoie un message WhatsApp via l'API Cloud officielle de WhatsApp (Meta)
+    OU via la passerelle QR Code autonome (Baileys) si connectée.
     """
     if not recipient_phone:
         return {"success": False, "status": "PHONE_MANQUANT", "error": "Numéro de téléphone manquant"}
 
+    # 1. Tentative d'envoi via la passerelle WhatsApp QR Code (Baileys) si disponible
+    bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+    try:
+        req_st = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
+        with urllib.request.urlopen(req_st, timeout=2) as resp_st:
+            st_data = json.loads(resp_st.read().decode("utf-8"))
+            if st_data.get("status") == "CONNECTED":
+                send_payload = json.dumps({"phone": recipient_phone, "text": text}).encode("utf-8")
+                req_send = urllib.request.Request(
+                    f"{bridge_url}/send",
+                    data=send_payload,
+                    headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"}
+                )
+                with urllib.request.urlopen(req_send, timeout=10) as resp_send:
+                    send_res = json.loads(resp_send.read().decode("utf-8"))
+                    if send_res.get("success"):
+                        return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": send_res.get("messageId"), "gateway": "BAILEYS_QR"}
+    except Exception:
+        pass
+
+    # 2. Sinon, envoi via l'API Meta Cloud officielle
     creds = get_stored_meta_credentials()
     token = token or creds.get("whatsapp_token") or creds.get("meta_token")
     phone_id = phone_number_id or creds.get("whatsapp_phone_number_id")
@@ -339,7 +361,7 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
         return {
             "success": False,
             "status": "NON_CONNECTE",
-            "error": "Identifiants WhatsApp Cloud API (Token ou Phone Number ID) non configurés."
+            "error": "Identifiants WhatsApp (Passerelle QR Code ou Meta Cloud API) non configurés."
         }
 
     clean_phone = recipient_phone.replace("+", "").replace(" ", "").replace("-", "")
@@ -360,7 +382,7 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
         res_code, res_data = _make_http_request(url, headers=headers, json_data=payload, method="POST", timeout=12)
         if res_code in (200, 201) and "messages" in res_data:
             wamid = res_data["messages"][0].get("id")
-            return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": wamid}
+            return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": wamid, "gateway": "META_CLOUD"}
         else:
             err = res_data.get("error", {})
             return {"success": False, "status": "ECHEC_WHATSAPP", "error": err.get("message", "Erreur envoi WhatsApp")}

@@ -215,6 +215,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_webhook_whatsapp_verify(query)
         elif path == "/api/connections/status":
             self.handle_api_connections_status()
+        elif path == "/api/whatsapp/qr":
+            self.handle_api_whatsapp_qr()
+        elif path == "/api/whatsapp/status":
+            self.handle_api_whatsapp_bridge_status()
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -260,6 +264,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/connections/test-facebook":
             self.handle_api_test_facebook(body)
+            return
+        elif path == "/api/whatsapp/logout":
+            self.handle_api_whatsapp_logout()
             return
         elif path == "/api/goals":
             self.handle_api_update_goals(body)
@@ -896,6 +903,46 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         token_to_test = body.get("meta_token")
         status = verify_meta_token(token_to_test)
         self.send_json_response(status)
+
+    def handle_api_whatsapp_qr(self):
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        try:
+            req = urllib.request.Request(f"{bridge_url}/qr", headers={"User-Agent": "Sales-Agent/1.0"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                self.send_json_response(data)
+        except Exception as e:
+            self.send_json_response({
+                "connected": False,
+                "status": "OFFLINE",
+                "error": f"Passerelle WhatsApp locale non joignable : {str(e)}",
+                "message": "Veuillez démarrer la passerelle WhatsApp sur le port 3001."
+            })
+
+    def handle_api_whatsapp_bridge_status(self):
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        try:
+            req = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                self.send_json_response(data)
+        except Exception as e:
+            self.send_json_response({
+                "status": "OFFLINE",
+                "error": str(e),
+                "number": None,
+                "hasQr": False
+            })
+
+    def handle_api_whatsapp_logout(self):
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        try:
+            req = urllib.request.Request(f"{bridge_url}/logout", data=b"{}", headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                self.send_json_response(data)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)})
 
     def handle_api_get_domains(self):
         profiles_dir = os.path.join(BASE_DIR, "config", "domain_profiles")

@@ -1645,8 +1645,28 @@
                 </div>
               </div>
 
+              <!-- Section Connexion QR Code Direct (Zéro paperasse Meta) -->
+              <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">📲</span>
+                    <div>
+                      <h4 class="font-bold text-white text-xs">Passerelle WhatsApp Directe (Scan QR Code)</h4>
+                      <p class="text-[10px] text-emerald-400">Connectez le numéro +2290194933458 directement sans restriction Meta</p>
+                    </div>
+                  </div>
+                  <button type="button" onclick="openWhatsAppQrModal()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/30">
+                    <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Scanner QR Code
+                  </button>
+                </div>
+                <div id="wa-bridge-info" class="text-[11px] text-slate-400 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-slate-500 inline-block" id="wa-bridge-dot"></span>
+                  <span id="wa-bridge-text">Statut de la passerelle : Vérification en cours...</span>
+                </div>
+              </div>
+
               <div>
-                <label class="block text-slate-400 mb-1">Phone Number ID (ID Numéro Meta WhatsApp)</label>
+                <label class="block text-slate-400 mb-1">Phone Number ID (Optionnel - Si Meta Cloud API)</label>
                 <input type="text" id="setting-whatsapp-phone-number-id" placeholder="Ex: 104829104829104" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none font-mono text-sm">
                 <p class="text-[10px] text-slate-500 mt-1">Trouvable dans Meta Developers > WhatsApp > Configuration de l'API > Identifiant du numéro de téléphone</p>
               </div>
@@ -2589,6 +2609,57 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODALE SCAN QR CODE WHATSAPP -->
+  <div id="modal-whatsapp-qr" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="glass-card bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md p-6 space-y-4 text-center shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">📲</div>
+          <h3 class="font-bold text-white text-base">Connexion WhatsApp Directe</h3>
+        </div>
+        <button onclick="closeWhatsAppQrModal()" class="text-slate-400 hover:text-white transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="text-xs text-slate-300 space-y-1">
+        <p>1. Ouvrez <strong>WhatsApp</strong> sur votre téléphone (<span class="text-emerald-400 font-mono">+229 01 94 93 34 58</span>)</p>
+        <p>2. Allez dans <strong>Paramètres</strong> > <strong>Appareils connectés</strong> > <strong>Associer un appareil</strong></p>
+        <p>3. Pointez votre appareil vers l'écran pour scanner ce QR Code</p>
+      </div>
+
+      <!-- Zone d'affichage du QR Code -->
+      <div class="bg-white p-4 rounded-xl flex items-center justify-center min-h-[260px] mx-auto w-[260px] border-4 border-emerald-500/30 relative">
+        <div id="wa-qr-loading" class="text-slate-600 text-xs font-semibold flex flex-col items-center gap-2">
+          <div class="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+          Chargement du QR Code...
+        </div>
+        <img id="wa-qr-image" src="" alt="QR Code WhatsApp" class="w-full h-full object-contain hidden">
+        <div id="wa-qr-connected" class="text-emerald-700 text-sm font-bold flex flex-col items-center gap-2 hidden">
+          <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl">✓</div>
+          WhatsApp Connecté !
+          <span id="wa-connected-number" class="text-xs text-slate-600 font-mono"></span>
+        </div>
+      </div>
+
+      <div id="wa-qr-status-text" class="text-xs text-slate-400 font-mono">
+        En attente de scan...
+      </div>
+
+      <div class="flex justify-between items-center pt-2">
+        <button type="button" onclick="refreshWhatsAppQr()" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualiser QR Code
+        </button>
+        <button type="button" onclick="disconnectWhatsApp()" id="btn-wa-logout" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-semibold hidden">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Déconnecter
+        </button>
+        <button type="button" onclick="closeWhatsAppQrModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all">
+          Fermer
+        </button>
+      </div>
     </div>
   </div>
 
