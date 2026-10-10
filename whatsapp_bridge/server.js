@@ -1,8 +1,7 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const qrcode = require('qrcode');
-const http = require('http');
 const path = require('path');
 const fs = require('fs');
 
@@ -15,22 +14,43 @@ const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
 
 let sock = null;
 let currentQrCodeDataUrl = null;
+let currentPairingCode = null;
 let connectionStatus = 'DISCONNECTED'; // DISCONNECTED, SCAN_QR, CONNECTED
 let connectedNumber = null;
 
-async function startWhatsApp() {
+async function startWhatsApp(pairingPhone = '2290194933458') {
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true,
+        printQRInTerminal: false,
         auth: state,
-        browser: ['Commercial IA Autonome', 'Chrome', '120.0.0']
+        browser: ['Chrome (Linux)', 'Chrome', '122.0.6261.111'],
+        syncFullHistory: false,
+        connectTimeoutMs: 60000,
+        defaultQueryTimeoutMs: 60000,
+        keepAliveIntervalMs: 25000
     });
 
     sock.ev.on('creds.update', saveCreds);
+
+    // Demander le Pairing Code officiel WhatsApp si non encore enregistré
+    if (!sock.authState.creds.registered && pairingPhone) {
+        setTimeout(async () => {
+            try {
+                const cleanPhone = pairingPhone.replace(/[^0-9]/g, '');
+                const code = await sock.requestPairingCode(cleanPhone);
+                currentPairingCode = code;
+                console.log(`\n======================================================`);
+                console.log(`🔑 [CODE WHATSAPP OFFICIEL] : ${code}`);
+                console.log(`======================================================\n`);
+            } catch (err) {
+                console.error('Erreur demande Pairing Code:', err.message);
+            }
+        }, 4000);
+    }
 
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
@@ -38,10 +58,12 @@ async function startWhatsApp() {
         if (qr) {
             connectionStatus = 'SCAN_QR';
             try {
-                currentQrCodeDataUrl = await qrcode.toDataURL(qr);
-                console.log('⚡ [WhatsApp Bridge] Nouveau QR Code généré et prêt à être scanné.');
+                currentQrCodeDataUrl = await qrcode.toDataURL(qr, { margin: 2, scale: 8 });
+                const base64Data = currentQrCodeDataUrl.split(',')[1];
+                const qrPath = '/home/dave/.gemini/antigravity/brain/6132d17c-7db0-4b8b-b2af-77f411c639a9/whatsapp_qr.png';
+                fs.writeFileSync(qrPath, Buffer.from(base64Data, 'base64'));
             } catch (err) {
-                console.error('Erreur génération QR DataURL:', err);
+                console.error('Erreur génération QR:', err);
             }
         }
 
@@ -49,29 +71,30 @@ async function startWhatsApp() {
             const statusCode = (lastDisconnect?.error)?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             connectionStatus = 'DISCONNECTED';
+            currentPairingCode = null;
             currentQrCodeDataUrl = null;
             connectedNumber = null;
             console.log(`❌ [WhatsApp Bridge] Déconnecté (Code: ${statusCode}). Reconnexion: ${shouldReconnect}`);
             if (shouldReconnect) {
-                setTimeout(startWhatsApp, 3000);
+                setTimeout(() => startWhatsApp(pairingPhone), 3000);
             }
         } else if (connection === 'open') {
             connectionStatus = 'CONNECTED';
+            currentPairingCode = null;
             currentQrCodeDataUrl = null;
             connectedNumber = sock.user?.id ? sock.user.id.split(':')[0] : 'Inconnu';
-            console.log(`✅ [WhatsApp Bridge] WhatsApp connecté avec succès au numéro: +${connectedNumber}`);
+            console.log(`🎉 [WhatsApp Bridge] WhatsApp CONNECTÉ avec succès au numéro: +${connectedNumber}`);
         }
     });
 
-    // Écouter les messages entrants réels de WhatsApp
     sock.ev.on('messages.upsert', async (m) => {
         if (m.type !== 'notify') return;
 
         for (const msg of m.messages) {
-            if (msg.key.fromMe) continue; // Ignorer les messages envoyés par nous-mêmes
+            if (msg.key.fromMe) continue;
 
             const remoteJid = msg.key.remoteJid;
-            if (!remoteJid || remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') continue; // Uniquement messages directs (pas de groupes)
+            if (!remoteJid || remoteJid.includes('@g.us') || remoteJid === 'status@broadcast') continue;
 
             const senderPhone = remoteJid.split('@')[0];
             const senderName = msg.pushName || '';
@@ -91,7 +114,6 @@ async function startWhatsApp() {
 
             console.log(`📩 [WhatsApp Inbound] Message de +${senderPhone} (${senderName}): "${userText.trim()}"`);
 
-            // Transmettre à l'agent IA via le format Webhook WhatsApp officiel
             const payload = {
                 object: 'whatsapp_business_account',
                 entry: [{
@@ -128,18 +150,25 @@ async function startWhatsApp() {
                     body: JSON.stringify(payload)
                 });
             } catch (postErr) {
-                console.error(`Erreur transfert Webhook vers Commercial IA: ${postErr.message}`);
+                console.error(`Erreur transfert Webhook: ${postErr.message}`);
             }
         }
     });
 }
 
-// Routes HTTP pour piloter la passerelle depuis le tableau de bord Commercial IA
 app.get('/status', (req, res) => {
     res.json({
         status: connectionStatus,
         number: connectedNumber,
-        hasQr: !!currentQrCodeDataUrl
+        hasQr: !!currentQrCodeDataUrl,
+        pairingCode: currentPairingCode
+    });
+});
+
+app.get('/pairing-code', (req, res) => {
+    res.json({
+        pairingCode: currentPairingCode,
+        status: connectionStatus
     });
 });
 
@@ -147,53 +176,35 @@ app.get('/qr', (req, res) => {
     if (connectionStatus === 'CONNECTED') {
         return res.json({ connected: true, number: connectedNumber, status: 'CONNECTED' });
     }
-    if (!currentQrCodeDataUrl) {
-        return res.json({ connected: false, status: connectionStatus, message: 'Initialisation du QR Code en cours...' });
-    }
     res.json({
         connected: false,
-        status: 'SCAN_QR',
+        status: connectionStatus,
+        pairingCode: currentPairingCode,
         qrDataUrl: currentQrCodeDataUrl
     });
 });
 
 app.post('/send', async (req, res) => {
     const { phone, text } = req.body;
-    if (!phone || !text) {
-        return res.status(400).json({ success: false, error: 'Paramètres phone et text requis' });
-    }
-    if (connectionStatus !== 'CONNECTED' || !sock) {
-        return res.status(503).json({ success: false, error: 'Passerelle WhatsApp non connectée (QR Code requis)' });
-    }
+    if (!phone || !text) return res.status(400).json({ success: false, error: 'Paramètres manquants' });
+    if (connectionStatus !== 'CONNECTED' || !sock) return res.status(503).json({ success: false, error: 'Non connecté' });
 
     try {
         const cleanPhone = phone.replace(/[^0-9]/g, '');
         const jid = `${cleanPhone}@s.whatsapp.net`;
         const result = await sock.sendMessage(jid, { text });
-        console.log(`📤 [WhatsApp Outbound] Message envoyé avec succès à +${cleanPhone}`);
         res.json({ success: true, messageId: result.key.id });
     } catch (sendErr) {
-        console.error(`Erreur envoi message WhatsApp: ${sendErr.message}`);
         res.status(500).json({ success: false, error: sendErr.message });
     }
 });
 
-app.post('/logout', async (req, res) => {
-    try {
-        if (sock) {
-            await sock.logout();
-        }
-        if (fs.existsSync(AUTH_DIR)) {
-            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-        }
-        setTimeout(startWhatsApp, 2000);
-        res.json({ success: true, message: 'Session WhatsApp réinitialisée' });
-    } catch (e) {
-        res.status(500).json({ success: false, error: e.message });
-    }
-});
+// Nettoyage auth pour renouveler la session à neuf
+if (fs.existsSync(AUTH_DIR)) {
+    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+}
 
 app.listen(PORT, () => {
-    console.log(`🚀 [WhatsApp Bridge] Service écoute sur le port ${PORT}`);
-    startWhatsApp();
+    console.log(`🚀 [WhatsApp Bridge] Écoute sur le port ${PORT}`);
+    startWhatsApp('2290194933458');
 });
