@@ -1816,27 +1816,27 @@
       <!-- ==================== TAB 6 : PARAMÈTRES & MOTEUR IA ==================== -->
       <section id="tab-settings" class="tab-pane hidden space-y-6">
         <div>
-          <h2 class="text-xl font-black text-white flex items-center gap-2">
-            <i data-lucide="sliders-horizontal" class="w-6 h-6 text-purple-400"></i>
+          <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+            <i data-lucide="sliders-horizontal" class="w-6 h-6 text-purple-600"></i>
             Paramètres Généraux, Moteur IA & Conformité
           </h2>
-          <p class="text-xs text-slate-400">Configurez l'intelligence artificielle de pointe qui pilote l'agent, vos comptes réseaux sociaux et le registre légal RGPD.</p>
+          <p class="text-xs text-slate-500">Configurez l'intelligence artificielle de pointe qui pilote l'agent, vos comptes réseaux sociaux et le registre légal RGPD.</p>
         </div>
 
         <!-- Section 1 : Cerveau IA & Architecture Cognitive -->
-        <div class="glass-card rounded-2xl p-6 space-y-5 border-purple-500/20">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="glass-card rounded-2xl p-6 space-y-5 border border-purple-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center font-bold">
+              <div class="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center font-bold">
                 <i data-lucide="brain" class="w-5 h-5"></i>
               </div>
               <div>
-                <h3 class="font-bold text-white text-base">Sur quelle IA l'agent est-il assis ?</h3>
-                <p class="text-xs text-slate-400">Architecture Cognitive Hybride : Puissance LLM + Garde-Fou Déterministe Zéro-Hallucination</p>
+                <h3 class="font-bold text-slate-900 text-base">Sur quelle IA l'agent est-il assis ?</h3>
+                <p class="text-xs text-slate-500">Architecture Cognitive Hybride : Puissance LLM + Garde-Fou Déterministe Zéro-Hallucination</p>
               </div>
             </div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               Double Étage Actif
             </span>
           </div>
@@ -2034,25 +2034,25 @@
           <!-- Section 3 : Connexions Réseaux Sociaux & Canaux -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
             <!-- Meta / Facebook Page & Messenger -->
-            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-700/60">
+            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold text-base">f</div>
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 text-[#0062ff] flex items-center justify-center font-bold text-base border border-blue-100">f</div>
                   <div>
-                    <h3 class="font-bold text-white text-sm">Meta Facebook Page & Messenger API</h3>
-                    <p class="text-[11px] text-slate-400">Échanges directs, visibilité dans la boîte de réception Facebook & Webhooks</p>
+                    <h3 class="font-bold text-slate-900 text-sm">Meta Facebook Page & Messenger API</h3>
+                    <p class="text-[11px] text-slate-500">Échanges directs, visibilité dans la boîte de réception Facebook & Webhooks</p>
                   </div>
                 </div>
-                <div id="meta-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                <div id="meta-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                   Non testé
                 </div>
               </div>
 
               <div>
-                <label class="block text-slate-400 mb-1">Jeton d'accès Page Meta (Page Access Token)</label>
+                <label class="block text-slate-700 font-semibold mb-1">Jeton d'accès Page Meta (Page Access Token)</label>
                 <div class="flex gap-2">
-                  <input type="password" id="setting-meta-token" placeholder="EAA..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
-                  <button type="button" onclick="testFacebookConnection()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/30">
+                  <input type="password" id="setting-meta-token" placeholder="EAA..." class="flex-1 bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500">
+                  <button type="button" onclick="testFacebookConnection()" class="bg-[#0062ff] hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-xs">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tester
                   </button>
                 </div>
@@ -2061,156 +2061,156 @@
               <div id="meta-connection-feedback" class="text-[11px] p-2.5 rounded-lg hidden"></div>
 
               <!-- Paramètres Webhook Meta pour synchronisation bidirectionnelle -->
-              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-1.5 text-[11px]">
-                <div class="font-bold text-slate-300 flex items-center gap-1.5">
-                  <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-400"></i> Paramètres Webhook Meta Messenger
+              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[11px]">
+                <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-600"></i> Paramètres Webhook Meta Messenger
                 </div>
-                <p class="text-slate-400 text-[10px]">Pour recevoir les messages de vos prospects directement dans le CRM :</p>
-                <div class="space-y-1 text-slate-300 font-mono text-[10px]">
-                  <div><span class="text-slate-500 font-sans">URL de rappel :</span> <span class="text-indigo-300 select-all">https://commercial-ia-autonome.onrender.com/webhook/facebook</span></div>
-                  <div><span class="text-slate-500 font-sans">Jeton de vérification :</span> <span class="text-emerald-300 select-all">commercial_ia_verify_2026</span></div>
-                  <div><span class="text-slate-500 font-sans">Abonnement :</span> <span class="text-slate-300">messages, messaging_postbacks</span></div>
+                <p class="text-slate-500 text-[10px]">Pour recevoir les messages de vos prospects directement dans le CRM :</p>
+                <div class="space-y-1 text-slate-700 font-mono text-[10px]">
+                  <div><span class="text-slate-500 font-sans">URL de rappel :</span> <span class="text-indigo-600 font-semibold select-all">https://commercial-ia-autonome.onrender.com/webhook/facebook</span></div>
+                  <div><span class="text-slate-500 font-sans">Jeton de vérification :</span> <span class="text-emerald-600 font-semibold select-all">commercial_ia_verify_2026</span></div>
+                  <div><span class="text-slate-500 font-sans">Abonnement :</span> <span class="text-slate-600">messages, messaging_postbacks</span></div>
                 </div>
               </div>
             </div>
 
             <!-- LinkedIn -->
-            <div class="glass-card rounded-xl p-5 space-y-3">
+            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-sky-600/20 text-sky-400 flex items-center justify-center font-bold">in</div>
+                <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold border border-sky-100">in</div>
                 <div>
-                  <h3 class="font-bold text-white text-sm">LinkedIn Professional Engine</h3>
-                  <p class="text-[11px] text-slate-400">Prospection B2B réelle (Zéro prospect fictif si déconnecté)</p>
+                  <h3 class="font-bold text-slate-900 text-sm">LinkedIn Professional Engine</h3>
+                  <p class="text-[11px] text-slate-500">Prospection B2B réelle (Zéro prospect fictif si déconnecté)</p>
                 </div>
               </div>
               <div>
-                <label class="block text-slate-400 mb-1">Jeton d'accès LinkedIn API</label>
-                <input type="password" id="setting-linkedin-token" placeholder="AQV..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
-                <span class="text-[10px] text-slate-500 mt-1 block">Laissé vide : aucun faux lead généré dans le CRM.</span>
+                <label class="block text-slate-700 font-semibold mb-1">Jeton d'accès LinkedIn API</label>
+                <input type="password" id="setting-linkedin-token" placeholder="AQV..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none">
+                <span class="text-[10px] text-slate-400 mt-1 block">Laissé vide : aucun faux lead généré dans le CRM.</span>
               </div>
             </div>
 
             <!-- WhatsApp Business (Meta Cloud API) -->
-            <div class="glass-card rounded-xl p-5 space-y-3">
+            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-bold">WA</div>
+                  <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100">WA</div>
                   <div>
-                    <h3 class="font-bold text-white text-sm">WhatsApp Business (Meta Cloud API)</h3>
-                    <p class="text-[11px] text-slate-400">Canal officiel direct +2290194933458 — Entrants & Sortants 24h/24</p>
+                    <h3 class="font-bold text-slate-900 text-sm">WhatsApp Business (Meta Cloud API)</h3>
+                    <p class="text-[11px] text-slate-500">Canal officiel direct +2290194933458 — Entrants & Sortants 24h/24</p>
                   </div>
                 </div>
-                <div id="wa-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                <div id="wa-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
                   En attente
                 </div>
               </div>
 
               <!-- Section Connexion QR Code Direct (Zéro paperasse Meta) -->
-              <div class="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30">
+              <div class="mt-4 p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-2">
-                    <i data-lucide="smartphone" class="w-5 h-5 text-emerald-400"></i>
+                    <i data-lucide="smartphone" class="w-5 h-5 text-emerald-600"></i>
                     <div>
-                      <h4 class="font-bold text-white text-xs">Passerelle WhatsApp Directe (Scan QR Code)</h4>
-                      <p class="text-[10px] text-emerald-400">Connectez le numéro +2290194933458 directement sans restriction Meta</p>
+                      <h4 class="font-bold text-slate-900 text-xs">Passerelle WhatsApp Directe (Scan QR Code)</h4>
+                      <p class="text-[10px] text-emerald-700">Connectez le numéro +2290194933458 directement sans restriction Meta</p>
                     </div>
                   </div>
-                  <button type="button" onclick="openWhatsAppQrModal()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-600/30">
+                  <button type="button" onclick="openWhatsAppQrModal()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs">
                     <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Scanner QR Code
                   </button>
                 </div>
-                <div id="wa-bridge-info" class="text-[11px] text-slate-400 flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-slate-500 inline-block" id="wa-bridge-dot"></span>
+                <div id="wa-bridge-info" class="text-[11px] text-slate-600 flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="wa-bridge-dot"></span>
                   <span id="wa-bridge-text">Statut de la passerelle : Vérification en cours...</span>
                 </div>
               </div>
 
               <div>
-                <label class="block text-slate-400 mb-1">Phone Number ID (Optionnel - Si Meta Cloud API)</label>
-                <input type="text" id="setting-whatsapp-phone-number-id" placeholder="Ex: 104829104829104" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none font-mono text-sm">
-                <p class="text-[10px] text-slate-500 mt-1">Trouvable dans Meta Developers > WhatsApp > Configuration de l'API > Identifiant du numéro de téléphone</p>
+                <label class="block text-slate-700 font-semibold mb-1">Phone Number ID (Optionnel - Si Meta Cloud API)</label>
+                <input type="text" id="setting-whatsapp-phone-number-id" placeholder="Ex: 104829104829104" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
+                <p class="text-[10px] text-slate-400 mt-1">Trouvable dans Meta Developers > WhatsApp > Configuration de l'API > Identifiant du numéro de téléphone</p>
               </div>
 
               <div>
-                <label class="block text-slate-400 mb-1">WhatsApp Access Token (Meta Cloud API / WATI)</label>
-                <input type="password" id="setting-wati-token" placeholder="EAA..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none font-mono text-sm">
-                <p class="text-[10px] text-slate-500 mt-1">Jeton d'accès temporaire ou jeton d'utilisateur système avec permission whatsapp_business_messaging</p>
+                <label class="block text-slate-700 font-semibold mb-1">WhatsApp Access Token (Meta Cloud API / WATI)</label>
+                <input type="password" id="setting-wati-token" placeholder="EAA..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
+                <p class="text-[10px] text-slate-400 mt-1">Jeton d'accès temporaire ou jeton d'utilisateur système avec permission whatsapp_business_messaging</p>
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-slate-400 mb-1">WABA ID (Compte WhatsApp Business - Optionnel)</label>
-                  <input type="text" id="setting-whatsapp-waba-id" placeholder="Ex: 109876543210987" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none font-mono text-sm">
+                  <label class="block text-slate-700 font-semibold mb-1">WABA ID (Compte WhatsApp Business - Optionnel)</label>
+                  <input type="text" id="setting-whatsapp-waba-id" placeholder="Ex: 109876543210987" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
                 </div>
                 <div>
-                  <label class="block text-slate-400 mb-1">Numéro Officiel / Alertes Directeur</label>
-                  <input type="text" id="setting-admin-phone" value="+2290194933458" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none font-mono text-sm">
+                  <label class="block text-slate-700 font-semibold mb-1">Numéro Officiel / Alertes Directeur</label>
+                  <input type="text" id="setting-admin-phone" value="+2290194933458" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
                 </div>
               </div>
 
-              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 text-[11px] text-slate-400 space-y-1">
+              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-600 space-y-1">
                 <div class="flex items-center justify-between">
                   <span class="text-slate-500 font-sans">URL de rappel Webhook :</span>
-                  <span class="text-emerald-300 font-mono select-all font-semibold">https://commercial-ia-autonome.onrender.com/webhook/whatsapp</span>
+                  <span class="text-emerald-700 font-mono select-all font-semibold">https://commercial-ia-autonome.onrender.com/webhook/whatsapp</span>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-slate-500 font-sans">Jeton de vérification (Verify Token) :</span>
-                  <span class="text-indigo-300 font-mono select-all font-semibold">commercial_ia_verify_2026</span>
+                  <span class="text-indigo-700 font-mono select-all font-semibold">commercial_ia_verify_2026</span>
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-slate-500 font-sans">Champ d'abonnement Meta Webhook :</span>
-                  <span class="text-amber-300 font-mono font-semibold">messages</span>
+                  <span class="text-amber-700 font-mono font-semibold">messages</span>
                 </div>
               </div>
             </div>
 
             <!-- Passerelles Paiement & Mobile Money -->
-            <div class="glass-card rounded-xl p-5 space-y-3">
+            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 flex items-center justify-center font-bold">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold border border-purple-100">
                   <i data-lucide="credit-card" class="w-4 h-4"></i>
                 </div>
                 <div>
-                  <h3 class="font-bold text-white text-sm">Paiements & Mobile Money</h3>
-                  <p class="text-[11px] text-slate-400">Systeme.io, PayTech (MTN, Moov, Wave) ou Stripe</p>
+                  <h3 class="font-bold text-slate-900 text-sm">Paiements & Mobile Money</h3>
+                  <p class="text-[11px] text-slate-500">Systeme.io, PayTech (MTN, Moov, Wave) ou Stripe</p>
                 </div>
               </div>
               <div>
-                <label class="block text-slate-400 mb-1">Lien de paiement / Tunnel de vente</label>
-                <input type="url" id="setting-payment-url" value="https://formations.sagbodavid.com/pack-digital" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none">
+                <label class="block text-slate-700 font-semibold mb-1">Lien de paiement / Tunnel de vente</label>
+                <input type="url" id="setting-payment-url" value="https://formations.sagbodavid.com/pack-digital" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none">
               </div>
             </div>
           </div>
 
           <div class="flex justify-end">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+            <button type="submit" class="bg-[#0062ff] hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center gap-2">
               <i data-lucide="save" class="w-4 h-4"></i> Enregistrer Tous les Paramètres
             </button>
           </div>
         </form>
 
         <!-- Section 3 : Conformité Légale & Registre RGPD -->
-        <div class="glass-card rounded-2xl p-6 space-y-4 border-slate-800">
-          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h3 class="font-bold text-white text-base flex items-center gap-2">
-              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+        <div class="glass-card rounded-2xl p-6 space-y-4 border border-slate-200">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
               Registre de Conformité Légale & Protection des Données (RGPD)
             </h3>
-            <span class="text-xs text-slate-400">Gestion des opt-outs et droit d'oubli</span>
+            <span class="text-xs text-slate-500">Gestion des opt-outs et droit d'oubli</span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="space-y-3">
-              <h4 class="text-xs font-bold text-slate-300">Test de désinscription "STOP"</h4>
-              <p class="text-[11px] text-slate-400">Simulez la réception d'un mot-clé STOP pour vérifier l'arrêt immédiat des relances.</p>
+              <h4 class="text-xs font-bold text-slate-700">Test de désinscription "STOP"</h4>
+              <p class="text-[11px] text-slate-500">Simulez la réception d'un mot-clé STOP pour vérifier l'arrêt immédiat des relances.</p>
               <form onsubmit="testOptOut(event)" class="space-y-2.5 text-xs">
-                <input type="text" id="optout-phone" value="+22997123456" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white" placeholder="Numéro WhatsApp">
-                <input type="text" id="optout-message" value="STOP je ne suis pas intéressé" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white" placeholder="Message reçu">
-                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded-lg">
+                <input type="text" id="optout-phone" value="+22997123456" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900" placeholder="Numéro WhatsApp">
+                <input type="text" id="optout-message" value="STOP je ne suis pas intéressé" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900" placeholder="Message reçu">
+                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition">
                   Tester la Désinscription
                 </button>
               </form>
-              <div id="optout-result" class="text-[11px] text-slate-300 mt-2"></div>
+              <div id="optout-result" class="text-[11px] text-slate-600 mt-2"></div>
             </div>
 
             <div class="md:col-span-2 space-y-3">
