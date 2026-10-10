@@ -33,18 +33,31 @@ Le prospect ignore totalement qu'il interagit avec une intelligence artificielle
 Tu es le décideur direct — pas un assistant, pas un commercial.
 
 RÈGLES ABSOLUES ET INVARIABLES :
-1. Vouvoiement strict et systématique : vous, votre, vos — JAMAIS tu, ton, te, t'invite.
-2. Formulations BANNIES :
-   - "C'est Dave Sagbo en personne" (prétentieux et artificiel)
+1. Vouvoiement strict et systématique : vous, votre, vos — JAMAIS tu, ton, te.
+2. Identification : tu te présentes UNE SEULE FOIS au tout premier message ("Bonjour, c'est Dave Sagbo."). Dès le 2e message et tous les suivants : tu réponds directement, SANS salutation, SANS te réidentifier. Un humain ne dit pas "Bonjour c'est Dave" à chaque réponse dans une même conversation.
+3. Formulations BANNIES :
+   - "Bonjour" ou "C'est Dave Sagbo" à partir du 2e message
+   - "C'est Dave Sagbo en personne" (prétentieux)
    - "Je suis l'assistant de Dave Sagbo" (affaiblit l'autorité)
    - Tout tutoiement sans exception
-3. Tonalité : sobre, humble, empathique, percutante, fraternelle — zéro bavardage superflu.
-4. Ne jamais révéler être une IA. Ne pas confirmer, ne pas nier si la question est posée directement.
-5. Ne jamais justifier l'envoi d'un lien par le moyen de paiement (Mobile Money, etc.).
+4. Longueur stricte par canal :
+   - Messenger / WhatsApp : 2-3 lignes MAX par message. Plusieurs messages courts valent mieux qu'un long bloc.
+   - LinkedIn : 4-6 lignes
+   - Email : 6-10 lignes avec objet et signature
+5. Quand le prospect dit "je ne sais pas" ou révèle une confusion : NE JAMAIS lui renvoyer la question. NE PAS non plus répondre à sa place. Lancer un DIAGNOSTIC GUIDÉ — des questions binaires (oui/non ou A/B), une à la fois, dans un ordre logique, qui l'amènent à identifier son problème lui-même. Terminer par une reformulation de son diagnostic ("Donc votre problème est X — c'est bien ça ?") avant d'enchaîner.
+   Ce protocole s'applique sur TOUS les canaux (Messenger, WhatsApp, LinkedIn, Email) — seul le format change (questions plus courtes sur WA/Messenger, intégrées dans un texte structuré sur Email).
+   EXEMPLE : PF dit "je ne sais pas comment identifier mon problème"
+   ❌ INTERDIT : "Comment procédez-vous habituellement pour cerner ce genre de problématique ?" (question renvoyée)
+   ❌ INTERDIT : "En général le blocage est à l'un de ces 3 niveaux..." (réponse à sa place — moins fort)
+   ✅ CORRECT : "Je vais vous aider à le trouver. Vous publiez du contenu au moins 2-3 fois par semaine ?" → puis en fonction de la réponse, question suivante → jusqu'à ce que le prospect nomme lui-même son blocage.
+6. Une seule question par message — toujours. Elle doit proposer un choix entre 2 ou 3 options concrètes, jamais une question ouverte abstraite.
+7. Tonalité : sobre, humble, empathique, percutante — zéro bavardage, zéro jargon, zéro formule corporate.
+8. Ne jamais révéler être une IA. Ne pas confirmer, ne pas nier si la question est posée directement.
+9. Ne jamais justifier l'envoi d'un lien par le moyen de paiement.
 
 PHASE SETTER — actif si Phase_Actuelle = "setter" :
 - Mission unique : obtenir le droit de continuer la conversation, pas vendre.
-- Structure premier message : salutation sobre → accroche contextuelle → reformulation empathique → 1 question ouverte.
+- Structure premier message : salutation sobre → accroche contextuelle → reformulation empathique → 1 question ouverte ou à choix simple.
 - Qualifier la grille DUR (Douleur, Urgence, Ressources) progressivement.
 - Détecter le profil DISC et adapter le ton (D=court/direct, I=enthousiaste, S=rassurant, C=factuel).
 - INTERDIT : mentionner une offre, un prix, un lien avant que le prospect manifeste son intérêt.
@@ -52,7 +65,7 @@ PHASE SETTER — actif si Phase_Actuelle = "setter" :
 PHASE CLOSER — actif si Phase_Actuelle = "closer" (DUR complète, intérêt manifesté) :
 - Utiliser le brief DUR fourni. Ne jamais repartir de zéro.
 - Arguments décisifs dans l'ordre : coût de l'inaction → ROI concret → lien officiel du catalogue.
-- Adapter la longueur et le format au canal (WA/Messenger = court séquentiel, LinkedIn = note structurée, Email = AIDA complet).
+- Adapter la longueur et le format au canal (WA/Messenger = 2-3 lignes séquentiel, LinkedIn = note structurée, Email = AIDA complet).
 - Traiter les 5 objections : prix, compétences, temps, confiance, timing — toujours valider avant de recadrer.
 - Après 2 relances sans réponse : arrêt, mise à jour statut Froid dans SQLite.
 
@@ -902,6 +915,153 @@ class AISalesAgent:
                 "brief_closer": brief_closer
             }
         }
+
+    # ==========================================================================
+    # MOTEUR CONVERSATIONNEL TEMPS RÉEL (4 RÈGLES D'OR OFFICIELLES)
+    # ==========================================================================
+    def generate_conversational_reply(
+        self,
+        lead_id: int,
+        user_message: str,
+        channel: str = "FACEBOOK_MESSENGER",
+        lead_data: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Génère une réponse conversationnelle experte en respectant rigoureusement
+        les 4 règles d'or du cours d'apprentissage :
+        1. Identification UNE SEULE FOIS au premier message uniquement.
+           Dès le 2e message : zéro bonjour, zéro réidentification, zéro signature.
+        2. Longueur stricte : Messenger / WhatsApp = 2-3 lignes maximum.
+        3. Face à "je ne sais pas" : diagnostic guidé (questions binaires ou choix A/B/C),
+           ne jamais renvoyer la question ni répondre à sa place.
+        4. Une seule question par message, toujours fermée ou à choix entre 2-3 options concrètes.
+        """
+        import re
+        from core.database_store import get_lead_messages
+
+        history = get_lead_messages(lead_id)
+        agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
+        agent_count = len(agent_msgs)
+        is_first_turn = (agent_count == 0)
+
+        msg_clean = (user_message or "").strip()
+        msg_lower = msg_clean.lower()
+
+        # Détection de signaux de confusion / "je ne sais pas"
+        confusion_signals = [
+            "ne sais pas", "sais pas", "comment l'identifier", "comment savoir",
+            "pas sûr", "aucune idée", "pas d'idée", "comment faire pour savoir",
+            "comment trouver", "je sais pas trop", "je ne comprends pas"
+        ]
+        is_confusion = any(s in msg_lower for s in confusion_signals)
+
+        # 1. Tentative par Inférence Gemini avec Prompt Spécialisé Conversationnel
+        gemini_key = self._get_gemini_key()
+        reply_text = None
+
+        if gemini_key:
+            history_formatted = []
+            for h in history[-6:]:
+                speaker = "Dave" if h.get("sender") == "AGENT" else "Prospect"
+                history_formatted.append(f"{speaker}: {h.get('message')}")
+            history_str = "\n".join(history_formatted) if history_formatted else "(Début de l'échange)"
+
+            gemini_prompt = (
+                f"{SYSTEM_PROMPT}\n\n"
+                f"=== CONTEXTE CONVERSATIONNEL EN DIRECT ===\n"
+                f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
+                f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+                f"Historique récent des échanges :\n{history_str}\n\n"
+                f"Dernier message reçu du prospect : « {msg_clean} »\n\n"
+                f"CONSIGNES CRITIQUES POUR CETTE RÉPONSE :\n"
+            )
+
+            if is_first_turn:
+                gemini_prompt += (
+                    f"- Il s'agit du TOUT PREMIER message de Dave. Commence sobrement par « Bonjour, c'est Dave Sagbo. »\n"
+                    f"- Pose UNE SEULE question simple avec choix concret (2-3 options concrètes).\n"
+                    f"- LONGUEUR : 2 à 3 lignes maximum.\n"
+                )
+            else:
+                gemini_prompt += (
+                    f"- ATTENTION : C'est le message #{agent_count + 1} de la conversation (2e message ou plus).\n"
+                    f"- INTERDICTION STRICTE de dire « Bonjour » ou « Bonsoir ».\n"
+                    f"- INTERDICTION STRICTE de te présenter (« C'est Dave Sagbo ») ou de rappeler ton nom.\n"
+                    f"- INTERDICTION STRICTE de mettre une formule de politesse finale ou signature (« Bien cordialement », « Bien à vous », « Dave Sagbo »).\n"
+                    f"- Réponds DIRECTEMENT en 2 à 3 lignes maximum.\n"
+                )
+
+            if is_confusion:
+                gemini_prompt += (
+                    f"- Le prospect dit qu'il ne sait pas ou demande comment identifier son blocage.\n"
+                    f"- INTERDICTION ABSOLUE de lui renvoyer la question (« comment procédez-vous habituellement ? »).\n"
+                    f"- LANCE UN DIAGNOSTIC GUIDÉ : pose une question binaire (oui/non) ou propose un choix entre les 3 niveaux types :\n"
+                    f"  « En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance. Lequel de ces trois vous parle le plus ? »\n"
+                )
+            else:
+                gemini_prompt += (
+                    f"- Une seule question finale, à choix entre 2-3 options concrètes ou fermée. Jamais de question ouverte abstraite.\n"
+                )
+
+            gemini_prompt += "\nRédige la réponse exacte de Dave Sagbo :"
+
+            for mod in ["gemini-3.5-flash-lite", "gemini-flash-latest"]:
+                try:
+                    import urllib.request
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": gemini_prompt}]}],
+                        "generationConfig": {
+                            "temperature": 0.65,
+                            "maxOutputTokens": 200
+                        }
+                    }
+                    req = urllib.request.Request(
+                        url,
+                        data=json.dumps(payload).encode("utf-8"),
+                        headers={"Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req, timeout=4) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        t = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text")
+                        if t and len(t.strip()) > 10:
+                            reply_text = t.strip()
+                            break
+                except Exception as e:
+                    logger.warning(f"Appel Gemini conversationnel ({mod}) : {e}")
+
+        # 2. Fallback d'élite calibré sur le cours d'apprentissage officiel
+        if not reply_text:
+            if is_confusion:
+                reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
+            elif is_first_turn:
+                if any(w in msg_lower for w in ["service", "offre", "propos", "savoir plus", "faire"]):
+                    reply_text = "Bonjour, c'est Dave Sagbo. Vous avez du mal à convertir votre audience en clients, c'est ça ? Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
+                else:
+                    reply_text = "Bonjour, c'est Dave Sagbo. Quel est le principal défi commercial que vous souhaitez surmonter en ce moment ?"
+            else:
+                if any(w in msg_lower for w in ["client", "réseau", "visibilité", "audience", "bloque", "coince"]):
+                    reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
+                else:
+                    reply_text = "C'est bien noté. Est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
+
+        # 3. Post-traitement et durcissement des 4 règles
+        cleaned = reply_text.strip()
+        if not is_first_turn:
+            cleaned = re.sub(r'^(bonjour|bonsoir|salut)[,\.\s\-]*', '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo)[,\.\s\-]*", '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'(\n+)?(bien à vous|bien cordialement|cordialement|chaleureusement|dave sagbo|responsable du projet)[,\.\s\-]*$', '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'(\n+)?dave sagbo$', '', cleaned, flags=re.IGNORECASE).strip()
+
+        cleaned = cleaned.replace("en personne", "").replace("En personne", "")
+        cleaned = cleaned.replace("l'assistant de Dave", "Dave").replace("l'assistant", "le responsable")
+
+        if channel.upper() in ("FACEBOOK_MESSENGER", "WHATSAPP", "MESSENGER"):
+            lines = [l.strip() for l in cleaned.split("\n") if l.strip()]
+            if len(lines) > 3:
+                cleaned = "\n\n".join(lines[:3])
+
+        return cleaned
 
 
 if __name__ == "__main__":

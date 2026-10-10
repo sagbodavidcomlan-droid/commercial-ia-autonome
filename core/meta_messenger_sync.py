@@ -498,8 +498,15 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 "facebook_psid": sender_psid
             }
 
-            # 4. Générer la réponse experte d'acquisition & closing
-            reply_text = omnichannel_messenger.generate_channel_pitch(lead_data, "FACEBOOK_MESSENGER")
+            # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours)
+            from modules.ai_sales_agent import AISalesAgent
+            ai_agent = AISalesAgent()
+            reply_text = ai_agent.generate_conversational_reply(
+                lead_id=lead_id,
+                user_message=user_text,
+                channel="FACEBOOK_MESSENGER",
+                lead_data=lead_data
+            )
 
             # Vérifier si l'IA est en mode 100% Autonome ou en mode Pause / Supervision
             from core.autopilot_daemon import is_autopilot_active

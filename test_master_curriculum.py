@@ -227,6 +227,44 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertIn("leads_by_channel", report)
         self.assertGreaterEqual(report["total_leads"], 5)
 
+    def test_10_conversation_turn_rules_and_guided_diagnostic(self):
+        """
+        Vérifie les 4 règles d'or de la mise à jour du cours :
+        1. Identification unique au premier message, zéro réidentification au 2e message et plus.
+        2. Longueur 2-3 lignes max sur Messenger/WhatsApp.
+        3. Diagnostic guidé face à 'je ne sais pas' (ne jamais renvoyer la question).
+        4. Une seule question à choix concret ou binaire.
+        """
+        from core.database_store import get_connection, log_lead_message
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO crm_leads (nom_complet, source_canal, statut_lead, date_creation) VALUES ('Test Turn Rules', 'Facebook Messenger', 'Nouveau', datetime('now'))")
+        t_id = c.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Tour 1 : Demande de renseignements
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "LEAD", "Puis je en savoir plus sur vos services ?")
+        rep1 = self.agent.generate_conversational_reply(t_id, "Puis je en savoir plus sur vos services ?", "FACEBOOK_MESSENGER")
+        self.assertTrue("dave sagbo" in rep1.lower(), "Tour 1 doit contenir l'identification de Dave Sagbo")
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep1)
+
+        # Tour 2 : Difficulté réseaux sociaux
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "LEAD", "Je n'arrive pas obtenir de client depuis mes réseaux sociaux, avez une solution pour m'aider ?")
+        rep2 = self.agent.generate_conversational_reply(t_id, "Je n'arrive pas obtenir de client depuis mes réseaux sociaux, avez une solution pour m'aider ?", "FACEBOOK_MESSENGER")
+        self.assertFalse(rep2.strip().lower().startswith("bonjour"), "Tour 2 ne doit pas commencer par bonjour")
+        self.assertFalse("c'est dave sagbo" in rep2.lower(), "Tour 2 ne doit pas se réidentifier")
+        self.assertFalse("bien à vous" in rep2.lower() or "bien cordialement" in rep2.lower(), "Tour 2 ne doit pas avoir de signature")
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep2)
+
+        # Tour 3 : 'Non je ne sais pas, comment l'identifier?'
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "LEAD", "Non je ne sais pas, comment l'identifier?")
+        rep3 = self.agent.generate_conversational_reply(t_id, "Non je ne sais pas, comment l'identifier?", "FACEBOOK_MESSENGER")
+        self.assertFalse("comment procédez-vous habituellement" in rep3.lower(), "Ne doit pas renvoyer la question")
+        # Doit lancer le diagnostic guidé
+        self.assertTrue("niveau" in rep3.lower() or "aider" in rep3.lower() or "soit" in rep3.lower() or "est-ce que" in rep3.lower(), "Doit proposer un diagnostic guidé")
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep3)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

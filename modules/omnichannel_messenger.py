@@ -325,14 +325,12 @@ class OmnichannelMessenger:
                 f"Pour bien appréhender votre situation : comment est articulée votre démarche sur cette partie en ce moment ?\n\nBien à vous,\nDave Sagbo\nResponsable de Projet",
                 f"Seriez-vous ouvert à m'indiquer comment votre équipe aborde cette problématique aujourd'hui ?\n\nChaleureusement,\nDave Sagbo\nDirecteur Commercial"
             ]
-        else: # WHATSAPP & MESSENGER
-            questions = [
-                f"Pour que je comprenne au mieux votre situation : comment gérez-vous cette partie concrètement aujourd'hui dans votre organisation ?",
-                f"Si ce n'est pas indiscret : est-ce que votre suivi sur ce sujet est fait principalement à la main en ce moment ?",
-                f"Dites-moi, quel est le principal frein que vous rencontrez actuellement pour franchir un cap sur ce point ?"
-            ]
-
-        question = questions[(lead_id + 1) % len(questions)]
+        if channel_upper in ("WHATSAPP", "FACEBOOK_MESSENGER", "MESSENGER"):
+            # Règle d'or : 2-3 lignes MAX sur Messenger / WhatsApp avec question à choix concret
+            if declencheur:
+                return f"Bonjour, c'est Dave Sagbo. J'ai vu que vous cherchez à avancer sur {declencheur[:60]}. Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
+            else:
+                return f"Bonjour, c'est Dave Sagbo. Vous cherchez à développer vos résultats sur {interet[:50]} ? Vous êtes plutôt sur un enjeu de visibilité ou de conversion ?"
 
         return f"{opening}\n\n{empathy}\n\n{question}"
 
