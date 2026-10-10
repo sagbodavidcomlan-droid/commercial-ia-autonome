@@ -486,9 +486,28 @@ def init_db():
         lead_name TEXT,
         lead_phone TEXT,
         status TEXT DEFAULT 'INFO',
-        details TEXT
+        details TEXT,
+        action_type TEXT,
+        lead_id INTEGER,
+        duration_ms INTEGER,
+        performed_by TEXT DEFAULT 'agent_poller',
+        created_at TEXT DEFAULT (datetime('now'))
     )
     """)
+
+    # Migrations de colonnes pour agent_activity_logs si déjà existante
+    cursor.execute("PRAGMA table_info(agent_activity_logs)")
+    act_cols = [c[1] for c in cursor.fetchall()]
+    if "action_type" not in act_cols:
+        cursor.execute("ALTER TABLE agent_activity_logs ADD COLUMN action_type TEXT")
+    if "lead_id" not in act_cols:
+        cursor.execute("ALTER TABLE agent_activity_logs ADD COLUMN lead_id INTEGER")
+    if "duration_ms" not in act_cols:
+        cursor.execute("ALTER TABLE agent_activity_logs ADD COLUMN duration_ms INTEGER")
+    if "performed_by" not in act_cols:
+        cursor.execute("ALTER TABLE agent_activity_logs ADD COLUMN performed_by TEXT DEFAULT 'agent_poller'")
+    if "created_at" not in act_cols:
+        cursor.execute("ALTER TABLE agent_activity_logs ADD COLUMN created_at TEXT")
 
     # 10. Table Messagerie Omnicanale (Facebook Messenger, LinkedIn, Email, WhatsApp)
     cursor.execute("""
@@ -501,6 +520,15 @@ def init_db():
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'DELIVERED',
         metadata_json TEXT
+    )
+    """)
+
+    # 11. Table des verrous de traitement anti-doublon pour le Poller 24/7
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS processing_locks (
+        lead_id INTEGER PRIMARY KEY,
+        locked_at TEXT,
+        expires_at TEXT
     )
     """)
     conn.commit()

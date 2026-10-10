@@ -36,6 +36,7 @@ from core.catalog_engine import CatalogEngine
 from core.hubspot_sync import hubspot_manager
 from core.autopilot_daemon import autopilot_daemon
 from core.auth_manager import auth_manager
+from poller import start_poller_thread, get_agent_poller_status, run_poller_cycle
 from modules.config_loader import get_active_config, set_active_domain, create_domain_profile
 from modules.ai_sales_agent import AISalesAgent
 from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
@@ -197,6 +198,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_ratelimit_status()
         elif path == "/api/autopilot/status":
             self.handle_api_autopilot_status()
+        elif path == "/api/agent/status":
+            self.send_json_response(get_agent_poller_status())
         elif path == "/api/export/dossier":
             self.handle_api_export_dossier()
         elif path == "/api/export/leads-csv":
@@ -316,6 +319,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_enrich_disc(body)
         elif path == "/api/autopilot/run":
             self.handle_api_autopilot_run(body)
+        elif path == "/api/agent/trigger-cycle":
+            run_poller_cycle()
+            self.send_json_response({"success": True, "status": get_agent_poller_status()})
         elif path == "/api/payments/checkout":
             self.handle_api_payments_checkout(body)
         elif path == "/api/payments/simulate":
@@ -1771,6 +1777,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
 
 def run_server(port=7860):
+    # Lancement du poller commercial autonome 24/7 en arrière-plan
+    start_poller_thread(interval_seconds=120)
+
     server_address = ("", port)
     httpd = ThreadingHTTPServer(server_address, SalesPlatformHandler)
     print(f"""

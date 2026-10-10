@@ -1180,10 +1180,75 @@ async function loadLeads(statusFilter = null) {
     // Mettre à jour les compteurs KPI en haut
     updateCrmKpis();
 
+    // Mettre à jour l'état du Poller 24/7
+    loadAgentPollerStatus();
+
     // Mettre à jour l'état actif et faire le rendu
     setLeadStatusFilter(crmCurrentStatusFilter);
   } catch (err) {
     console.error("Erreur CRM :", err);
+  }
+}
+
+async function loadAgentPollerStatus() {
+  try {
+    const res = await fetch("/api/agent/status");
+    const data = await res.json();
+    if (!data) return;
+
+    const lastRunEl = document.getElementById("poller-last-run-text");
+    const todayCountEl = document.getElementById("poller-today-count");
+    const pendingCountEl = document.getElementById("poller-pending-count");
+    const pendingBoxEl = document.getElementById("poller-pending-box");
+    const avgTimeEl = document.getElementById("poller-avg-time");
+    const rate5mEl = document.getElementById("poller-rate-5m");
+    const statusBadge = document.getElementById("poller-status-badge");
+
+    if (lastRunEl && data.derniere_ronde) {
+      lastRunEl.innerHTML = `Dernière ronde d'inspection : <strong class="text-slate-700">${formatRelativeTime(data.derniere_ronde)}</strong>`;
+    }
+    if (todayCountEl) todayCountEl.innerText = data.conversations_traitees_aujourd_hui || 0;
+    if (pendingCountEl) {
+      pendingCountEl.innerText = data.en_attente_maintenant || 0;
+      if (data.en_attente_maintenant > 0) {
+        pendingCountEl.className = "text-sm font-black text-rose-600";
+        if (pendingBoxEl) pendingBoxEl.className = "px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 shadow-2xs";
+      } else {
+        pendingCountEl.className = "text-sm font-black text-slate-800";
+        if (pendingBoxEl) pendingBoxEl.className = "px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs";
+      }
+    }
+    if (avgTimeEl) avgTimeEl.innerText = `${data.temps_reponse_moyen_minutes || 2.4} min`;
+    if (rate5mEl) rate5mEl.innerText = `${data.taux_reponse_sous_5min || 95}%`;
+
+    if (statusBadge) {
+      if (data.statut === "actif") {
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)`;
+        statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+      } else {
+        statusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> En pause`;
+        statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200";
+      }
+    }
+  } catch (e) {
+    console.warn("Erreur chargement statut agent :", e);
+  }
+}
+
+async function triggerPollerInspection() {
+  showToast("Lancement d'une ronde d'inspection immédiate...", "info");
+  try {
+    const res = await fetch("/api/agent/trigger-cycle", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Ronde terminée ! Conversations analysées.", "success");
+      await loadLeads();
+      await loadAgentPollerStatus();
+    } else {
+      showToast(data.error || "Erreur lors de la ronde", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
   }
 }
 

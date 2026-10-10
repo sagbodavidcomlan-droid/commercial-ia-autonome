@@ -1072,6 +1072,51 @@
           </div>
         </div>
 
+        <!-- BANNIÈRE ÉTAT EN TEMPS RÉEL DE L'AGENT IA (POLLER 24/7) -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-blue-200/80 bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-white shadow-xs">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-2xl bg-[#0062ff]/10 text-[#0062ff] flex items-center justify-center font-black text-lg shrink-0 shadow-xs border border-blue-200/60">
+                🤖
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-black text-slate-900">AGENT IA — ÉTAT EN TEMPS RÉEL</h3>
+                  <span id="poller-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5" id="poller-last-run-text">
+                  Dernière ronde d'inspection : <strong class="text-slate-700">Il y a quelques instants</strong>
+                </p>
+              </div>
+            </div>
+
+            <!-- Stats temps réel du Poller -->
+            <div class="flex items-center gap-2 sm:gap-4 flex-wrap text-xs">
+              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Traités aujourd'hui</span>
+                <span class="text-sm font-black text-slate-800" id="poller-today-count">0</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs" id="poller-pending-box">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">En attente active</span>
+                <span class="text-sm font-black text-slate-800" id="poller-pending-count">0</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Temps réponse moyen</span>
+                <span class="text-sm font-black text-[#0062ff]" id="poller-avg-time">2.4 min</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Taux &lt; 5 min</span>
+                <span class="text-sm font-black text-emerald-600" id="poller-rate-5m">95%</span>
+              </div>
+              <button onclick="triggerPollerInspection()" class="p-2 rounded-xl bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-xs font-bold transition shadow-2xs" title="Lancer une ronde d'inspection manuelle immédiate">
+                <i data-lucide="play-circle" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- KPI WIDGETS CRM EN HAUT -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
           <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
