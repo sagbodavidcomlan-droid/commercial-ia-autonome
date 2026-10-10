@@ -53,11 +53,8 @@ class TestMasterCurriculum(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute("DELETE FROM crm_leads WHERE telephone IN ('+22997000101', '+221770000202', '+22997112233', '+225070000303', '+223700000404')")
-        conn.commit()
-        conn.close()
+        # Les leads authentiques de démonstration/cours sont conservés pour alimenter le CRM et l'audit.
+        pass
 
     def test_01_identity_and_vouvoiement_rules(self):
         """Vérifie le respect strict du vouvoiement et le bannissement total des formules interdites."""
@@ -279,6 +276,14 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertIn("formations.sagbodavid.com", rep4, "Doit présenter le lien officiel de l'offre (Sortie +2)")
         log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep4)
 
+        # Nettoyage test
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM crm_leads WHERE id = ?", (t_id,))
+        c.execute("DELETE FROM crm_lead_messages WHERE lead_id = ?", (t_id,))
+        conn.commit()
+        conn.close()
+
     def test_12_linkedin_outreach_diagnostic_and_eight_turn_ceiling(self):
         """
         Vérifie la résolution du bug de diagnostic guidé du 2026-10-10 17:50 :
@@ -352,6 +357,14 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertEqual(row[1], "closer", "phase_actuelle doit être 'closer'")
         self.assertIn("75 000", str(row[2]), "Offre matchée doit être l'Offre #7")
         self.assertIsNotNone(row[3], "La douleur identifiée doit être enregistrée")
+
+        # Nettoyage test
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        c.execute("DELETE FROM crm_lead_messages WHERE lead_id = ?", (lead_id,))
+        conn.commit()
+        conn.close()
 
     def test_11_crm_lead_deduplication_and_contact_extraction(self):
         """

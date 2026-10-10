@@ -376,7 +376,8 @@ function showTab(tabId) {
     renderCalendar(calCurrentMonth, calCurrentYear);
   } else if (tabId === "crm") {
     loadLeads("Tous");
-    loadConversionAudit();
+  } else if (tabId === "audit") {
+    loadConversionAudit(false);
   } else if (tabId === "swarm") {
     loadSwarmStatus();
   } else if (tabId === "catalog") {
