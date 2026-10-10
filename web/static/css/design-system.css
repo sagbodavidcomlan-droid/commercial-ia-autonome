@@ -1155,10 +1155,157 @@ body {
   .kpi-grid {
     grid-template-columns: 1fr;
   }
-  .kanban-board {
-    grid-template-columns: 1fr;
-  }
   .drawer {
     width: 100vw;
   }
 }
+
+/* ==========================================================================
+   ICÔNES LUCIDE & SYSTEME D'ICÔNES SVG (PROPRIÉTÉS STRICTES)
+   ========================================================================== */
+/* Tailles standards */
+.icon-xs  { width: 14px; height: 14px; }
+.icon-sm  { width: 16px; height: 16px; }
+.icon-md  { width: 20px; height: 20px; }  /* défaut */
+.icon-lg  { width: 24px; height: 24px; }
+.icon-xl  { width: 32px; height: 32px; }
+
+/* Style SVG uniforme */
+[data-lucide] {
+  stroke-width: 1.75 !important;       /* trait fin et élégant */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  display: inline-flex;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Status Poller — Point pulsé SVG */
+.status-pulse-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Animations d'icônes */
+.icon-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.icon-bounce {
+  animation: bounce 1s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+
+.icon-shake {
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25%       { transform: translateX(-4px); }
+  75%       { transform: translateX(4px); }
+}
+
+/* ==========================================================================
+   ICÔNES DE MARQUE (SIMPLE ICONS SVG SPRITE)
+   ========================================================================== */
+.brand-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Couleurs officielles des marques */
+.brand-icon.whatsapp  { fill: #25D366; }
+.brand-icon.messenger { fill: #0084FF; }
+.brand-icon.linkedin  { fill: #0A66C2; }
+.brand-icon.email     { fill: #EA4335; }
+
+/* Badges de canaux */
+.canal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.canal-badge.canal-whatsapp {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.canal-badge.canal-messenger {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.canal-badge.canal-linkedin {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.canal-badge.canal-email {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.canal-badge .brand-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.canal-badge.canal-whatsapp  .brand-icon { fill: #16a34a; }
+.canal-badge.canal-messenger .brand-icon { fill: #2563eb; }
+.canal-badge.canal-linkedin  .brand-icon { fill: #0369a1; }
+.canal-badge.canal-email     .brand-icon { fill: #dc2626; }
+
+/* KPI Icon Wrap */
+.kpi-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.kpi-icon-primary { 
+  background: var(--color-primary-light); 
+  color: var(--color-primary); 
+}
+.kpi-icon-warning { 
+  background: #fff7ed; 
+  color: #ea580c; 
+}
+.kpi-icon-success { 
+  background: #f0fdf4; 
+  color: #16a34a; 
+}
+.kpi-icon-danger  { 
+  background: #fef2f2; 
+  color: #dc2626; 
+}
+.kpi-icon-neutral { 
+  background: #f1f5f9; 
+  color: #475569; 
+}
+

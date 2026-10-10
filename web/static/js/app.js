@@ -63,7 +63,7 @@ function showToast(message, type = "success") {
 
   toast.className = `p-3 rounded-xl border shadow-xl flex items-center gap-2.5 text-xs font-semibold backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto ${bg}`;
   toast.innerHTML = `
-    <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+    <span><i data-lucide="${type === 'success' ? 'check-circle-2' : type === 'error' ? 'alert-circle' : 'info'}" class="w-4 h-4"></i></span>
     <span>${message}</span>
   `;
 
@@ -631,21 +631,21 @@ async function loadDirectorTab() {
     // Remplir le sélecteur d'offres / services
     const prodSelect = document.getElementById("goal-product");
     if (prodSelect) {
-      let opts = `<option value="0" data-price="0">🌟 Toutes les Offres (Catalogue Global)</option>`;
+      let opts = `<option value="0" data-price="0">Toutes les Offres (Catalogue Global)</option>`;
       if (activeCatalogItems && activeCatalogItems.length > 0) {
         const services = activeCatalogItems.filter(p => p.type === "service");
         const products = activeCatalogItems.filter(p => p.type === "produit");
         if (services.length > 0) {
           opts += `<optgroup label="Services & Formations">`;
           services.forEach(p => {
-            opts += `<option value="${p.id}" data-price="${p.prix_vente || 0}">🎯 ${escapeHtml(p.nom)} (${(p.prix_vente || 0).toLocaleString()} FCFA)</option>`;
+            opts += `<option value="${p.id}" data-price="${p.prix_vente || 0}">${escapeHtml(p.nom)} (${(p.prix_vente || 0).toLocaleString()} FCFA)</option>`;
           });
           opts += `</optgroup>`;
         }
         if (products.length > 0) {
           opts += `<optgroup label="Produits Physiques">`;
           products.forEach(p => {
-            opts += `<option value="${p.id}" data-price="${p.prix_vente || 0}">📦 ${escapeHtml(p.nom)} (${(p.prix_vente || 0).toLocaleString()} FCFA)</option>`;
+            opts += `<option value="${p.id}" data-price="${p.prix_vente || 0}">${escapeHtml(p.nom)} (${(p.prix_vente || 0).toLocaleString()} FCFA)</option>`;
           });
           opts += `</optgroup>`;
         }
@@ -752,10 +752,10 @@ function onGoalProductChange() {
   const targetRev = parseFloat(document.getElementById("goal-revenue")?.value || 0);
 
   if (select.value === "0" || price <= 0) {
-    hint.innerHTML = `💡 <strong>Objectif Global :</strong> L'Agent IA orientera ses efforts de closing sur l'ensemble du catalogue.`;
+    hint.innerHTML = `<strong>Objectif Global :</strong> L'Agent IA orientera ses efforts de closing sur l'ensemble du catalogue.`;
   } else {
     const requiredConversions = Math.ceil(targetRev / price);
-    hint.innerHTML = `🎯 <strong>Stratégie Dédiée :</strong> Pour atteindre <strong>${targetRev.toLocaleString()} FCFA</strong> avec un tarif de <strong>${price.toLocaleString()} FCFA/unité</strong>, l'IA doit conclure <strong>${requiredConversions} ventes</strong> de cette offre spécifique.`;
+    hint.innerHTML = `<strong>Stratégie Dédiée :</strong> Pour atteindre <strong>${targetRev.toLocaleString()} FCFA</strong> avec un tarif de <strong>${price.toLocaleString()} FCFA/unité</strong>, l'IA doit conclure <strong>${requiredConversions} ventes</strong> de cette offre spécifique.`;
     const convInput = document.getElementById("goal-conversions");
     if (convInput && (convInput.value === "25" || !convInput.value)) {
       convInput.value = requiredConversions;
@@ -769,7 +769,7 @@ async function saveDirectorGoals(e) {
   const selectedProdId = prodSelect ? parseInt(prodSelect.value, 10) : 0;
   let selectedProdName = "Toutes les Offres (Catalogue Global)";
   if (prodSelect && prodSelect.selectedIndex >= 0 && selectedProdId > 0) {
-    selectedProdName = prodSelect.options[prodSelect.selectedIndex].text.replace(/^[🎯📦🌟]\s*/, '').split(' (')[0].trim();
+    selectedProdName = prodSelect.options[prodSelect.selectedIndex].text.trim().split(' (')[0].trim();
   }
 
   const payload = {
@@ -966,10 +966,10 @@ function renderSelectedDayEvents(dateStr) {
     }
 
     let statusPill = ev.status === "termine"
-      ? '<span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">Terminé ✅</span>'
+      ? '<span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">Terminé</span>'
       : (ev.status === "en_cours" 
-        ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold border border-amber-200 animate-pulse">En cours ⚡</span>'
-        : '<span class="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200">Planifié ⏳</span>');
+        ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold border border-amber-200 animate-pulse">En cours</span>'
+        : '<span class="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200">Planifié</span>');
 
     return `
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2.5 hover:border-slate-300 transition">
@@ -1524,7 +1524,9 @@ function applyLeadsFilterAndRender() {
       <tr>
         <td colspan="9" class="p-12 text-center text-slate-500 bg-white">
           <div class="max-w-md mx-auto space-y-3">
-            <div class="text-4xl select-none">📭</div>
+            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+              <i data-lucide="${isSearching ? 'search-x' : 'inbox'}" class="w-6 h-6"></i>
+            </div>
             <div class="font-bold text-base text-slate-800">
               ${isSearching ? 'Aucun résultat trouvé' : `Aucun lead dans "${escapeHtml(filterLabel)}"`}
             </div>
@@ -1536,10 +1538,13 @@ function applyLeadsFilterAndRender() {
             </p>
             <div class="pt-2 flex items-center justify-center gap-2">
               ${isSearching 
-                ? `<button onclick="clearLeadSearch()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">Effacer la recherche</button>`
+                ? `<button onclick="clearLeadSearch()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition">
+                     <i data-lucide="x" class="w-3.5 h-3.5"></i> Effacer la recherche
+                   </button>`
                 : ''}
               ${crmCurrentStatusFilter !== 'Tous' 
                 ? `<button onclick="setLeadStatusFilter('Tous')" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0062ff] hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition">
+                     <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
                      <span>Voir tous les leads (${crmLeadsData.length})</span>
                    </button>` 
                 : ''}
@@ -1563,7 +1568,7 @@ function applyLeadsFilterAndRender() {
         const leadId = l.id;
         const isSelected = selectedLeadIds.has(leadId);
 
-        // 1. Nom & Canal
+        // 1. Nom & Canal (Badges de canal SVG Simple Icons)
         let fullName = "";
         if (l.prenom || l.nom) {
           fullName = `${l.prenom || ""} ${l.nom || ""}`.trim();
@@ -1574,13 +1579,29 @@ function applyLeadsFilterAndRender() {
 
         const canalSource = String(l.canal_source || l.source_contact || l.source_canal || "messenger").toLowerCase();
         const canalIdStr = l.canal_id ? String(l.canal_id) : "";
-        let canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
+        let canalBadge = `
+          <span class="canal-badge canal-messenger">
+            <svg class="brand-icon messenger"><use href="#icon-messenger"/></svg>
+            Messenger
+          </span>`;
         if (canalSource.includes("whatsapp") || canalIdStr.startsWith("wa_")) {
-          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
+          canalBadge = `
+            <span class="canal-badge canal-whatsapp">
+              <svg class="brand-icon whatsapp"><use href="#icon-whatsapp"/></svg>
+              WhatsApp
+            </span>`;
         } else if (canalSource.includes("linkedin") || canalIdStr.startsWith("li_")) {
-          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
+          canalBadge = `
+            <span class="canal-badge canal-linkedin">
+              <svg class="brand-icon linkedin"><use href="#icon-linkedin"/></svg>
+              LinkedIn
+            </span>`;
         } else if (canalSource.includes("email") || canalIdStr.startsWith("email_")) {
-          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
+          canalBadge = `
+            <span class="canal-badge canal-email">
+              <svg class="brand-icon email"><use href="#icon-email"/></svg>
+              Email
+            </span>`;
         }
 
         const dateCreationStr = formatRelativeTime(l.date_creation || l.created_at);
@@ -1738,8 +1759,9 @@ function applyLeadsFilterAndRender() {
                 Dernier : <strong class="text-slate-700">${escapeHtml(lastContactStr)}</strong>
               </div>
               ${prochaineAction ? `
-                <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px]" title="Action: ${escapeHtml(prochaineAction)}">
-                  👉 ${escapeHtml(prochaineAction)}
+                <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px] flex items-center gap-1" title="Action: ${escapeHtml(prochaineAction)}">
+                  <i data-lucide="arrow-right" class="w-3 h-3 text-indigo-500 shrink-0"></i>
+                  <span>${escapeHtml(prochaineAction)}</span>
                 </div>
               ` : ''}
             </td>
@@ -2171,7 +2193,7 @@ function renderConversationMessages(messages, leadName) {
         <i data-lucide="message-square-plus" class="w-8 h-8 mx-auto text-slate-300"></i>
         <div class="text-xs font-bold text-slate-600">Aucun échange préalable sur ce canal</div>
         <p class="text-[11px] text-slate-400 max-w-sm mx-auto">
-          L'agent IA peut initier le contact dès maintenant. Cliquez sur « 🪄 Générer Relance IA » pour préparer la première accroche.
+          L'agent IA peut initier le contact dès maintenant. Cliquez sur « Générer Relance IA » pour préparer la première accroche.
         </p>
       </div>
     `;
@@ -2211,7 +2233,7 @@ function renderConversationMessages(messages, leadName) {
               ${escapeHtml(m.message)}
             </div>
             <div class="text-[10px] text-slate-400 pr-1 font-medium flex items-center justify-end gap-1">
-              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Dave Sagbo • Responsable du Projet</span> • <span>✓✓</span>
+              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Dave Sagbo • Responsable du Projet</span> • <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
             </div>
           </div>
         </div>
@@ -2330,7 +2352,7 @@ function insertCheckoutLinkInConversation() {
   }
 
   const prodName = activeConversationData?.product?.nom || "votre commande";
-  const prompt = `Voici votre lien officiel pour valider ${prodName} :\n👉 ${link}\n(Règlement immédiat & sécurisé par Mobile Money MTN, Moov, Wave, Orange ou Carte Bancaire)`;
+  const prompt = `Voici votre lien officiel pour valider ${prodName} :\n${link}\n(Règlement immédiat & sécurisé par Mobile Money MTN, Moov, Wave, Orange ou Carte Bancaire)`;
   input.value = (input.value ? input.value + "\n\n" + prompt : prompt).trim();
   input.focus();
   showToast("Lien officiel du Catalogue inséré avec succès !", "success");
@@ -2902,14 +2924,14 @@ async function checkConnectionsHealth() {
     if (fbBadge && data.facebook) {
       if (data.facebook.valid) {
         fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        fbBadge.innerHTML = `✓ Connecté : ${data.facebook.page_name || 'Page Facebook'}`;
+        fbBadge.innerHTML = `Connecté : ${data.facebook.page_name || 'Page Facebook'}`;
         if (fbFeedback) {
           fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-800/50 block";
           fbFeedback.innerHTML = `<strong>Page active :</strong> ${data.facebook.page_name} (ID: ${data.facebook.page_id})<br><span class="text-[10px] text-slate-400">Les messages échangés sont synchronisés en direct avec votre boîte de réception Facebook Messenger.</span>`;
         }
       } else if (data.facebook.status === "EXPIRE") {
         fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
-        fbBadge.innerText = "⚠ Jeton Expiré";
+        fbBadge.innerText = "Jeton Expiré";
         if (fbFeedback) {
           fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-rose-950/50 text-rose-300 border border-rose-800/60 block";
           fbFeedback.innerHTML = `<strong>Attention :</strong> ${data.facebook.message}<br><span class="text-[10px] text-slate-400">Générez un nouveau Page Access Token dans Meta Developers et collez-le ci-dessus.</span>`;
@@ -2932,7 +2954,7 @@ async function checkConnectionsHealth() {
     if (waBadge && data.whatsapp) {
       if (data.whatsapp.status === "PRET") {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        waBadge.innerText = `✓ WhatsApp Cloud Actif (ID: ${data.whatsapp.phone_number_id})`;
+        waBadge.innerText = `WhatsApp Cloud Actif (ID: ${data.whatsapp.phone_number_id})`;
       } else if (data.whatsapp.status === "TOKEN_SEUL") {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
         waBadge.innerText = "Phone Number ID manquant";
@@ -2972,7 +2994,7 @@ async function testFacebookConnection() {
     if (data.valid) {
       if (fbBadge) {
         fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        fbBadge.innerHTML = `✓ Connecté : ${data.page_name}`;
+        fbBadge.innerHTML = `Connecté : ${data.page_name}`;
       }
       if (fbFeedback) {
         fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-emerald-950/40 text-emerald-300 border border-emerald-800/50 block";
@@ -2982,7 +3004,7 @@ async function testFacebookConnection() {
     } else {
       if (fbBadge) {
         fbBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30";
-        fbBadge.innerText = data.status === "EXPIRE" ? "⚠ Jeton Expiré" : "Échec Connexion";
+        fbBadge.innerText = data.status === "EXPIRE" ? "Jeton Expiré" : "Échec Connexion";
       }
       if (fbFeedback) {
         fbFeedback.className = "text-[11px] p-2.5 rounded-lg bg-rose-950/50 text-rose-300 border border-rose-800/60 block";
@@ -3049,7 +3071,7 @@ async function checkWhatsAppBridgeStatus() {
       if (text) text.innerHTML = `<span class="text-emerald-400 font-bold">Connecté</span> au numéro : <strong class="text-white">+${data.number}</strong>`;
       if (waBadge) {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        waBadge.innerText = `✓ WhatsApp Actif (+${data.number})`;
+        waBadge.innerText = `WhatsApp Actif (+${data.number})`;
       }
     } else if (data.status === "SCAN_QR") {
       if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500 inline-block animate-pulse";
@@ -3102,7 +3124,7 @@ async function refreshWhatsAppQr() {
       if (connectedDiv) connectedDiv.classList.remove("hidden");
       const numSpan = document.getElementById("wa-connected-number");
       if (numSpan) numSpan.innerText = `Numéro lié : +${data.number || ""}`;
-      if (statusText) statusText.innerText = "✅ Session active. Vos prospects reçoivent les réponses de Dave Sagbo.";
+      if (statusText) statusText.innerText = "Session active. Vos prospects reçoivent les réponses de Dave Sagbo.";
       if (btnLogout) btnLogout.classList.remove("hidden");
     } else if (data.qrDataUrl) {
       if (loading) loading.classList.add("hidden");
@@ -3136,7 +3158,7 @@ async function pollWhatsAppQrStatus() {
       if (connectedDiv) connectedDiv.classList.remove("hidden");
       const numSpan = document.getElementById("wa-connected-number");
       if (numSpan) numSpan.innerText = `Numéro : +${data.number}`;
-      if (statusText) statusText.innerText = "🎉 Connecté avec succès ! L'agent est opérationnel 24h/24.";
+      if (statusText) statusText.innerText = "Connecté avec succès ! L'agent est opérationnel 24h/24.";
       if (btnLogout) btnLogout.classList.remove("hidden");
       checkWhatsAppBridgeStatus();
     }
@@ -3177,15 +3199,15 @@ async function testAiKey(provider) {
 
     const data = await res.json();
     if (data.success) {
-      statusEl.innerHTML = `<span class="text-emerald-600 font-black flex items-center gap-1">✓ Validé & Actif</span>`;
+      statusEl.innerHTML = `<span class="text-emerald-600 font-black flex items-center gap-1">Validé & Actif</span>`;
       showToast(data.message || `Clé ${provider.toUpperCase()} validée et active !`, "success");
     } else {
-      statusEl.innerHTML = `<span class="text-rose-600 font-bold flex items-center gap-1">✗ Invalide</span>`;
+      statusEl.innerHTML = `<span class="text-rose-600 font-bold flex items-center gap-1">Invalide</span>`;
       showToast(data.message || "Erreur de validation de la clé API", "error");
     }
   } catch (err) {
     console.error("Erreur test clé AI:", err);
-    statusEl.innerHTML = `<span class="text-rose-600 font-bold">✗ Erreur</span>`;
+    statusEl.innerHTML = `<span class="text-rose-600 font-bold">Erreur</span>`;
     showToast("Erreur de communication : " + (err.name === 'AbortError' ? "Délai d'attente dépassé (15s)" : err.message), "error");
   }
 }
@@ -3204,12 +3226,12 @@ async function testHubSpot() {
     const data = await res.json();
     if (data.success) {
       if (resultDiv) {
-        resultDiv.innerHTML = `<div class="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold mt-2">✓ ${data.message} (Portail: ${data.portal_id || 'Actif'})</div>`;
+        resultDiv.innerHTML = `<div class="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold mt-2">${data.message} (Portail: ${data.portal_id || 'Actif'})</div>`;
       }
       alert(data.message);
     } else {
       if (resultDiv) {
-        resultDiv.innerHTML = `<div class="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-semibold mt-2">✗ ${data.error || 'Échec de connexion'}</div>`;
+        resultDiv.innerHTML = `<div class="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-semibold mt-2">${data.error || 'Échec de connexion'}</div>`;
       }
     }
   } catch (err) {
@@ -3260,7 +3282,7 @@ async function testOptOut(e) {
   const data = await res.json();
   const resDiv = document.getElementById("optout-result");
   if (data.is_opt_out) {
-    resDiv.innerHTML = `<span class="text-emerald-400 font-bold">✅ Opt-out validé avec succès :</span> ${data.reply_message}`;
+    resDiv.innerHTML = `<span class="text-emerald-400 font-bold">Opt-out validé avec succès :</span> ${data.reply_message}`;
     loadComplianceRegistry();
     loadLeads("Tous");
   } else {
@@ -3382,7 +3404,7 @@ async function loadRateLimitStatus() {
       <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
         <div class="flex items-center justify-between">
           <span class="font-bold text-slate-900 text-xs">${c.name}</span>
-          <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">${c.data?.health_status || '🟢 Sécurisé'}</span>
+          <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">${c.data?.health_status || 'Sécurisé'}</span>
         </div>
         <div class="text-[11px] text-slate-600">Quota consommé : <strong class="text-slate-900">${c.data?.sent_today || 0}</strong> / ${c.data?.max_daily_quota || 50}</div>
         <div class="text-[10px] text-slate-500">Délai humain simulé : ${r.human_typing_delay_sample}</div>
@@ -3488,8 +3510,8 @@ async function generateVoiceScript(e) {
   out.innerHTML = `
     <div class="space-y-2">
       <div class="flex items-center justify-between text-xs font-bold text-pink-600">
-        <span>⏱️ Durée Estimée : ~${data.estimated_duration_seconds} sec</span>
-        <span>🎙️ Directives : ${data.speech_notes}</span>
+        <span>Durée Estimée : ~${data.estimated_duration_seconds} sec</span>
+        <span>Directives : ${data.speech_notes}</span>
       </div>
       <div class="p-3 bg-pink-50/50 rounded-xl text-slate-800 font-sans text-xs whitespace-pre-wrap leading-relaxed border border-pink-200">
 ${data.script_text}
@@ -3624,7 +3646,7 @@ async function simulateLivePayment() {
     resultDiv.innerHTML = `
       <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 space-y-2">
         <div class="font-bold flex items-center justify-between text-xs">
-          <span class="text-emerald-700">✅ Transaction Confirmée : ${data.transaction_id}</span>
+          <span class="text-emerald-700">Transaction Confirmée : ${data.transaction_id}</span>
           <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold">${(data.amount_paid || 0).toLocaleString()} FCFA</span>
         </div>
         <div class="text-xs text-slate-700">
@@ -3757,7 +3779,7 @@ async function quickEditExternalUrl(itemId) {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(cleanUrl ? `✓ Lien boutique mis à jour : ${cleanUrl}` : "✓ Lien externe retiré (page de vente intégrée active)", "success");
+      showToast(cleanUrl ? `Lien boutique mis à jour : ${cleanUrl}` : "Lien externe retiré (page de vente intégrée active)", "success");
       await loadCatalog(currentCatalogFilter);
     } else {
       showToast("Erreur lors de la mise à jour de l'URL", "error");
@@ -3800,7 +3822,7 @@ function renderCatalogGrid(items) {
 
     let statusBadge = "";
     if (isService) {
-      statusBadge = `<span class="text-emerald-600 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">⚡ ${item.disponibilite_service || 'Disponible'} (${item.places_max_semaine || 10} pl/sem)</span>`;
+      statusBadge = `<span class="text-emerald-600 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">${item.disponibilite_service || 'Disponible'} (${item.places_max_semaine || 10} pl/sem)</span>`;
     } else {
       const stock = item.stock_quantite || 0;
       const threshold = item.seuil_alerte_stock || 3;
@@ -3906,7 +3928,7 @@ function copySalesPageLink(itemId) {
     url = `${window.location.origin}/vente/${itemId}`;
   }
   navigator.clipboard.writeText(url).then(() => {
-    alert(`✓ Lien copié dans le presse-papier !\n\nPartagez-le à vos prospects ou sur vos publicités :\n${url}`);
+    alert(`Lien copié dans le presse-papier !\n\nPartagez-le à vos prospects ou sur vos publicités :\n${url}`);
   }).catch(() => {
     prompt("Copiez l'adresse de votre page de vente :", url);
   });
@@ -4359,12 +4381,12 @@ function startTargetSimulation() {
     <div class="flex items-start gap-2.5">
       <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">IA</div>
       <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-4 text-xs text-slate-800 max-w-lg shadow-2xs leading-relaxed whitespace-pre-wrap font-medium">
-Hello ${targetName} ! 👋 Ravi de faire votre connaissance.
+Bonjour ${targetName} ! Ravi de faire votre connaissance.
 
 J'ai bien noté votre prise de contact via ${targetChannel} concernant *${prodNom}*.
 Je sais que la priorité pour vous est : "${targetPain}".
 
-Dites-moi, quelles sont vos questions ou vos hésitations pour qu'on avance ensemble ? 😊
+Dites-moi, quelles sont vos questions ou vos hésitations pour qu'on avance ensemble ?
       </div>
     </div>
   `;
@@ -4384,7 +4406,7 @@ function initSimulator() {
       <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">IA</div>
       <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-4 text-xs text-slate-800 max-w-lg shadow-2xs leading-relaxed font-medium">
 Bonjour ${targetName} ! Je suis votre commercial IA d'élite.
-Posez-moi n'importe quelle question sur nos services, formulez une objection ou demandez des détails pour observer mon raisonnement en direct ! 🚀
+Posez-moi n'importe quelle question sur nos services, formulez une objection ou demandez des détails pour observer mon raisonnement en direct !
       </div>
     </div>
   `;
@@ -4450,7 +4472,7 @@ async function handleSimulatorSubmit(e) {
 
     // Extraction sécurisée de la réplique sans risque de 'undefined'
     const replyText = data.reply_message || data.reply || data.response || data.message ||
-      (data.error ? `⚠️ Problème technique : ${data.error}` : "Bonjour ! Je suis à votre écoute pour vous renseigner.");
+      (data.error ? `Problème technique : ${data.error}` : "Bonjour ! Je suis à votre écoute pour vous renseigner.");
 
     // Enregistrer la réponse dans l'historique
     simulatorHistory.push({ role: "assistant", content: replyText });
@@ -4532,20 +4554,20 @@ function updateCognitiveCockpit(cog) {
   if (closingBox && statusLabel && probLabel) {
     if (cog.closing_status === "DEAL_CLOSED") {
       closingBox.className = "glass-card rounded-xl p-3 border-emerald-500 bg-emerald-950/70 text-xs text-emerald-300 flex items-center justify-between shadow-lg shadow-emerald-500/20";
-      statusLabel.innerHTML = "🎉 <strong>Phase : CLÔTURE RÉUSSIE (Achat Déclenché !)</strong>";
+      statusLabel.innerHTML = "<strong>Phase : CLÔTURE RÉUSSIE (Achat Déclenché !)</strong>";
       probLabel.textContent = "100% gagné";
       showToast("Opportunité conclue avec succès ! Lien de paiement transmis.", "success");
     } else if (cog.closing_status === "PITCH_DELIVERED") {
       closingBox.className = "glass-card rounded-xl p-3 border-teal-500/50 bg-teal-950/40 text-xs text-teal-300 flex items-center justify-between";
-      statusLabel.innerHTML = "📋 <strong>Phase : Offre & Fiche Technique Présentée</strong>";
+      statusLabel.innerHTML = "<strong>Phase : Offre & Fiche Technique Présentée</strong>";
       probLabel.textContent = "75% closing";
     } else if (cog.closing_status === "OBJECTION_HANDLED") {
       closingBox.className = "glass-card rounded-xl p-3 border-indigo-500/50 bg-indigo-950/40 text-xs text-indigo-300 flex items-center justify-between";
-      statusLabel.innerHTML = "🛡️ <strong>Objection traitée avec succès</strong>";
+      statusLabel.innerHTML = "<strong>Objection traitée avec succès</strong>";
       probLabel.textContent = "80% closing";
     } else {
       closingBox.className = "glass-card rounded-xl p-3 border-amber-500/40 bg-amber-950/30 text-xs text-amber-300 flex items-center justify-between";
-      statusLabel.innerHTML = "🔍 <strong>Phase : Qualification du besoin</strong>";
+      statusLabel.innerHTML = "<strong>Phase : Qualification du besoin</strong>";
       probLabel.textContent = "60% closing";
     }
   }
@@ -4586,12 +4608,12 @@ async function refreshAutopilotStatus() {
       if (d.is_running) {
         btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100";
         btnHeader.title = "IA en activité 100% autonome. Cliquez pour mettre en Pause (Mode Supervision).";
-        statusText.innerHTML = "🟢 IA Active";
+        statusText.innerHTML = "IA Active";
         if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
       } else {
         btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100";
         btnHeader.title = "IA en Pause (Mode Supervision). Les leads sont captés mais l'IA ne répond pas automatiquement. Cliquez pour réactiver.";
-        statusText.innerHTML = "⏸️ IA en Pause";
+        statusText.innerHTML = "IA en Pause";
         if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
       }
     }
@@ -4627,9 +4649,9 @@ async function toggleAutopilot24h() {
     const data = await res.json();
     await refreshAutopilotStatus();
     if (data.is_running) {
-      showToast("🟢 Mode Autonome Activé : l'agent prospecte, relance et répond aux messages en direct.", "success");
+      showToast("Mode Autonome Activé : l'agent prospecte, relance et répond aux messages en direct.", "success");
     } else {
-      showToast("⏸️ Mode Pause / Supervision Activé : les leads sont captés au CRM, mais les réponses automatiques sont suspendues.", "warning");
+      showToast("Mode Pause / Supervision Activé : les leads sont captés au CRM, mais les réponses automatiques sont suspendues.", "warning");
     }
   } catch (err) {
     showToast("Erreur lors du basculement de l'Autopilot", "error");
@@ -4739,10 +4761,10 @@ async function loadHistoryFeed(isSilent = false) {
     const catConfig = {
       "PROSPECTION": { icon: "radar", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Prospection & Ads" },
       "QUALIFICATION_DUR": { icon: "brain-circuit", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Qualification DUR" },
-      "MESSENGER_FACEBOOK": { icon: "facebook", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "🔵 Messenger Facebook" },
-      "LINKEDIN_MESSAGING": { icon: "linkedin", bg: "bg-sky-50 text-sky-800 border-sky-200/60", label: "🔷 LinkedIn B2B" },
-      "EMAIL_CLOSING": { icon: "mail", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "📧 Emailing Pro" },
-      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "🟢 Closing WhatsApp" },
+      "MESSENGER_FACEBOOK": { icon: "facebook", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Messenger Facebook" },
+      "LINKEDIN_MESSAGING": { icon: "linkedin", bg: "bg-sky-50 text-sky-800 border-sky-200/60", label: "LinkedIn B2B" },
+      "EMAIL_CLOSING": { icon: "mail", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Emailing Pro" },
+      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "Closing WhatsApp" },
       "VENTE_PAIEMENT": { icon: "badge-dollar-sign", bg: "bg-amber-50 text-amber-700 border-amber-200/60", label: "Vente & Paiement" },
       "PATROUILLE": { icon: "zap", bg: "bg-rose-50 text-rose-700 border-rose-200/60", label: "Patrouille Autonome" },
       "CONFORMITE_RGPD": { icon: "shield-check", bg: "bg-teal-50 text-teal-700 border-teal-200/60", label: "Conformité RGPD" }
@@ -4816,7 +4838,7 @@ async function loadHistoryFeed(isSilent = false) {
 }
 
 async function confirmClearCRM() {
-  if (!confirm("⚠️ CONFIRMATION DE VIDAGE CRM :\n\nSouhaitez-vous réinitialiser le CRM et purger l'ensemble des prospects, conversations et fausses ventes de démonstration pour préparer le système à recevoir exclusivement de VRAIS leads ?\n\n(Le catalogue et vos règles de closing resteront intacts).")) {
+  if (!confirm("CONFIRMATION DE VIDAGE CRM :\n\nSouhaitez-vous réinitialiser le CRM et purger l'ensemble des prospects, conversations et fausses ventes de démonstration pour préparer le système à recevoir exclusivement de VRAIS leads ?\n\n(Le catalogue et vos règles de closing resteront intacts).")) {
     return;
   }
   try {
@@ -4828,9 +4850,9 @@ async function confirmClearCRM() {
     const data = await res.json();
     if (data.success) {
       if (typeof showToast === "function") {
-        showToast("✓ CRM vidé avec succès. Mode production réelle activé !", "success");
+        showToast("CRM vidé avec succès. Mode production réelle activé !", "success");
       } else {
-        alert("✓ CRM vidé avec succès. Mode production réelle activé !");
+        alert("CRM vidé avec succès. Mode production réelle activé !");
       }
       if (typeof loadLeads === "function") loadLeads("Tous");
       if (typeof loadConversionAudit === "function") loadConversionAudit(true);
