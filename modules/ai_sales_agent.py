@@ -928,13 +928,7 @@ class AISalesAgent:
     ) -> str:
         """
         Génère une réponse conversationnelle experte en respectant rigoureusement
-        les 4 règles d'or du cours d'apprentissage :
-        1. Identification UNE SEULE FOIS au premier message uniquement.
-           Dès le 2e message : zéro bonjour, zéro réidentification, zéro signature.
-        2. Longueur stricte : Messenger / WhatsApp = 2-3 lignes maximum.
-        3. Face à "je ne sais pas" : diagnostic guidé (questions binaires ou choix A/B/C),
-           ne jamais renvoyer la question ni répondre à sa place.
-        4. Une seule question par message, toujours fermée ou à choix entre 2-3 options concrètes.
+        les règles d'or du cours d'apprentissage.
         """
         import re
         from core.database_store import get_lead_messages
@@ -947,6 +941,9 @@ class AISalesAgent:
         msg_clean = (user_message or "").strip()
         msg_lower = msg_clean.lower()
 
+        last_agent_msg = agent_msgs[-1].get("message", "") if agent_msgs else ""
+        last_agent_lower = last_agent_msg.lower()
+
         # Détection de signaux de confusion / "je ne sais pas"
         confusion_signals = [
             "ne sais pas", "sais pas", "comment l'identifier", "comment savoir",
@@ -955,11 +952,38 @@ class AISalesAgent:
         ]
         is_confusion = any(s in msg_lower for s in confusion_signals)
 
+        # Détection des étapes clés du diagnostic guidé
+        is_price_question = any(w in last_agent_lower for w in ["prix", "tarif", "avant d'annoncer", "avant de donner", "avant le prix"])
+        is_levels_question = any(w in last_agent_lower for w in ["trois niveaux", "3 niveaux", "lequel de ces trois", "lequel vous parle", "blocage se situe"])
+
+        # Détection explicite que le problème diagnostiqué est le prix annoncé trop tôt ou l'absence de qualification
+        states_price_problem = (
+            any(w in msg_lower for w in ["tarif", "prix"]) and any(w in msg_lower for w in ["direct", "tout de suite", "dès le début", "sans poser", "sans question", "pas de question", "d'emblée"])
+        )
+
+        # Confirmation du diagnostic (Sortie +1 et Sortie +2 obligatoires) :
+        # Le prospect valide le problème (Non à la qualification avant prix, annonce le prix direct, ou confirme valeur perçue)
+        is_diagnostic_confirmed = (
+            states_price_problem
+            or (is_price_question and any(w in msg_lower for w in ["non", "pas de question", "direct", "tout de suite", "dès le début", "trop cher", "directement"]))
+            or (any(w in msg_lower for w in ["trop cher", "cher", "prix trop", "valeur perçue"]) and any(w in last_agent_lower for w in ["question", "bloque", "niveau", "prix"]))
+            or (lead_data and lead_data.get("diagnostic_complet") == 1)
+        )
+
         # 1. Tentative par Inférence Gemini avec Prompt Spécialisé Conversationnel
         gemini_key = self._get_gemini_key()
         reply_text = None
 
-        if gemini_key:
+        if is_diagnostic_confirmed:
+            # Circuit déterministe d'élite immédiat conforme au cours :
+            # Sortie +1 (Coût de l'inaction) + Sortie +2 (Offre matchée #7 avec lien officiel)
+            reply_text = (
+                "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
+                "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
+                "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
+                "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
+            )
+        elif gemini_key:
             history_formatted = []
             for h in history[-6:]:
                 speaker = "Dave" if h.get("sender") == "AGENT" else "Prospect"
@@ -988,6 +1012,7 @@ class AISalesAgent:
                     f"- INTERDICTION STRICTE de dire « Bonjour » ou « Bonsoir ».\n"
                     f"- INTERDICTION STRICTE de te présenter (« C'est Dave Sagbo ») ou de rappeler ton nom.\n"
                     f"- INTERDICTION STRICTE de mettre une formule de politesse finale ou signature (« Bien cordialement », « Bien à vous », « Dave Sagbo »).\n"
+                    f"- INTERDICTION STRICTE de donner des scripts gratuits ou de faire du conseil/coaching gratuit.\n"
                     f"- Réponds DIRECTEMENT en 2 à 3 lignes maximum.\n"
                 )
 
@@ -997,6 +1022,11 @@ class AISalesAgent:
                     f"- INTERDICTION ABSOLUE de lui renvoyer la question (« comment procédez-vous habituellement ? »).\n"
                     f"- LANCE UN DIAGNOSTIC GUIDÉ : pose une question binaire (oui/non) ou propose un choix entre les 3 niveaux types :\n"
                     f"  « En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance. Lequel de ces trois vous parle le plus ? »\n"
+                )
+            elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième"]):
+                gemini_prompt += (
+                    f"- Le prospect a choisi le niveau 2 (les gens regardent mais ne passent pas à l'acte).\n"
+                    f"- Pose la question clinique de qualification : est-ce qu'il pose des questions pour comprendre leur besoin avant d'annoncer son tarif, ou s'il donne le prix directement ?\n"
                 )
             else:
                 gemini_prompt += (
@@ -1034,6 +1064,8 @@ class AISalesAgent:
         if not reply_text:
             if is_confusion:
                 reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
+            elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième", "conversion"]):
+                reply_text = "C'est très clair. Quand ils vous écrivent, est-ce que vous leur posez des questions pour comprendre leur besoin avant d'annoncer votre tarif, ou vous donnez le prix directement ?"
             elif is_first_turn:
                 if any(w in msg_lower for w in ["service", "offre", "propos", "savoir plus", "faire"]):
                     reply_text = "Bonjour, c'est Dave Sagbo. Vous avez du mal à convertir votre audience en clients, c'est ça ? Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
@@ -1048,18 +1080,38 @@ class AISalesAgent:
         # 3. Post-traitement et durcissement des 4 règles
         cleaned = reply_text.strip()
         if not is_first_turn:
-            cleaned = re.sub(r'^(bonjour|bonsoir|salut)[,\.\s\-]*', '', cleaned, flags=re.IGNORECASE).strip()
-            cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo)[,\.\s\-]*", '', cleaned, flags=re.IGNORECASE).strip()
+            for _ in range(3):
+                cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\-\!]*', '', cleaned, flags=re.IGNORECASE).strip()
+                cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo|dave sagbo|ici dave sagbo|dave à l'appareil)[,\.\s\-\!]*", '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'^[,\.\s\-\!\:\;\?]+', '', cleaned).strip()
             cleaned = re.sub(r'(\n+)?(bien à vous|bien cordialement|cordialement|chaleureusement|dave sagbo|responsable du projet)[,\.\s\-]*$', '', cleaned, flags=re.IGNORECASE).strip()
             cleaned = re.sub(r'(\n+)?dave sagbo$', '', cleaned, flags=re.IGNORECASE).strip()
 
+        # Règle absolue anti-dérive : interdiction absolue de fournir un script gratuit ou du consulting gratuit
+        forbidden_drift_cues = [
+            "voici un script", "voici ce que vous pouvez dire", "voici un exemple de message",
+            "préférez-vous un appel", "par écrit ou par appel", "script gratuit", "écrit ou appel",
+            "appel téléphonique", "structurions un message", "approche tarifaire",
+            "revoir toute votre approche", "message de qualification simple", "voulez-vous que nous structurions"
+        ]
+        if is_diagnostic_confirmed or any(c in cleaned.lower() for c in forbidden_drift_cues):
+            if any(c in cleaned.lower() for c in forbidden_drift_cues) or not ("formations.sagbodavid.com" in cleaned):
+                cleaned = (
+                    "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
+                    "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
+                    "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
+                    "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
+                )
+
         cleaned = cleaned.replace("en personne", "").replace("En personne", "")
         cleaned = cleaned.replace("l'assistant de Dave", "Dave").replace("l'assistant", "le responsable")
+        if cleaned and cleaned[0].islower():
+            cleaned = cleaned[0].upper() + cleaned[1:]
 
         if channel.upper() in ("FACEBOOK_MESSENGER", "WHATSAPP", "MESSENGER"):
             lines = [l.strip() for l in cleaned.split("\n") if l.strip()]
-            if len(lines) > 3:
-                cleaned = "\n\n".join(lines[:3])
+            if len(lines) > 4:
+                cleaned = "\n\n".join(lines[:4])
 
         return cleaned
 

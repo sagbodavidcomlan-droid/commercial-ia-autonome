@@ -5,12 +5,14 @@ Gère l'envoi et la réception de messages réels sur Facebook Messenger & Whats
 """
 
 import os
+import re
 import json
 import logging
 import sqlite3
 import urllib.request
 import urllib.parse
 import urllib.error
+from typing import Optional, List, Dict, Any
 
 def _make_http_request(url, params=None, json_data=None, headers=None, method='GET', timeout=12):
     if params:
@@ -305,7 +307,7 @@ def send_messenger_message(recipient_psid: str, text: str, token: Optional[str] 
             error = res_data.get("error", {})
             err_msg = error.get("message", "Erreur lors de l'envoi Meta Graph API")
             err_code = error.get("code")
-            logger.error(f"Échec envoi Messenger au PSID {recipient_psid} : HTTP {res.status_code} - {err_msg}")
+            logger.error(f"Échec envoi Messenger au PSID {recipient_psid} : HTTP {res_code} - {err_msg}")
             return {
                 "success": False,
                 "status": "ECHEC_META",
@@ -366,11 +368,43 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
         return {"success": False, "status": "ERREUR_RESEAU", "error": str(e)}
 
 
+def _extract_lead_contact_info(text: str) -> Dict[str, str]:
+    """
+    Extrait automatiquement le téléphone/WhatsApp, l'email ou le nom
+    d'un message envoyé par le prospect.
+    """
+    info = {}
+    if not text:
+        return info
+
+    # 1. Extraction numéro téléphone (+229..., 00229... ou 8 à 15 chiffres consécutifs)
+    phone_match = re.search(r'(\+?\b(?:229|225|221|226|228|237|223|242|243)?\s*[0-9]{2}(?:[\s.-]?[0-9]{2}){3,4}\b)', text)
+    if phone_match:
+        clean_phone = re.sub(r'[\s.-]', '', phone_match.group(1))
+        if len(clean_phone) >= 8:
+            info["telephone"] = clean_phone
+            info["whatsapp"] = clean_phone
+
+    # 2. Extraction adresse email
+    email_match = re.search(r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', text)
+    if email_match:
+        info["email"] = email_match.group(1).lower().strip()
+
+    # 3. Extraction prénom / nom si formulé ("Je m'appelle X", "Moi c'est X")
+    name_match = re.search(r"(?:je m'appelle|moi c'est|mon nom est|je suis)\s+([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,})?)", text, re.IGNORECASE)
+    if name_match:
+        candidate_name = name_match.group(1).strip().title()
+        if candidate_name.lower() not in ("dave", "dave sagbo", "un client", "intéressé", "bloqué"):
+            info["nom"] = candidate_name
+
+    return info
+
+
 def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
     Traite le payload entrant envoyé par le Webhook Meta Messenger.
     1. Parse l'événement 'messaging'
-    2. Identifie ou enregistre le lead dans crm_leads avec son facebook_psid
+    2. Identifie ou enregistre le lead dans crm_leads avec déduplication stricte
     3. Consigne le message reçu de l'utilisateur dans crm_lead_messages
     4. Génère automatiquement la réponse experte d'acquisition/closing (vouvoiement, catalogue)
     5. Dispatche la réponse en direct sur la messagerie de la Page Facebook
@@ -398,44 +432,89 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
         for event in messaging_events:
             sender = event.get("sender", {})
             recipient = event.get("recipient", {})
-            sender_psid = str(sender.get("id") or "1000999")
+            sender_psid = str(sender.get("id") or "").strip()
+            if not sender_psid or sender_psid == "None":
+                sender_psid = str(event.get("from", {}).get("id") or "").strip()
+            if not sender_psid or sender_psid == "None":
+                continue
 
             # Événement de message texte reçu de l'utilisateur
             message_obj = event.get("message")
-            if not message_obj or not sender_psid:
+            if not message_obj:
                 continue
 
             # Ignorer les échos (messages envoyés par la page elle-même)
             if message_obj.get("is_echo"):
                 continue
 
-            user_text = message_obj.get("text", "")
+            user_text = (message_obj.get("text") or "").strip()
             if not user_text:
                 continue
 
             logger.info(f"Nouveau message Facebook reçu du PSID {sender_psid} : '{user_text}'")
 
-            # 1. Rechercher si ce lead existe déjà via son facebook_psid
+            # Extraction automatique des coordonnées fournies dans le message
+            extracted_info = _extract_lead_contact_info(user_text)
+
+            # 1. Rechercher si ce lead existe déjà via son facebook_psid ou son canal_id (DÉDUPLICATION STRICTE)
             conn = get_connection()
             cursor = conn.cursor()
+            canal_id_val = f"FB_{sender_psid}"
             
-            # Vérifier si la colonne facebook_psid existe dans crm_leads, sinon l'ajouter
-            try:
-                cursor.execute("SELECT id, nom_complet, nom_lead, score_qualification FROM crm_leads WHERE facebook_psid = ?", (sender_psid,))
-                lead_row = cursor.fetchone()
-            except sqlite3.OperationalError:
-                cursor.execute("ALTER TABLE crm_leads ADD COLUMN facebook_psid TEXT")
-                conn.commit()
-                cursor.execute("SELECT id, nom_complet, nom_lead, score_qualification FROM crm_leads WHERE facebook_psid = ?", (sender_psid,))
-                lead_row = cursor.fetchone()
+            cursor.execute("""
+                SELECT id, nom_complet, nom_lead, prenom, nom, facebook_psid, canal_id,
+                       telephone, whatsapp, email, source_canal, canal_source, canal_actuel,
+                       statut_lead, temperature, score_qualification, score_dur, profil_disc,
+                       douleur_identifiee, urgence_niveau, ressources_confirmees, offre_matchee,
+                       diagnostic_complet, diagnostic_etape, conversation_count, notes
+                FROM crm_leads 
+                WHERE (facebook_psid IS NOT NULL AND facebook_psid = ?)
+                   OR (canal_id IS NOT NULL AND canal_id = ?)
+                ORDER BY id ASC LIMIT 1
+            """, (sender_psid, canal_id_val))
+            lead_row = cursor.fetchone()
 
             lead_id = None
             lead_name = ""
 
             if lead_row:
                 lead_id = lead_row["id"]
+                current_count = lead_row["conversation_count"] or 1
                 lead_name = lead_row["nom_complet"] or lead_row["nom_lead"] or f"Prospect Messenger #{sender_psid[-4:]}"
-                cursor.execute("UPDATE crm_leads SET last_interaction = datetime('now') WHERE id = ?", (lead_id,))
+
+                # Mettre à jour les données du lead (dernière interaction + compteurs + coordonnées)
+                upd_fields = [
+                    "last_interaction = datetime('now')",
+                    "last_contact_at = datetime('now')",
+                    "conversation_count = ?"
+                ]
+                upd_params = [current_count + 1]
+
+                if "telephone" in extracted_info and not lead_row["telephone"]:
+                    upd_fields.append("telephone = ?")
+                    upd_fields.append("whatsapp = ?")
+                    upd_params.extend([extracted_info["telephone"], extracted_info["telephone"]])
+
+                if "email" in extracted_info and not lead_row["email"]:
+                    upd_fields.append("email = ?")
+                    upd_params.append(extracted_info["email"])
+
+                if "nom" in extracted_info and ("Prospect" in lead_name or not lead_row["nom"]):
+                    lead_name = extracted_info["nom"]
+                    upd_fields.append("nom_complet = ?")
+                    upd_fields.append("nom_lead = ?")
+                    upd_params.extend([lead_name, lead_name])
+
+                if not lead_row["facebook_psid"]:
+                    upd_fields.append("facebook_psid = ?")
+                    upd_params.append(sender_psid)
+
+                if not lead_row["canal_id"]:
+                    upd_fields.append("canal_id = ?")
+                    upd_params.append(canal_id_val)
+
+                upd_params.append(lead_id)
+                cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
                 conn.commit()
             else:
                 # 2. Récupérer le nom réel depuis Meta Graph API
@@ -444,24 +523,35 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 last_name = profile.get("last_name", "")
                 full_name = f"{first_name} {last_name}".strip()
                 if not full_name:
-                    full_name = sender.get("name") or f"Prospect Facebook {sender_psid[-4:]}"
+                    full_name = sender.get("name") or event.get("from", {}).get("name") or ""
+                if not full_name and "nom" in extracted_info:
+                    full_name = extracted_info["nom"]
+                if not full_name:
+                    full_name = f"Prospect Facebook #{sender_psid[-4:]}"
 
                 lead_name = full_name
+                extracted_phone = extracted_info.get("telephone")
+                extracted_email = extracted_info.get("email")
+
                 cursor.execute("""
                     INSERT INTO crm_leads (
-                        nom_lead, nom_complet, source_canal, statut_lead, 
-                        score_qualification, centre_interet,
-                        notes, facebook_psid, date_creation, last_interaction
+                        nom_lead, nom_complet, prenom, nom, facebook_psid, canal_id,
+                        telephone, whatsapp, email, source_canal, source_contact,
+                        canal_source, canal_actuel, statut_lead, temperature,
+                        score_qualification, score_dur, centre_interet,
+                        notes, conversation_count, date_creation, last_interaction, last_contact_at
                     ) VALUES (
-                        ?, ?, 'Facebook Messenger', 'Nouveau',
-                        65, ?,
-                        ?, ?, datetime('now'), datetime('now')
+                        ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, 'Facebook Messenger', 'Facebook Messenger',
+                        'MESSENGER', 'MESSENGER', 'Nouveau', 'Tiède',
+                        65, 65, ?,
+                        ?, 1, datetime('now'), datetime('now'), datetime('now')
                     )
                 """, (
-                    full_name, full_name,
+                    full_name, full_name, first_name or "", last_name or "", sender_psid, canal_id_val,
+                    extracted_phone, extracted_phone, extracted_email,
                     user_text[:120],
-                    f"Inbound Facebook Messenger. Premier échange : '{user_text}'",
-                    sender_psid
+                    f"Inbound Facebook Messenger. Premier échange : '{user_text}'"
                 ))
                 lead_id = cursor.lastrowid
                 conn.commit()
@@ -470,7 +560,7 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     category="PROSPECTION_INBOUND",
                     action="Nouveau lead réel capturé via Facebook Messenger",
                     lead_name=lead_name,
-                    lead_phone=f"FB:{sender_psid[-6:]}",
+                    lead_phone=extracted_phone or f"FB:{sender_psid[-6:]}",
                     status="SUCCESS",
                     details=f"Lead authentique créé suite à un message sur la Page Facebook. Message initial : {user_text}"
                 )
@@ -507,6 +597,24 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 channel="FACEBOOK_MESSENGER",
                 lead_data=lead_data
             )
+
+            # Synchronisation automatique de la qualification et de l'offre recommandée au CRM
+            if "automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower():
+                try:
+                    cursor.execute("""
+                        UPDATE crm_leads 
+                        SET diagnostic_complet = 1,
+                            statut_lead = 'Chaud',
+                            temperature = 'Chaud',
+                            score_qualification = 85,
+                            score_dur = 85,
+                            offre_matchee = ?,
+                            phase_actuelle = 'closer'
+                        WHERE id = ?
+                    """, ("Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)", lead_id))
+                    conn.commit()
+                except Exception as e_upd:
+                    logger.warning(f"Note mise à jour état CRM après closing : {e_upd}")
 
             # Vérifier si l'IA est en mode 100% Autonome ou en mode Pause / Supervision
             from core.autopilot_daemon import is_autopilot_active

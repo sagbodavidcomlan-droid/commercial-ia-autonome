@@ -263,7 +263,93 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertFalse("comment procédez-vous habituellement" in rep3.lower(), "Ne doit pas renvoyer la question")
         # Doit lancer le diagnostic guidé
         self.assertTrue("niveau" in rep3.lower() or "aider" in rep3.lower() or "soit" in rep3.lower() or "est-ce que" in rep3.lower(), "Doit proposer un diagnostic guidé")
+        self.assertFalse(rep3.strip().lower().startswith("bonjour"), "Tour 3 ne doit pas commencer par bonjour")
+        self.assertFalse("c'est dave sagbo" in rep3.lower(), "Tour 3 ne doit pas se réidentifier")
         log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep3)
+
+        # Tour 4 : Confirmation du diagnostic ('Non, je donne le prix directement sans poser de question')
+        # Doit déclencher Sortie +1 et Sortie +2, SANS script gratuit, SANS coaching gratuit
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "LEAD", "Non, je donne mon tarif tout de suite sans poser de question")
+        rep4 = self.agent.generate_conversational_reply(t_id, "Non, je donne mon tarif tout de suite sans poser de question", "FACEBOOK_MESSENGER")
+        self.assertFalse(rep4.strip().lower().startswith("bonjour"), "Tour 4 ne doit pas commencer par bonjour")
+        self.assertFalse("c'est dave sagbo" in rep4.lower(), "Tour 4 ne doit pas se réidentifier")
+        self.assertNotIn("voici un script", rep4.lower(), "L'agent ne doit jamais donner de script gratuit")
+        self.assertNotIn("préférez-vous un appel", rep4.lower(), "L'agent ne doit pas dériver sur des questions hors-sujet")
+        self.assertIn("précisément là que ça coince", rep4.lower(), "Doit valider le diagnostic et le coût d'inaction (Sortie +1)")
+        self.assertIn("formations.sagbodavid.com", rep4, "Doit présenter le lien officiel de l'offre (Sortie +2)")
+        log_lead_message(t_id, "FACEBOOK_MESSENGER", "AGENT", rep4)
+
+    def test_11_crm_lead_deduplication_and_contact_extraction(self):
+        """
+        Vérifie la déduplication stricte des leads CRM et l'extraction automatique des coordonnées :
+        1. Deux messages reçus avec le même facebook_psid ne créent qu'une SEULE ligne dans crm_leads.
+        2. Les numéros de téléphone et emails sont automatiquement extraits et enregistrés.
+        3. Le compteur de messages (conversation_count) est correctement incrémenté.
+        """
+        from core.meta_messenger_sync import handle_facebook_webhook_payload
+        from core.database_store import get_connection
+
+        test_psid = "998877665544"
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM crm_leads WHERE facebook_psid = ?", (test_psid,))
+        conn.commit()
+        conn.close()
+
+        # Message 1 du webhook
+        payload_1 = {
+            "object": "page",
+            "entry": [{
+                "id": "1416395014886309",
+                "messaging": [{
+                    "sender": {"id": test_psid},
+                    "recipient": {"id": "1416395014886309"},
+                    "message": {"mid": "mid.test.1", "text": "Puis je en savoir plus sur vos services ?"}
+                }]
+            }]
+        }
+        res1 = handle_facebook_webhook_payload(payload_1)
+        self.assertEqual(len(res1), 1)
+        lead_id_1 = res1[0]["lead_id"]
+
+        # Message 2 du webhook avec numéro WhatsApp et email fournis
+        payload_2 = {
+            "object": "page",
+            "entry": [{
+                "id": "1416395014886309",
+                "messaging": [{
+                    "sender": {"id": test_psid},
+                    "recipient": {"id": "1416395014886309"},
+                    "message": {"mid": "mid.test.2", "text": "Voici mon WhatsApp +22997123456 et mon email contact.pro@gmail.com"}
+                }]
+            }]
+        }
+        res2 = handle_facebook_webhook_payload(payload_2)
+        self.assertEqual(len(res2), 1)
+        lead_id_2 = res2[0]["lead_id"]
+
+        # Vérification 1 : Même identifiant de lead (DÉDUPLICATION VALIDÉE)
+        self.assertEqual(lead_id_1, lead_id_2, "Le même PSID doit réutiliser la même ligne de lead")
+
+        # Vérification 2 : Unicité en base
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM crm_leads WHERE facebook_psid = ?", (test_psid,))
+        self.assertEqual(c.fetchone()[0], 1, "Il ne doit exister qu'une seule ligne crm_leads pour ce PSID")
+
+        # Vérification 3 : Coordonnées automatiquement extraites
+        c.execute("SELECT telephone, whatsapp, email, conversation_count FROM crm_leads WHERE id = ?", (lead_id_1,))
+        row = c.fetchone()
+        self.assertIn("22997123456", str(row[0]))
+        self.assertIn("22997123456", str(row[1]))
+        self.assertEqual(row[2], "contact.pro@gmail.com")
+        self.assertEqual(row[3], 2, "conversation_count doit être égal à 2 après deux échanges")
+
+        # Nettoyage test
+        c.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id_1,))
+        c.execute("DELETE FROM crm_lead_messages WHERE lead_id = ?", (lead_id_1,))
+        conn.commit()
+        conn.close()
 
 
 if __name__ == "__main__":

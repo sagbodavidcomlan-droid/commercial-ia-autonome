@@ -195,11 +195,48 @@ def init_db():
             ("code_ambassadeur", "TEXT"),
             ("canal_source", "TEXT"),
             ("canal_actuel", "TEXT"),
-            ("facebook_psid", "TEXT")
+            ("facebook_psid", "TEXT"),
+            ("canal_id", "TEXT"),
+            ("prenom", "TEXT"),
+            ("nom", "TEXT"),
+            ("temperature", "TEXT DEFAULT 'Tiède'"),
+            ("douleur_identifiee", "TEXT"),
+            ("urgence_niveau", "INTEGER DEFAULT 3"),
+            ("ressources_confirmees", "TEXT DEFAULT 'En cours'"),
+            ("offre_matchee", "TEXT"),
+            ("diagnostic_complet", "INTEGER DEFAULT 0"),
+            ("diagnostic_etape", "TEXT DEFAULT 'none'"),
+            ("conversation_count", "INTEGER DEFAULT 1"),
+            ("last_contact_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
             if col_name not in existing_cols:
                 cursor.execute(f"ALTER TABLE crm_leads ADD COLUMN {col_name} {col_type}")
+
+        # Nettoyage et déduplication des leads ayant le même facebook_psid ou canal_id
+        try:
+            cursor.execute("""
+                SELECT facebook_psid, MIN(id) as primary_id, COUNT(*) as cnt 
+                FROM crm_leads 
+                WHERE facebook_psid IS NOT NULL AND facebook_psid != ''
+                GROUP BY facebook_psid HAVING cnt > 1
+            """)
+            dup_psids = cursor.fetchall()
+            for dup in dup_psids:
+                psid_val, primary_id = dup[0], dup[1]
+                cursor.execute("""
+                    UPDATE crm_lead_messages 
+                    SET lead_id = ? 
+                    WHERE lead_id IN (
+                        SELECT id FROM crm_leads WHERE facebook_psid = ? AND id != ?
+                    )
+                """, (primary_id, psid_val, primary_id))
+                cursor.execute("DELETE FROM crm_leads WHERE facebook_psid = ? AND id != ?", (psid_val, primary_id))
+
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_leads_facebook_psid ON crm_leads(facebook_psid) WHERE facebook_psid IS NOT NULL")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_leads_canal_id ON crm_leads(canal_id) WHERE canal_id IS NOT NULL")
+        except Exception as e_dedup:
+            logger.warning(f"Note index unique déduplication crm_leads : {e_dedup}")
 
         # Table des règles de matching sémantique catalogue (modifiables dynamiquement sans redéploiement)
         cursor.execute("""
@@ -346,6 +383,7 @@ def init_db():
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/site-vitrine' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Site%' OR nom LIKE '%Web%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/parcelle-foncier' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Parcelle%' OR nom LIKE '%Terrain%')")
         cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/automatisation-whatsapp' WHERE (url_externe IS NULL OR url_externe = '') AND (nom LIKE '%Automatisation%' OR nom LIKE '%Relance%')")
+        cursor.execute("UPDATE catalog_items SET url_externe = 'https://formations.sagbodavid.com/audit-commercial', prix_vente = 50000 WHERE nom LIKE '%Audit Commercial%'")
 
         # Insertion de l'offre dédiée Automatisation Commerciale & Closing WhatsApp si absente
         cursor.execute("SELECT COUNT(*) FROM catalog_items WHERE nom LIKE '%Automatisation%' OR nom LIKE '%Relance%'")

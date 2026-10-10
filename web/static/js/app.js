@@ -1244,7 +1244,7 @@ function applyLeadsFilterAndRender() {
   tbody.innerHTML = filtered.map((l, index) => {
     const fullName = l.nom_complet || l.nom_lead || `Prospect #${l.id}`;
     const rawPhone = l.whatsapp || l.telephone || '';
-    const phoneDisplay = rawPhone || (l.email || 'Non renseigné');
+    const phoneDisplay = rawPhone || (l.email || (l.facebook_psid ? `FB: ${l.facebook_psid}` : 'Non renseigné'));
     const channel = l.source_contact || l.source_canal || 'Prospection Inbound';
     const interest = l.centre_interet || l.poste || 'Intérêt Général';
     const score = l.score_qualification || l.score_dur || 50;
@@ -1366,7 +1366,8 @@ async function openLeadConversation(leadId, channel = null) {
     if (statusEl) statusEl.textContent = lead.statut;
     if (durEl) durEl.textContent = `DUR: ${lead.score_dur}/100`;
     if (contactEl) {
-      contactEl.textContent = `${lead.poste} • ${lead.telephone || lead.email || 'Contact en ligne'} • Source : ${lead.source}`;
+      const coordStr = lead.telephone || lead.email || (lead.facebook_psid ? `Messenger PSID: ${lead.facebook_psid}` : 'Contact en ligne');
+      contactEl.textContent = `${lead.poste || 'Prospect'} • ${coordStr} • Source : ${lead.source || 'Facebook Messenger'}`;
     }
 
     // Mise à jour des onglets de canaux
