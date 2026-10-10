@@ -1469,19 +1469,20 @@ function applyLeadsFilterAndRender() {
     if (crmCurrentStatusFilter === "Tous") return true;
     
     if (crmCurrentStatusFilter === "48h_inactif") {
-      const dStr = l.last_contact_at || l.updated_at || l.created_at;
+      const dStr = l.last_contact_at || l.last_interaction || l.updated_at || l.date_creation || l.created_at;
       if (!dStr) return false;
       const d = new Date(dStr);
       return (now - d) > (48 * 3600 * 1000);
     }
     
     if (crmCurrentStatusFilter === "diag_sans_offre") {
-      return (l.diagnostic_complet === 1 || l.diagnostic_complet === true) &&
-             (!l.offre_matchee_id || l.offre_matchee_id === "0" || l.offre_matchee_id === "");
+      const hasOffer = (l.offre_matchee_id && l.offre_matchee_id !== "0" && l.offre_matchee_id !== 0) ||
+                        (typeof l.offre_matchee === "string" && l.offre_matchee.trim().length > 0);
+      return (l.diagnostic_complet === 1 || l.diagnostic_complet === true) && !hasOffer;
     }
 
-    const s = (l.statut_lead || l.temperature || "").toLowerCase();
-    const target = crmCurrentStatusFilter.toLowerCase();
+    const s = String(l.statut_lead || l.temperature || "").toLowerCase();
+    const target = String(crmCurrentStatusFilter || "").toLowerCase();
     if (target === "rejeté") {
       return s.includes("rejeté") || s.includes("rgpd") || l.opt_out === 1;
     }
@@ -1491,13 +1492,13 @@ function applyLeadsFilterAndRender() {
   // Filtrage instantané par mot-clé de recherche
   if (crmCurrentSearchTerm) {
     filtered = filtered.filter(l => {
-      const nom = (l.prenom ? `${l.prenom} ${l.nom || ''}` : (l.nom_complet || l.nom_lead || "")).toLowerCase();
-      const phone = (l.whatsapp || l.telephone || "").toLowerCase();
-      const email = (l.email || "").toLowerCase();
-      const douleur = (l.douleur_identifiee || "").toLowerCase();
-      const offre = (l.offre_proposee || "").toLowerCase();
-      const source = (l.source_contact || l.source_canal || l.canal_source || "").toLowerCase();
-      const status = (l.statut_lead || l.temperature || "").toLowerCase();
+      const nom = String(l.prenom ? `${l.prenom} ${l.nom || ''}` : (l.nom_complet || l.nom_lead || "")).toLowerCase();
+      const phone = String(l.whatsapp || l.telephone || "").toLowerCase();
+      const email = String(l.email || "").toLowerCase();
+      const douleur = String(l.douleur_identifiee || "").toLowerCase();
+      const offre = String(l.offre_matchee || l.offre_proposee || "").toLowerCase();
+      const source = String(l.source_contact || l.source_canal || l.canal_source || "").toLowerCase();
+      const status = String(l.statut_lead || l.temperature || "").toLowerCase();
       const score = String(l.score_dur || l.score_qualification || "");
       
       return nom.includes(crmCurrentSearchTerm) ||
@@ -1552,209 +1553,238 @@ function applyLeadsFilterAndRender() {
       </tr>
     `;
     updateBulkBarUI();
-    lucide.createIcons();
+    try {
+      if (window.lucide && typeof lucide.createIcons === "function") {
+        lucide.createIcons();
+      }
+    } catch (_) {}
     return;
   }
 
-  tbody.innerHTML = filtered.map((l) => {
-    const leadId = l.id;
-    const isSelected = selectedLeadIds.has(leadId);
+  try {
+    tbody.innerHTML = filtered.map((l) => {
+      try {
+        const leadId = l.id;
+        const isSelected = selectedLeadIds.has(leadId);
 
-    // 1. Nom & Canal
-    let fullName = "";
-    if (l.prenom || l.nom) {
-      fullName = `${l.prenom || ""} ${l.nom || ""}`.trim();
-    }
-    if (!fullName) {
-      fullName = l.nom_complet || l.nom_lead || `Prospect #${leadId}`;
-    }
+        // 1. Nom & Canal
+        let fullName = "";
+        if (l.prenom || l.nom) {
+          fullName = `${l.prenom || ""} ${l.nom || ""}`.trim();
+        }
+        if (!fullName) {
+          fullName = l.nom_complet || l.nom_lead || `Prospect #${leadId}`;
+        }
 
-    const canalSource = (l.canal_source || l.source_contact || l.source_canal || "messenger").toLowerCase();
-    let canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
-    if (canalSource.includes("whatsapp") || l.canal_id?.startsWith("wa_")) {
-      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
-    } else if (canalSource.includes("linkedin") || l.canal_id?.startsWith("li_")) {
-      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
-    } else if (canalSource.includes("email") || l.canal_id?.startsWith("email_")) {
-      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
-    }
+        const canalSource = String(l.canal_source || l.source_contact || l.source_canal || "messenger").toLowerCase();
+        const canalIdStr = l.canal_id ? String(l.canal_id) : "";
+        let canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
+        if (canalSource.includes("whatsapp") || canalIdStr.startsWith("wa_")) {
+          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
+        } else if (canalSource.includes("linkedin") || canalIdStr.startsWith("li_")) {
+          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
+        } else if (canalSource.includes("email") || canalIdStr.startsWith("email_")) {
+          canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
+        }
 
-    const dateCreationStr = formatRelativeTime(l.created_at || l.date_creation);
+        const dateCreationStr = formatRelativeTime(l.date_creation || l.created_at);
 
-    // 2. Contact
-    const rawWa = l.whatsapp || l.telephone || "";
-    const cleanWa = rawWa ? rawWa.replace(/[^0-9]/g, "") : "";
-    const emailVal = l.email || "";
-    const liVal = l.linkedin_url || "";
+        // 2. Contact
+        const rawWa = l.whatsapp || l.telephone || "";
+        const cleanWa = rawWa ? String(rawWa).replace(/[^0-9]/g, "") : "";
+        const emailVal = l.email ? String(l.email) : "";
+        const liVal = l.linkedin_url ? String(l.linkedin_url) : "";
 
-    // 3. Douleur identifiée
-    const douleurVal = l.douleur_identifiee || "";
+        // 3. Douleur identifiée
+        const douleurVal = l.douleur_identifiee ? String(l.douleur_identifiee) : "";
 
-    // 4. Score DUR (Barre de progression + D / U / R)
-    const scoreVal = Math.min(100, Math.max(0, Number(l.score_dur || l.score_qualification || 0)));
-    let scoreBarColor = "bg-slate-400";
-    let scoreTextColor = "text-slate-600";
-    if (scoreVal >= 70) {
-      scoreBarColor = "bg-emerald-500";
-      scoreTextColor = "text-emerald-700";
-    } else if (scoreVal >= 40) {
-      scoreBarColor = "bg-amber-500";
-      scoreTextColor = "text-amber-700";
-    } else {
-      scoreBarColor = "bg-blue-400";
-      scoreTextColor = "text-blue-700";
-    }
+        // 4. Score DUR (Barre de progression + D / U / R)
+        const scoreVal = Math.min(100, Math.max(0, Number(l.score_dur || l.score_qualification || 0)));
+        let scoreBarColor = "bg-slate-400";
+        let scoreTextColor = "text-slate-600";
+        if (scoreVal >= 70) {
+          scoreBarColor = "bg-emerald-500";
+          scoreTextColor = "text-emerald-700";
+        } else if (scoreVal >= 40) {
+          scoreBarColor = "bg-amber-500";
+          scoreTextColor = "text-amber-700";
+        } else {
+          scoreBarColor = "bg-blue-400";
+          scoreTextColor = "text-blue-700";
+        }
 
-    const hasDouleur = Boolean(l.douleur_identifiee && l.douleur_identifiee.trim().length > 3);
-    const urgenceLevel = (l.urgence_niveau || "").toLowerCase();
-    const hasUrgence = (urgenceLevel === "haute" || urgenceLevel === "moyenne" || scoreVal >= 60);
-    const hasRessources = (l.ressources_confirmees === 1 || l.ressources_confirmees === true || scoreVal >= 75);
+        const hasDouleur = Boolean(douleurVal && douleurVal.trim().length > 3);
+        const urgenceVal = (l.urgence_niveau !== undefined && l.urgence_niveau !== null) ? l.urgence_niveau : "";
+        const urgenceStr = String(urgenceVal).toLowerCase();
+        const hasUrgence = (urgenceStr === "haute" || urgenceStr === "moyenne" || urgenceStr === "3" || urgenceStr === "2" || Number(urgenceVal) >= 2 || scoreVal >= 60);
+        const resValStr = String(l.ressources_confirmees || "").toLowerCase();
+        const hasRessources = (l.ressources_confirmees === 1 || l.ressources_confirmees === true || resValStr.includes("oui") || resValStr.includes("cours") || scoreVal >= 75);
 
-    // 5. Profil DISC
-    const discCode = (l.profil_disc || "C").charAt(0).toUpperCase();
-    const discMap = {
-      "D": { label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border-rose-200" },
-      "I": { label: "I (Influent)", color: "bg-amber-50 text-amber-800 border-amber-200" },
-      "S": { label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-      "C": { label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border-blue-200" }
-    };
-    const discInfo = discMap[discCode] || discMap["C"];
+        // 5. Profil DISC
+        const discCode = String(l.profil_disc || "C").charAt(0).toUpperCase();
+        const discMap = {
+          "D": { label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border-rose-200" },
+          "I": { label: "I (Influent)", color: "bg-amber-50 text-amber-800 border-amber-200" },
+          "S": { label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+          "C": { label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border-blue-200" }
+        };
+        const discInfo = discMap[discCode] || discMap["C"];
 
-    // 6. Offre matchée
-    const offreNom = l.offre_proposee || (l.offre_matchee_id ? `Offre #${l.offre_matchee_id}` : "");
+        // 6. Offre matchée (Priorité au texte d'offre_matchee puis offre_proposee puis offre_matchee_id)
+        let offreNom = "";
+        if (typeof l.offre_matchee === "string" && l.offre_matchee.trim().length > 0) {
+          offreNom = l.offre_matchee;
+        } else if (typeof l.offre_proposee === "string" && l.offre_proposee.trim().length > 0) {
+          offreNom = l.offre_proposee;
+        } else if (l.offre_matchee_id) {
+          offreNom = `Offre #${l.offre_matchee_id}`;
+        }
 
-    // 7. Statut & Suivi
-    const statutVal = l.temperature || l.statut_lead || "Froid";
-    let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
-    if (statutVal === "Chaud") statusBadgeColor = "bg-amber-50 text-amber-800 border-amber-200";
-    else if (statutVal === "Converti") statusBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
-    else if (statutVal === "Tiède") statusBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
-    else if (statutVal.includes("Rejeté") || statutVal.includes("RGPD")) statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
+        // 7. Statut & Suivi
+        const statutVal = String(l.temperature || l.statut_lead || "Froid");
+        let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
+        if (statutVal === "Chaud") statusBadgeColor = "bg-amber-50 text-amber-800 border-amber-200";
+        else if (statutVal === "Converti") statusBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
+        else if (statutVal === "Tiède") statusBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
+        else if (statutVal.includes("Rejeté") || statutVal.includes("RGPD")) statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
 
-    const lastContactStr = formatRelativeTime(l.last_contact_at || l.updated_at);
-    const prochaineAction = l.prochaine_action || "";
+        const lastContactStr = formatRelativeTime(l.last_contact_at || l.last_interaction || l.updated_at || l.date_creation || l.created_at);
+        const prochaineAction = l.prochaine_action ? String(l.prochaine_action) : "";
 
-    return `
-      <tr id="lead-row-${leadId}" class="hover:bg-slate-50/90 transition-colors border-b border-slate-100 ${isSelected ? 'bg-blue-50/70' : ''}">
-        <!-- Col 0 : Checkbox -->
-        <td class="p-3.5 text-center w-10">
-          <input 
-            type="checkbox" 
-            data-lead-id="${leadId}"
-            class="lead-row-checkbox rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
-            ${isSelected ? 'checked' : ''}
-            onchange="toggleSelectLead(${leadId}, this.checked)"
-          />
-        </td>
+        return `
+          <tr id="lead-row-${leadId}" class="hover:bg-slate-50/90 transition-colors border-b border-slate-100 ${isSelected ? 'bg-blue-50/70' : ''}">
+            <!-- Col 0 : Checkbox -->
+            <td class="p-3.5 text-center w-10">
+              <input 
+                type="checkbox" 
+                data-lead-id="${leadId}"
+                class="lead-row-checkbox rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
+                ${isSelected ? 'checked' : ''}
+                onchange="toggleSelectLead(${leadId}, this.checked)"
+              />
+            </td>
 
-        <!-- Col 1 : Lead -->
-        <td class="p-3.5 min-w-[140px]">
-          <div class="font-extrabold text-slate-900">${escapeHtml(fullName)}</div>
-          <div class="flex items-center gap-1.5 mt-1">
-            ${canalBadge}
-            <span class="text-[10px] text-slate-400" title="Création">${escapeHtml(dateCreationStr)}</span>
-          </div>
-        </td>
+            <!-- Col 1 : Lead -->
+            <td class="p-3.5 min-w-[140px]">
+              <div class="font-extrabold text-slate-900">${escapeHtml(fullName)}</div>
+              <div class="flex items-center gap-1.5 mt-1">
+                ${canalBadge}
+                <span class="text-[10px] text-slate-400" title="Création">${escapeHtml(dateCreationStr)}</span>
+              </div>
+            </td>
 
-        <!-- Col 2 : Contact -->
-        <td class="p-3.5 min-w-[130px] text-xs">
-          ${cleanWa ? `
-            <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-semibold mb-0.5">
-              <i data-lucide="message-circle" class="w-3 h-3 text-emerald-600"></i>
-              <span>${escapeHtml(rawWa)}</span>
-            </a>
-          ` : '<div class="text-slate-400 text-[11px]">WA : Non renseigné</div>'}
-          ${emailVal ? `
-            <a href="mailto:${emailVal}" class="flex items-center gap-1 text-slate-600 hover:text-slate-900 truncate max-w-[150px] text-[11px]">
-              <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
-              <span>${escapeHtml(emailVal)}</span>
-            </a>
-          ` : ''}
-          ${liVal ? `
-            <a href="${liVal}" target="_blank" class="flex items-center gap-1 text-sky-700 hover:text-sky-900 text-[11px]">
-              <i data-lucide="linkedin" class="w-3 h-3 text-sky-600"></i>
-              <span>LinkedIn</span>
-            </a>
-          ` : ''}
-        </td>
+            <!-- Col 2 : Contact -->
+            <td class="p-3.5 min-w-[130px] text-xs">
+              ${cleanWa ? `
+                <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-semibold mb-0.5">
+                  <i data-lucide="message-circle" class="w-3 h-3 text-emerald-600"></i>
+                  <span>${escapeHtml(rawWa)}</span>
+                </a>
+              ` : '<div class="text-slate-400 text-[11px]">WA : Non renseigné</div>'}
+              ${emailVal ? `
+                <a href="mailto:${emailVal}" class="flex items-center gap-1 text-slate-600 hover:text-slate-900 truncate max-w-[150px] text-[11px]">
+                  <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
+                  <span>${escapeHtml(emailVal)}</span>
+                </a>
+              ` : ''}
+              ${liVal ? `
+                <a href="${liVal}" target="_blank" class="flex items-center gap-1 text-sky-700 hover:text-sky-900 text-[11px]">
+                  <i data-lucide="linkedin" class="w-3 h-3 text-sky-600"></i>
+                  <span>LinkedIn</span>
+                </a>
+              ` : ''}
+            </td>
 
-        <!-- Col 3 : Douleur identifiée -->
-        <td class="p-3.5 max-w-[200px]">
-          ${douleurVal ? `
-            <div class="text-xs text-slate-800 font-medium line-clamp-2" title="${escapeHtml(douleurVal)}">
-              ${escapeHtml(douleurVal)}
-            </div>
-          ` : `
-            <span class="text-slate-400 italic text-[11px]">Diagnostic en cours...</span>
-          `}
-        </td>
+            <!-- Col 3 : Douleur identifiée -->
+            <td class="p-3.5 max-w-[200px]">
+              ${douleurVal ? `
+                <div class="text-xs text-slate-800 font-medium line-clamp-2" title="${escapeHtml(douleurVal)}">
+                  ${escapeHtml(douleurVal)}
+                </div>
+              ` : `
+                <span class="text-slate-400 italic text-[11px]">Diagnostic en cours...</span>
+              `}
+            </td>
 
-        <!-- Col 4 : Score DUR -->
-        <td class="p-3.5 min-w-[130px]">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-xs font-black ${scoreTextColor}">${scoreVal}/100</span>
-            <div class="flex items-center gap-1 text-[9px] font-bold">
-              <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
-              <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
-              <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
-            </div>
-          </div>
-          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-300 ${scoreBarColor}" style="width: ${scoreVal}%"></div>
-          </div>
-        </td>
+            <!-- Col 4 : Score DUR -->
+            <td class="p-3.5 min-w-[130px]">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-black ${scoreTextColor}">${scoreVal}/100</span>
+                <div class="flex items-center gap-1 text-[9px] font-bold">
+                  <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
+                  <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
+                  <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
+                </div>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-300 ${scoreBarColor}" style="width: ${scoreVal}%"></div>
+              </div>
+            </td>
 
-        <!-- Col 5 : Profil DISC -->
-        <td class="p-3.5 whitespace-nowrap">
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${discInfo.color}">
-            ${discInfo.label}
-          </span>
-        </td>
+            <!-- Col 5 : Profil DISC -->
+            <td class="p-3.5 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${discInfo.color}">
+                ${discInfo.label}
+              </span>
+            </td>
 
-        <!-- Col 6 : Offre matchée -->
-        <td class="p-3.5 max-w-[160px]">
-          ${offreNom ? `
-            <div class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(offreNom)}">
-              <i data-lucide="package" class="w-3 h-3 text-[#0062ff] inline mr-0.5"></i>${escapeHtml(offreNom)}
-            </div>
-          ` : `
-            <span class="text-slate-400 text-[11px] italic">Non assignée</span>
-          `}
-        </td>
+            <!-- Col 6 : Offre matchée -->
+            <td class="p-3.5 max-w-[160px]">
+              ${offreNom ? `
+                <div class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(offreNom)}">
+                  <i data-lucide="package" class="w-3 h-3 text-[#0062ff] inline mr-0.5"></i>${escapeHtml(offreNom)}
+                </div>
+              ` : `
+                <span class="text-slate-400 text-[11px] italic">Non assignée</span>
+              `}
+            </td>
 
-        <!-- Col 7 : Statut & Suivi -->
-        <td class="p-3.5 min-w-[130px]">
-          <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${statusBadgeColor}">
-            ${escapeHtml(statutVal)}
-          </span>
-          <div class="text-[10px] text-slate-500 mt-1">
-            Dernier : <strong class="text-slate-700">${escapeHtml(lastContactStr)}</strong>
-          </div>
-          ${prochaineAction ? `
-            <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px]" title="Action: ${escapeHtml(prochaineAction)}">
-              👉 ${escapeHtml(prochaineAction)}
-            </div>
-          ` : ''}
-        </td>
+            <!-- Col 7 : Statut & Suivi -->
+            <td class="p-3.5 min-w-[130px]">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${statusBadgeColor}">
+                ${escapeHtml(statutVal)}
+              </span>
+              <div class="text-[10px] text-slate-500 mt-1">
+                Dernier : <strong class="text-slate-700">${escapeHtml(lastContactStr)}</strong>
+              </div>
+              ${prochaineAction ? `
+                <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px]" title="Action: ${escapeHtml(prochaineAction)}">
+                  👉 ${escapeHtml(prochaineAction)}
+                </div>
+              ` : ''}
+            </td>
 
-        <!-- Col 8 : Actions -->
-        <td class="p-3.5 text-right whitespace-nowrap">
-          <div class="flex items-center justify-end gap-1">
-            <button onclick="openLeadConversation(${leadId})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition" title="Voir les messages et répondre en direct">
-              <i data-lucide="messages-square" class="w-3 h-3"></i>
-              <span>Voir Conversation</span>
-            </button>
-            <button onclick="openLeadEditModal(${leadId})" class="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition" title="Modifier la fiche lead">
-              <i data-lucide="edit-2" class="w-3 h-3"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
+            <!-- Col 8 : Actions -->
+            <td class="p-3.5 text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="openLeadConversation(${leadId})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition" title="Voir les messages et répondre en direct">
+                  <i data-lucide="messages-square" class="w-3 h-3"></i>
+                  <span>Voir Conversation</span>
+                </button>
+                <button onclick="openLeadEditModal(${leadId})" class="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition" title="Modifier la fiche lead">
+                  <i data-lucide="edit-2" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      } catch (rowErr) {
+        console.error("Erreur rendu ligne lead ID:", l && l.id, rowErr);
+        return "";
+      }
+    }).join("");
+  } catch (renderErr) {
+    console.error("Erreur globale applyLeadsFilterAndRender:", renderErr);
+  }
 
   updateBulkBarUI();
-  lucide.createIcons();
+  try {
+    if (window.lucide && typeof lucide.createIcons === "function") {
+      lucide.createIcons();
+    }
+  } catch (iconErr) {
+    console.warn("Lucide icons error:", iconErr);
+  }
 }
 
 // ============================================================================
