@@ -498,34 +498,62 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 "facebook_psid": sender_psid
             }
 
+            # 4. Générer la réponse experte d'acquisition & closing
             reply_text = omnichannel_messenger.generate_channel_pitch(lead_data, "FACEBOOK_MESSENGER")
 
-            # 5. Envoyer la réponse en direct sur la messagerie Facebook
-            send_res = send_messenger_message(recipient_psid=sender_psid, text=reply_text)
+            # Vérifier si l'IA est en mode 100% Autonome ou en mode Pause / Supervision
+            from core.autopilot_daemon import is_autopilot_active
+            autopilot_enabled = is_autopilot_active()
 
-            # 6. Consigner la réponse émise
-            dispatch_status = "DELIVERED" if send_res.get("success") else "FAILED"
-            log_lead_message(
-                lead_id=lead_id,
-                channel="FACEBOOK_MESSENGER",
-                sender="AGENT",
-                message=reply_text,
-                status=dispatch_status,
-                metadata={
-                    "facebook_psid": sender_psid,
-                    "meta_message_id": send_res.get("message_id"),
-                    "error": send_res.get("error")
-                }
-            )
+            if autopilot_enabled:
+                # 5. Envoyer la réponse en direct sur la messagerie Facebook (Mode Autonome)
+                send_res = send_messenger_message(recipient_psid=sender_psid, text=reply_text)
+                dispatch_status = "DELIVERED" if send_res.get("success") else "FAILED"
+                log_lead_message(
+                    lead_id=lead_id,
+                    channel="FACEBOOK_MESSENGER",
+                    sender="AGENT",
+                    message=reply_text,
+                    status=dispatch_status,
+                    metadata={
+                        "facebook_psid": sender_psid,
+                        "meta_message_id": send_res.get("message_id"),
+                        "error": send_res.get("error")
+                    }
+                )
 
-            log_activity(
-                category="MESSENGER_FACEBOOK",
-                action="Réponse experte envoyée sur Facebook Messenger",
-                lead_name=lead_name,
-                lead_phone=f"FB:{sender_psid[-6:]}",
-                status="SUCCESS" if send_res.get("success") else "ERROR",
-                details=f"Réponse envoyée au PSID {sender_psid}. Succès : {send_res.get('success')}. Extrait : {reply_text[:80]}..."
-            )
+                log_activity(
+                    category="MESSENGER_FACEBOOK",
+                    action="Réponse experte envoyée sur Facebook Messenger",
+                    lead_name=lead_name,
+                    lead_phone=f"FB:{sender_psid[-6:]}",
+                    status="SUCCESS" if send_res.get("success") else "ERROR",
+                    details=f"Réponse envoyée au PSID {sender_psid}. Succès : {send_res.get('success')}. Extrait : {reply_text[:80]}..."
+                )
+            else:
+                # MODE PAUSE / SUPERVISION : Enregistrer le brouillon pour contrôle humain sans envoyer
+                send_res = {"success": False, "mode": "PAUSE_SUPERVISION", "message": "Envoi suspendu (Mode Pause / Supervision actif)"}
+                log_lead_message(
+                    lead_id=lead_id,
+                    channel="FACEBOOK_MESSENGER",
+                    sender="AGENT",
+                    message=reply_text,
+                    status="DRAFT_SUPERVISION",
+                    metadata={
+                        "facebook_psid": sender_psid,
+                        "supervision": True,
+                        "note": "IA en Pause. Brouillon préparé, en attente de validation humaine."
+                    }
+                )
+
+                log_activity(
+                    category="MESSENGER_SUPERVISION",
+                    action="Message capté - Réponse en attente (Mode Pause)",
+                    lead_name=lead_name,
+                    lead_phone=f"FB:{sender_psid[-6:]}",
+                    status="INFO",
+                    details=f"Lead enregistré au CRM. IA en Pause : aucun message envoyé à l'utilisateur. Brouillon préparé : {reply_text[:80]}..."
+                )
 
             conn.close()
 

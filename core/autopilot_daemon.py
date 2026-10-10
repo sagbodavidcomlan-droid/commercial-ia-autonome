@@ -26,6 +26,36 @@ from modules.ai_sales_agent import AISalesAgent
 
 logger = logging.getLogger("AutopilotDaemon")
 
+def is_autopilot_active() -> bool:
+    """Vérifie si l'Autopilot et les réponses automatiques sont autorisés (non en pause)."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'autopilot_active'")
+        row = c.fetchone()
+        conn.close()
+        if row is not None:
+            return row[0] == '1'
+    except Exception as e:
+        logger.warning(f"Erreur lecture autopilot_active: {e}")
+    return True  # Par défaut actif
+
+def set_autopilot_active(active: bool):
+    """Enregistre l'état actif/pause de l'Autopilot dans la base de données."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        val = '1' if active else '0'
+        c.execute("""
+            INSERT INTO system_settings (setting_key, setting_value, updated_at)
+            VALUES ('autopilot_active', ?, datetime('now'))
+            ON CONFLICT(setting_key) DO UPDATE SET setting_value = excluded.setting_value, updated_at = excluded.updated_at
+        """, (val,))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Erreur enregistrement autopilot_active: {e}")
+
 class Autopilot24hDaemon:
     _instance = None
 
@@ -36,7 +66,7 @@ class Autopilot24hDaemon:
         return cls._instance
 
     def _init_daemon(self):
-        self.is_running = True
+        self.is_running = is_autopilot_active()
         self.interval_seconds = 45  # Intervalle de patrouille
         self.thread = None
         self.last_run_timestamp = None
@@ -57,16 +87,19 @@ class Autopilot24hDaemon:
             self.logs.pop(0)
 
     def start(self):
-        if self.thread and self.thread.is_alive():
-            return
         self.is_running = True
+        set_autopilot_active(True)
+        if self.thread and self.thread.is_alive():
+            self.log_event("🚀 Autopilot réactivé (Mode 100% Autonome).")
+            return
         self.thread = threading.Thread(target=self._worker_loop, daemon=True)
         self.thread.start()
         self.log_event("🚀 Démon Autopilot 24/7 activé en arrière-plan (Mode Production Réelle).")
 
     def stop(self):
         self.is_running = False
-        self.log_event("⏸️ Démon Autopilot 24/7 mis en pause.")
+        set_autopilot_active(False)
+        self.log_event("⏸️ Démon Autopilot 24/7 mis en pause (Mode Supervision).")
 
     def toggle(self) -> bool:
         if self.is_running:

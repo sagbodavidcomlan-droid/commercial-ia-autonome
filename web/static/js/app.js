@@ -3277,22 +3277,41 @@ async function refreshAutopilotStatus() {
     if (salesEl) salesEl.textContent = `${d.sales_converted || 0}`;
     if (revEl) revEl.textContent = `${(d.revenue_generated || 0).toLocaleString()} FCFA`;
 
+    // Mise à jour du bouton d'état général dans le Header
+    const btnHeader = document.getElementById("btn-header-status-toggle");
+    const statusText = document.getElementById("header-status-text");
+    const pulseDot = document.getElementById("status-pulse-dot");
+
+    if (btnHeader && statusText) {
+      if (d.is_running) {
+        btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100";
+        btnHeader.title = "IA en activité 100% autonome. Cliquez pour mettre en Pause (Mode Supervision).";
+        statusText.innerHTML = "🟢 IA Active";
+        if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+      } else {
+        btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100";
+        btnHeader.title = "IA en Pause (Mode Supervision). Les leads sont captés mais l'IA ne répond pas automatiquement. Cliquez pour réactiver.";
+        statusText.innerHTML = "⏸️ IA en Pause";
+        if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+      }
+    }
+
     if (d.is_running) {
       if (badgeEl) {
         badgeEl.textContent = "EN PATROUILLE CONTINUE";
         badgeEl.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/20 text-white uppercase tracking-wider backdrop-blur-sm";
       }
       if (btnEl) {
-        btnEl.innerHTML = `<i data-lucide="pause-circle" class="w-4 h-4 text-[#0062ff]"></i> Mettre en Pause`;
+        btnEl.innerHTML = `<i data-lucide="pause-circle" class="w-4 h-4 text-[#0062ff]"></i> Mettre en Pause (Supervision)`;
         btnEl.className = "w-full mt-2 bg-white text-[#0062ff] hover:bg-slate-50 font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer";
       }
     } else {
       if (badgeEl) {
-        badgeEl.textContent = "EN PAUSE";
+        badgeEl.textContent = "MODE SUPERVISION (EN PAUSE)";
         badgeEl.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-200 border border-amber-400/30 uppercase tracking-wider backdrop-blur-sm";
       }
       if (btnEl) {
-        btnEl.innerHTML = `<i data-lucide="play-circle" class="w-4 h-4 text-emerald-600"></i> Activer Autopilot 24h/24`;
+        btnEl.innerHTML = `<i data-lucide="play-circle" class="w-4 h-4 text-emerald-600"></i> Reprendre l'Autonomie (Activer)`;
         btnEl.className = "w-full mt-2 bg-white text-slate-800 hover:bg-slate-100 font-bold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer";
       }
     }
@@ -3307,9 +3326,13 @@ async function toggleAutopilot24h() {
     const res = await fetch("/api/autopilot/toggle", { method: "POST" });
     const data = await res.json();
     await refreshAutopilotStatus();
-    showToast(data.is_running ? "🚀 Autopilot 24h/24 relancé ! L'agent patrouille et vend en continu." : "⏸️ Autopilot 24h/24 mis en pause.", data.is_running ? "success" : "info");
+    if (data.is_running) {
+      showToast("🟢 Mode Autonome Activé : l'agent prospecte, relance et répond aux messages en direct.", "success");
+    } else {
+      showToast("⏸️ Mode Pause / Supervision Activé : les leads sont captés au CRM, mais les réponses automatiques sont suspendues.", "warning");
+    }
   } catch (err) {
-    showToast("Erreur lors du basculement Autopilot", "error");
+    showToast("Erreur lors du basculement de l'Autopilot", "error");
   }
 }
 

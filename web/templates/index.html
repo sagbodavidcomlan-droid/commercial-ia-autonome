@@ -255,6 +255,12 @@
         <span id="header-eval-grade">Grade A (78/100)</span>
       </div>
 
+      <!-- Bouton Master Pause / Autonomie IA -->
+      <button onclick="toggleAutopilot24h()" id="btn-header-status-toggle" title="Cliquez pour basculer entre Mode 100% Autonome et Mode Pause / Supervision" class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="status-pulse-dot"></span>
+        <span id="header-status-text">🟢 IA Active</span>
+      </button>
+
       <!-- Autopilot Sprint Action -->
       <button onclick="triggerAutopilotSprint()" id="btn-header-autopilot" class="flex items-center gap-1.5 sm:gap-2 bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-bold px-2.5 sm:px-3.5 py-2 rounded-xl transition-all shadow-md shadow-blue-500/20">
         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
