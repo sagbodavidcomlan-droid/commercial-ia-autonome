@@ -19,7 +19,7 @@ from typing import Optional, Dict, Any, List
 # Import des moteurs métier
 from core.database_store import (
     init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs,
-    generate_weekly_kpi_report, build_closer_context, clear_crm_data
+    generate_weekly_kpi_report, build_closer_context, clear_crm_data, archive_before_delete
 )
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
@@ -278,6 +278,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_add_agenda_task(body)
         elif path == "/api/calendar/events":
             self.handle_api_add_calendar_event(body)
+        elif path in ("/api/crm/leads/bulk-action", "/crm/leads/bulk-action"):
+            self.handle_api_crm_bulk_action(body)
+        elif path in ("/api/crm/leads/update", "/crm/leads/update"):
+            self.handle_api_crm_update_lead(body)
         elif path == "/api/crm/leads/anonymize":
             self.handle_api_anonymize_lead(body)
         elif path == "/api/crm/leads/conversation/send":
@@ -588,18 +592,146 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         sql = "SELECT * FROM crm_leads WHERE 1=1"
         params = []
         if status_filter and status_filter != "Tous":
-            sql += " AND statut_lead = ?"
-            params.append(status_filter)
+            if status_filter == "48h_inactif":
+                sql += " AND (last_contact_at IS NOT NULL AND julianday('now') - julianday(last_contact_at) >= 2)"
+            elif status_filter == "diag_sans_offre":
+                sql += " AND diagnostic_complet = 1 AND (offre_matchee_id IS NULL OR offre_matchee_id = '' OR offre_matchee_id = '0')"
+            else:
+                sql += " AND (statut_lead = ? OR temperature = ?)"
+                params.extend([status_filter, status_filter])
         if search_query:
-            sql += " AND (nom_complet LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR centre_interet LIKE ? OR source_contact LIKE ?)"
+            sql += " AND (nom_complet LIKE ? OR nom_lead LIKE ? OR prenom LIKE ? OR nom LIKE ? OR whatsapp LIKE ? OR email LIKE ? OR centre_interet LIKE ? OR source_contact LIKE ? OR douleur_identifiee LIKE ?)"
             wildcard = f"%{search_query}%"
-            params.extend([wildcard, wildcard, wildcard, wildcard, wildcard])
+            params.extend([wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard, wildcard])
             
-        sql += " ORDER BY id DESC"
+        sql += " ORDER BY COALESCE(last_contact_at, updated_at, created_at, date_creation) DESC, id DESC"
         c.execute(sql, tuple(params))
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
         self.send_json_response(rows)
+
+    def handle_api_crm_bulk_action(self, body):
+        action = body.get("action")
+        lead_ids = body.get("lead_ids", [])
+        if not action or not isinstance(lead_ids, list) or len(lead_ids) == 0:
+            self.send_json_response({"error": "Paramètres 'action' et 'lead_ids' requis."}, status=400)
+            return
+
+        conn = get_connection()
+        c = conn.cursor()
+        try:
+            if action == "delete":
+                deleted_count = archive_before_delete(lead_ids, motif=body.get("motif", "suppression_manuelle"))
+                log_activity(
+                    category="CRM_BULK_DELETE",
+                    action=f"Suppression et archivage sécurisé de {deleted_count} leads",
+                    lead_name=f"{deleted_count} leads",
+                    lead_phone="N/A",
+                    status="SUCCESS",
+                    details=f"IDs archivés dans crm_leads_archived : {lead_ids}"
+                )
+                self.send_json_response({"success": True, "action": "delete", "affected": deleted_count})
+                return
+
+            elif action == "update_status":
+                new_status = body.get("status")
+                if not new_status:
+                    self.send_json_response({"error": "Nouveau statut requis."}, status=400)
+                    return
+                placeholders = ','.join('?' * len(lead_ids))
+                c.execute(
+                    f"UPDATE crm_leads SET temperature = ?, statut_lead = ?, updated_at = datetime('now') WHERE id IN ({placeholders})",
+                    (new_status, new_status, *lead_ids)
+                )
+                conn.commit()
+                affected = c.rowcount
+                self.send_json_response({"success": True, "action": "update_status", "affected": affected})
+                return
+
+            elif action == "update_phase":
+                new_phase = body.get("phase")
+                if not new_phase:
+                    self.send_json_response({"error": "Nouvelle phase requise."}, status=400)
+                    return
+                placeholders = ','.join('?' * len(lead_ids))
+                c.execute(
+                    f"UPDATE crm_leads SET phase_actuelle = ?, updated_at = datetime('now') WHERE id IN ({placeholders})",
+                    (new_phase, *lead_ids)
+                )
+                conn.commit()
+                affected = c.rowcount
+                self.send_json_response({"success": True, "action": "update_phase", "affected": affected})
+                return
+
+            elif action == "assign_offer":
+                offer_id = body.get("offer_id")
+                offer_name = body.get("offer_name", "")
+                if not offer_id:
+                    self.send_json_response({"error": "ID d'offre requis."}, status=400)
+                    return
+                placeholders = ','.join('?' * len(lead_ids))
+                c.execute(
+                    f"UPDATE crm_leads SET offre_matchee_id = ?, offre_proposee = COALESCE(NULLIF(?, ''), offre_proposee), updated_at = datetime('now') WHERE id IN ({placeholders})",
+                    (str(offer_id), str(offer_name), *lead_ids)
+                )
+                conn.commit()
+                affected = c.rowcount
+                self.send_json_response({"success": True, "action": "assign_offer", "affected": affected})
+                return
+
+            else:
+                self.send_json_response({"error": f"Action non supportée: {action}"}, status=400)
+                return
+        finally:
+            conn.close()
+
+    def handle_api_crm_update_lead(self, body):
+        lead_id = body.get("id") or body.get("lead_id")
+        if not lead_id:
+            self.send_json_response({"error": "lead_id requis."}, status=400)
+            return
+
+        conn = get_connection()
+        c = conn.cursor()
+        try:
+            fields = []
+            params = []
+            allowed_fields = [
+                "prenom", "nom", "nom_complet", "whatsapp", "email", "linkedin_url",
+                "temperature", "statut_lead", "phase_actuelle", "douleur_identifiee",
+                "urgence_niveau", "ressources_confirmees", "score_dur", "profil_disc",
+                "offre_matchee_id", "offre_proposee", "prochaine_action", "prochaine_action_at",
+                "notes"
+            ]
+
+            for field in allowed_fields:
+                if field in body:
+                    fields.append(f"{field} = ?")
+                    params.append(body[field])
+
+            if "temperature" in body and "statut_lead" not in body:
+                fields.append("statut_lead = ?")
+                params.append(body["temperature"])
+            elif "statut_lead" in body and "temperature" not in body:
+                fields.append("temperature = ?")
+                params.append(body["statut_lead"])
+
+            if not fields:
+                self.send_json_response({"error": "Aucun champ à mettre à jour."}, status=400)
+                return
+
+            fields.append("updated_at = datetime('now')")
+            params.append(int(lead_id))
+
+            sql = f"UPDATE crm_leads SET {', '.join(fields)} WHERE id = ?"
+            c.execute(sql, tuple(params))
+            conn.commit()
+
+            c.execute("SELECT * FROM crm_leads WHERE id = ?", (int(lead_id),))
+            updated_lead = dict(c.fetchone() or {})
+            self.send_json_response({"success": True, "lead": updated_lead})
+        finally:
+            conn.close()
 
     def handle_api_get_customers(self):
         conn = get_connection()

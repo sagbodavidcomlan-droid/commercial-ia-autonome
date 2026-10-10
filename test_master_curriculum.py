@@ -352,6 +352,8 @@ class TestMasterCurriculum(unittest.TestCase):
         self.assertEqual(row[1], "closer", "phase_actuelle doit être 'closer'")
         self.assertIn("75 000", str(row[2]), "Offre matchée doit être l'Offre #7")
         self.assertIsNotNone(row[3], "La douleur identifiée doit être enregistrée")
+
+    def test_11_crm_lead_deduplication_and_contact_extraction(self):
         """
         Vérifie la déduplication stricte des leads CRM et l'extraction automatique des coordonnées :
         1. Deux messages reçus avec le même facebook_psid ne créent qu'une SEULE ligne dans crm_leads.

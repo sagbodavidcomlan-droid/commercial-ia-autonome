@@ -478,10 +478,10 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
             # Extraction automatique des coordonnées fournies dans le message
             extracted_info = _extract_lead_contact_info(user_text)
 
-            # 1. Rechercher si ce lead existe déjà via son facebook_psid ou son canal_id (DÉDUPLICATION STRICTE)
+            # 1. Rechercher si ce lead existe déjà via son canal_id ou son facebook_psid (DÉDUPLICATION STRICTE)
             conn = get_connection()
             cursor = conn.cursor()
-            canal_id_val = f"FB_{sender_psid}"
+            canal_id_val = f"messenger_{sender_psid}"
             
             cursor.execute("""
                 SELECT id, nom_complet, nom_lead, prenom, nom, facebook_psid, canal_id,
@@ -490,10 +490,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                        douleur_identifiee, urgence_niveau, ressources_confirmees, offre_matchee,
                        diagnostic_complet, diagnostic_etape, conversation_count, notes
                 FROM crm_leads 
-                WHERE (facebook_psid IS NOT NULL AND facebook_psid = ?)
-                   OR (canal_id IS NOT NULL AND canal_id = ?)
+                WHERE (canal_id IS NOT NULL AND canal_id = ?)
+                   OR (facebook_psid IS NOT NULL AND facebook_psid = ?)
+                   OR (canal_id = ?)
                 ORDER BY id ASC LIMIT 1
-            """, (sender_psid, canal_id_val))
+            """, (canal_id_val, sender_psid, f"FB_{sender_psid}"))
             lead_row = cursor.fetchone()
 
             lead_id = None
@@ -508,9 +509,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 upd_fields = [
                     "last_interaction = datetime('now')",
                     "last_contact_at = datetime('now')",
-                    "conversation_count = ?"
+                    "updated_at = datetime('now')",
+                    "conversation_count = ?",
+                    "canal_id = ?"
                 ]
-                upd_params = [current_count + 1]
+                upd_params = [current_count + 1, canal_id_val]
 
                 if "telephone" in extracted_info and not lead_row["telephone"]:
                     upd_fields.append("telephone = ?")
@@ -530,10 +533,6 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 if not lead_row["facebook_psid"]:
                     upd_fields.append("facebook_psid = ?")
                     upd_params.append(sender_psid)
-
-                if not lead_row["canal_id"]:
-                    upd_fields.append("canal_id = ?")
-                    upd_params.append(canal_id_val)
 
                 upd_params.append(lead_id)
                 cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
@@ -555,28 +554,20 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 extracted_phone = extracted_info.get("telephone")
                 extracted_email = extracted_info.get("email")
 
-                cursor.execute("""
-                    INSERT INTO crm_leads (
-                        nom_lead, nom_complet, prenom, nom, facebook_psid, canal_id,
-                        telephone, whatsapp, email, source_canal, source_contact,
-                        canal_source, canal_actuel, statut_lead, temperature,
-                        score_qualification, score_dur, centre_interet,
-                        notes, conversation_count, date_creation, last_interaction, last_contact_at
-                    ) VALUES (
-                        ?, ?, ?, ?, ?, ?,
-                        ?, ?, ?, 'Facebook Messenger', 'Facebook Messenger',
-                        'MESSENGER', 'MESSENGER', 'Nouveau', 'Tiède',
-                        65, 65, ?,
-                        ?, 1, datetime('now'), datetime('now'), datetime('now')
-                    )
-                """, (
-                    full_name, full_name, first_name or "", last_name or "", sender_psid, canal_id_val,
-                    extracted_phone, extracted_phone, extracted_email,
-                    user_text[:120],
-                    f"Inbound Facebook Messenger. Premier échange : '{user_text}'"
-                ))
-                lead_id = cursor.lastrowid
-                conn.commit()
+                from core.database_store import get_or_create_lead
+                lead_id, _ = get_or_create_lead(
+                    canal_source="messenger",
+                    canal_id=canal_id_val,
+                    prenom=first_name or (full_name.split()[0] if " " in full_name else full_name),
+                    nom=last_name or (full_name.split()[-1] if " " in full_name else ""),
+                    nom_complet=full_name,
+                    telephone=extracted_phone,
+                    whatsapp=extracted_phone,
+                    email=extracted_email,
+                    facebook_psid=sender_psid,
+                    notes=f"Inbound Facebook Messenger. Premier échange : '{user_text}'",
+                    centre_interet=user_text[:120]
+                )
 
                 log_activity(
                     category="PROSPECTION_INBOUND",
@@ -787,7 +778,8 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 cursor = conn.cursor()
                 canal_id_val = f"WA_{clean_phone_digits}"
 
-                # Déduplication stricte dans crm_leads par whatsapp, telephone ou canal_id
+                # Déduplication stricte dans crm_leads par canal_id (wa_<numéro>), whatsapp ou telephone
+                canal_id_val = f"wa_{clean_phone_digits}"
                 cursor.execute("""
                     SELECT id, nom_complet, nom_lead, prenom, nom, facebook_psid, canal_id,
                            telephone, whatsapp, email, source_canal, canal_source, canal_actuel,
@@ -795,13 +787,14 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                            douleur_identifiee, urgence_niveau, ressources_confirmees, offre_matchee,
                            diagnostic_complet, diagnostic_etape, conversation_count, notes
                     FROM crm_leads 
-                    WHERE whatsapp = ? 
+                    WHERE canal_id = ?
+                       OR whatsapp = ? 
                        OR telephone = ? 
                        OR canal_id = ?
                        OR whatsapp = ?
                        OR telephone = ?
                     ORDER BY id ASC LIMIT 1
-                """, (formatted_phone, formatted_phone, canal_id_val, clean_phone_digits, clean_phone_digits))
+                """, (canal_id_val, formatted_phone, formatted_phone, f"WA_{clean_phone_digits}", clean_phone_digits, clean_phone_digits))
                 lead_row = cursor.fetchone()
 
                 lead_id = None
@@ -815,10 +808,12 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     upd_fields = [
                         "last_interaction = datetime('now')",
                         "last_contact_at = datetime('now')",
+                        "updated_at = datetime('now')",
                         "conversation_count = ?",
-                        "canal_actuel = 'WHATSAPP'"
+                        "canal_actuel = 'WHATSAPP'",
+                        "canal_id = ?"
                     ]
-                    upd_params = [current_count + 1]
+                    upd_params = [current_count + 1, canal_id_val]
 
                     if sender_profile_name and ("Contact WhatsApp" in lead_name or not lead_row["nom_complet"]):
                         lead_name = sender_profile_name
@@ -833,10 +828,6 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                         upd_fields.append("whatsapp = ?")
                         upd_params.append(formatted_phone)
 
-                    if not lead_row["canal_id"]:
-                        upd_fields.append("canal_id = ?")
-                        upd_params.append(canal_id_val)
-
                     upd_params.append(lead_id)
                     cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
                     conn.commit()
@@ -844,28 +835,19 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     lead_name = sender_profile_name if sender_profile_name else (extracted_info.get("nom") or f"Prospect WhatsApp {formatted_phone[-4:]}")
                     extracted_email = extracted_info.get("email")
 
-                    cursor.execute("""
-                        INSERT INTO crm_leads (
-                            nom_lead, nom_complet, prenom, nom, canal_id,
-                            telephone, whatsapp, email, source_canal, source_contact,
-                            canal_source, canal_actuel, statut_lead, temperature,
-                            score_qualification, score_dur, centre_interet,
-                            notes, conversation_count, date_creation, last_interaction, last_contact_at
-                        ) VALUES (
-                            ?, ?, ?, ?, ?,
-                            ?, ?, ?, 'WhatsApp Business', 'WhatsApp Business',
-                            'WHATSAPP', 'WHATSAPP', 'Nouveau', 'Tiède',
-                            65, 65, ?,
-                            ?, 1, datetime('now'), datetime('now'), datetime('now')
-                        )
-                    """, (
-                        lead_name, lead_name, lead_name.split()[0] if lead_name else "", "", canal_id_val,
-                        formatted_phone, formatted_phone, extracted_email,
-                        user_text[:120],
-                        f"Inbound WhatsApp Cloud API. Premier message : '{user_text}'"
-                    ))
-                    lead_id = cursor.lastrowid
-                    conn.commit()
+                    from core.database_store import get_or_create_lead
+                    lead_id, _ = get_or_create_lead(
+                        canal_source="whatsapp",
+                        canal_id=canal_id_val,
+                        prenom=lead_name.split()[0] if lead_name else "",
+                        nom=lead_name.split()[-1] if (lead_name and " " in lead_name) else "",
+                        nom_complet=lead_name,
+                        telephone=formatted_phone,
+                        whatsapp=formatted_phone,
+                        email=extracted_email,
+                        notes=f"Inbound WhatsApp Cloud API. Premier message : '{user_text}'",
+                        centre_interet=user_text[:120]
+                    )
 
                     log_activity(
                         category="PROSPECTION_INBOUND",

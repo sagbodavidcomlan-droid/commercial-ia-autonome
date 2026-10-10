@@ -1105,16 +1105,18 @@ async function runTaskNow(taskId) {
   }
 }
 
-// --- CRM LEADS & CLIENTS (AVEC RECHERCHE RAPIDE SANS SCROLLER) ---
+// --- CRM LEADS & CLIENTS (AVEC RECHERCHE RAPIDE, SÉLECTION MULTIPLE & BULK ACTIONS) ---
 let crmLeadsData = [];
 let crmCurrentStatusFilter = "Tous";
 let crmCurrentSearchTerm = "";
+let selectedLeadIds = new Set();
+let crmCatalogOffers = [];
 
 function setLeadStatusFilter(status) {
   crmCurrentStatusFilter = status;
   
   // Mettre à jour l'état visuel des boutons de statut
-  const chips = ["Tous", "Chaud", "Converti", "Tiède", "Rejeté"];
+  const chips = ["Tous", "Chaud", "Converti", "Tiède", "Froid", "48h_inactif", "diag_sans_offre", "Rejeté"];
   chips.forEach(s => {
     const btn = document.getElementById(`filter-chip-${s}`);
     if (btn) {
@@ -1168,10 +1170,186 @@ async function loadLeads(statusFilter = null) {
     crmLeadsData = await res.json();
     if (!Array.isArray(crmLeadsData)) crmLeadsData = [];
 
+    // Nettoyer les sélections non valides
+    const currentIds = new Set(crmLeadsData.map(l => l.id));
+    selectedLeadIds = new Set([...selectedLeadIds].filter(id => currentIds.has(id)));
+
+    // Charger les offres du catalogue pour l'assignation
+    loadCatalogOffersForCrm();
+
+    // Mettre à jour les compteurs KPI en haut
+    updateCrmKpis();
+
     // Mettre à jour l'état actif et faire le rendu
     setLeadStatusFilter(crmCurrentStatusFilter);
   } catch (err) {
     console.error("Erreur CRM :", err);
+  }
+}
+
+async function loadCatalogOffersForCrm() {
+  try {
+    const res = await fetch("/api/catalog");
+    const data = await res.json();
+    crmCatalogOffers = Array.isArray(data) ? data : [];
+    
+    // Remplir les selects d'offres
+    const bulkOfferSelect = document.getElementById("bulk-offer-select");
+    const editLeadOffre = document.getElementById("edit-lead-offre");
+    
+    const optionsHtml = crmCatalogOffers.map(o => 
+      `<option value="${o.id}">${escapeHtml(o.nom || o.titre || ('Offre #' + o.id))} (${(o.prix_vente || o.prix || 0).toLocaleString()} ${o.devise || 'FCFA'})</option>`
+    ).join("");
+
+    if (bulkOfferSelect) {
+      bulkOfferSelect.innerHTML = `<option value="" disabled selected>Assigner Offre...</option>` + optionsHtml;
+    }
+    if (editLeadOffre) {
+      editLeadOffre.innerHTML = `<option value="">Aucune offre matchée</option>` + optionsHtml;
+    }
+  } catch (e) {
+    console.warn("Impossible de charger le catalogue pour le CRM :", e);
+  }
+}
+
+function updateCrmKpis() {
+  const total = crmLeadsData.length;
+  const chauds = crmLeadsData.filter(l => (l.temperature === "Chaud" || l.statut_lead === "Chaud")).length;
+  const convertis = crmLeadsData.filter(l => (l.temperature === "Converti" || l.statut_lead === "Converti")).length;
+  
+  let durSum = 0;
+  crmLeadsData.forEach(l => {
+    durSum += Number(l.score_dur || l.score_qualification || 0);
+  });
+  const durMoyen = total > 0 ? Math.round(durSum / total) : 0;
+
+  // Calcul des inactifs > 48h
+  const now = new Date();
+  const inactifs48h = crmLeadsData.filter(l => {
+    const dStr = l.last_contact_at || l.updated_at || l.created_at;
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    return (now - d) > (48 * 3600 * 1000);
+  }).length;
+
+  const statTotal = document.getElementById("crm-stat-total");
+  const statChauds = document.getElementById("crm-stat-chauds");
+  const statConvertis = document.getElementById("crm-stat-convertis");
+  const statDurMoyen = document.getElementById("crm-stat-dur-moyen");
+  const statInactifs = document.getElementById("crm-stat-inactifs");
+  const stat48hCard = document.getElementById("crm-stat-48h-card");
+
+  if (statTotal) statTotal.innerText = total;
+  if (statChauds) statChauds.innerText = chauds;
+  if (statConvertis) statConvertis.innerText = convertis;
+  if (statDurMoyen) statDurMoyen.innerText = `${durMoyen}/100`;
+  if (statInactifs) statInactifs.innerText = inactifs48h;
+
+  if (stat48hCard) {
+    if (inactifs48h > 0) {
+      stat48hCard.className = "p-4 rounded-xl bg-rose-50 border border-rose-200 shadow-xs";
+      if (statInactifs) statInactifs.className = "text-2xl font-black text-rose-600 mt-1";
+    } else {
+      stat48hCard.className = "p-4 rounded-xl bg-white border border-slate-200 shadow-xs";
+      if (statInactifs) statInactifs.className = "text-2xl font-black text-slate-600 mt-1";
+    }
+  }
+}
+
+function updateBulkBarUI() {
+  const bulkBar = document.getElementById("crm-bulk-bar");
+  const countEl = document.getElementById("bulk-selected-count");
+  const selectAllCheckbox = document.getElementById("crm-select-all");
+  
+  const count = selectedLeadIds.size;
+  if (countEl) countEl.innerText = count;
+
+  if (count > 0) {
+    if (bulkBar) bulkBar.classList.remove("hidden");
+  } else {
+    if (bulkBar) bulkBar.classList.add("hidden");
+  }
+
+  // Mettre à jour la case header
+  if (selectAllCheckbox) {
+    const visibleCheckboxes = document.querySelectorAll(".lead-row-checkbox");
+    const totalVisible = visibleCheckboxes.length;
+    if (totalVisible === 0) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    } else if (count === totalVisible) {
+      selectAllCheckbox.checked = true;
+      selectAllCheckbox.indeterminate = false;
+    } else if (count > 0) {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = true;
+    } else {
+      selectAllCheckbox.checked = false;
+      selectAllCheckbox.indeterminate = false;
+    }
+  }
+}
+
+function toggleSelectAllLeads(checked) {
+  const visibleCheckboxes = document.querySelectorAll(".lead-row-checkbox");
+  visibleCheckboxes.forEach(cb => {
+    const id = parseInt(cb.dataset.leadId, 10);
+    cb.checked = checked;
+    if (checked) {
+      selectedLeadIds.add(id);
+    } else {
+      selectedLeadIds.delete(id);
+    }
+    const row = document.getElementById(`lead-row-${id}`);
+    if (row) {
+      if (checked) row.classList.add("bg-blue-50/70");
+      else row.classList.remove("bg-blue-50/70");
+    }
+  });
+  updateBulkBarUI();
+}
+
+function toggleSelectLead(id, checked) {
+  if (checked) {
+    selectedLeadIds.add(id);
+  } else {
+    selectedLeadIds.delete(id);
+  }
+  const row = document.getElementById(`lead-row-${id}`);
+  if (row) {
+    if (checked) row.classList.add("bg-blue-50/70");
+    else row.classList.remove("bg-blue-50/70");
+  }
+  updateBulkBarUI();
+}
+
+function deselectAllLeads() {
+  selectedLeadIds.clear();
+  const visibleCheckboxes = document.querySelectorAll(".lead-row-checkbox");
+  visibleCheckboxes.forEach(cb => {
+    cb.checked = false;
+    const row = document.getElementById(`lead-row-${cb.dataset.leadId}`);
+    if (row) row.classList.remove("bg-blue-50/70");
+  });
+  updateBulkBarUI();
+}
+
+function formatRelativeTime(dateStr) {
+  if (!dateStr) return "Jamais";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const now = new Date();
+    const diffSec = Math.floor((now - d) / 1000);
+    if (diffSec < 60) return "À l'instant";
+    if (diffSec < 3600) return `Il y a ${Math.floor(diffSec / 60)} min`;
+    if (diffSec < 86400) return `Il y a ${Math.floor(diffSec / 3600)} h`;
+    const days = Math.floor(diffSec / 86400);
+    if (days === 1) return "Hier";
+    if (days < 7) return `Il y a ${days} j`;
+    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  } catch (e) {
+    return dateStr;
   }
 }
 
@@ -1180,10 +1358,25 @@ function applyLeadsFilterAndRender() {
   const counterEl = document.getElementById("crm-leads-counter");
   if (!tbody) return;
 
+  const now = new Date();
+
   // Filtrage par statut
   let filtered = crmLeadsData.filter(l => {
     if (crmCurrentStatusFilter === "Tous") return true;
-    const s = (l.statut_lead || "").toLowerCase();
+    
+    if (crmCurrentStatusFilter === "48h_inactif") {
+      const dStr = l.last_contact_at || l.updated_at || l.created_at;
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      return (now - d) > (48 * 3600 * 1000);
+    }
+    
+    if (crmCurrentStatusFilter === "diag_sans_offre") {
+      return (l.diagnostic_complet === 1 || l.diagnostic_complet === true) &&
+             (!l.offre_matchee_id || l.offre_matchee_id === "0" || l.offre_matchee_id === "");
+    }
+
+    const s = (l.statut_lead || l.temperature || "").toLowerCase();
     const target = crmCurrentStatusFilter.toLowerCase();
     if (target === "rejeté") {
       return s.includes("rejeté") || s.includes("rgpd") || l.opt_out === 1;
@@ -1194,19 +1387,21 @@ function applyLeadsFilterAndRender() {
   // Filtrage instantané par mot-clé de recherche
   if (crmCurrentSearchTerm) {
     filtered = filtered.filter(l => {
-      const nom = (l.nom_complet || l.nom_lead || "").toLowerCase();
+      const nom = (l.prenom ? `${l.prenom} ${l.nom || ''}` : (l.nom_complet || l.nom_lead || "")).toLowerCase();
       const phone = (l.whatsapp || l.telephone || "").toLowerCase();
       const email = (l.email || "").toLowerCase();
-      const source = (l.source_contact || l.source_canal || "").toLowerCase();
-      const interest = (l.centre_interet || l.poste || "").toLowerCase();
-      const status = (l.statut_lead || "").toLowerCase();
-      const score = String(l.score_qualification || l.score_dur || "");
+      const douleur = (l.douleur_identifiee || "").toLowerCase();
+      const offre = (l.offre_proposee || "").toLowerCase();
+      const source = (l.source_contact || l.source_canal || l.canal_source || "").toLowerCase();
+      const status = (l.statut_lead || l.temperature || "").toLowerCase();
+      const score = String(l.score_dur || l.score_qualification || "");
       
       return nom.includes(crmCurrentSearchTerm) ||
              phone.includes(crmCurrentSearchTerm) ||
              email.includes(crmCurrentSearchTerm) ||
+             douleur.includes(crmCurrentSearchTerm) ||
+             offre.includes(crmCurrentSearchTerm) ||
              source.includes(crmCurrentSearchTerm) ||
-             interest.includes(crmCurrentSearchTerm) ||
              status.includes(crmCurrentSearchTerm) ||
              score.includes(crmCurrentSearchTerm);
     });
@@ -1225,94 +1420,478 @@ function applyLeadsFilterAndRender() {
     const isSearching = crmCurrentSearchTerm.length > 0;
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="p-8 text-center text-slate-500">
+        <td colspan="9" class="p-8 text-center text-slate-500">
           <div class="max-w-xs mx-auto space-y-2">
             <i data-lucide="search-x" class="w-8 h-8 text-slate-400 mx-auto"></i>
             <div class="font-bold text-slate-700">Aucun prospect trouvé</div>
             <p class="text-xs text-slate-400">
-              ${isSearching ? `Aucun résultat pour "<strong>${escapeHtml(crmCurrentSearchTerm)}</strong>".` : `Aucun prospect dans la catégorie "${escapeHtml(crmCurrentStatusFilter)}".`}
+              ${isSearching ? `Aucun résultat pour "<strong>${escapeHtml(crmCurrentSearchTerm)}</strong>".` : `Aucun prospect pour le filtre "${escapeHtml(crmCurrentStatusFilter)}".`}
             </p>
             ${isSearching ? `<button onclick="clearLeadSearch()" class="mt-2 text-xs font-bold text-[#0062ff] hover:underline">Effacer la recherche</button>` : ''}
           </div>
         </td>
       </tr>
     `;
+    updateBulkBarUI();
     lucide.createIcons();
     return;
   }
 
-  tbody.innerHTML = filtered.map((l, index) => {
-    const fullName = l.nom_complet || l.nom_lead || `Prospect #${l.id}`;
-    const rawPhone = l.whatsapp || l.telephone || '';
-    const phoneDisplay = rawPhone || (l.email || (l.facebook_psid ? `FB: ${l.facebook_psid}` : 'Non renseigné'));
-    const channel = l.source_contact || l.source_canal || 'Prospection Inbound';
-    const interest = l.centre_interet || l.poste || 'Intérêt Général';
-    const score = l.score_qualification || l.score_dur || 50;
-    const status = l.statut_lead || 'Froid';
+  tbody.innerHTML = filtered.map((l) => {
+    const leadId = l.id;
+    const isSelected = selectedLeadIds.has(leadId);
 
-    let badgeColor = "bg-slate-100 text-slate-700 border border-slate-200";
-    if (status === "Chaud") badgeColor = "bg-amber-50 text-amber-800 border border-amber-200";
-    else if (status === "Converti") badgeColor = "bg-emerald-50 text-emerald-800 border border-emerald-200";
-    else if (status === "Tiède") badgeColor = "bg-blue-50 text-blue-800 border border-blue-200";
-    else if (status.includes("RGPD") || status === "Rejeté") badgeColor = "bg-rose-50 text-rose-800 border border-rose-200";
-
-    const discTypes = [
-      { code: "D", label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border border-rose-200" },
-      { code: "I", label: "I (Influent)", color: "bg-amber-50 text-amber-800 border border-amber-200" },
-      { code: "S", label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border border-emerald-200" },
-      { code: "C", label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border border-blue-200" }
-    ];
-    const disc = discTypes[index % 4];
-
-    // Détection du badge de canal d'attraction
-    const chLower = (channel || "").toLowerCase();
-    let channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
-    if (chLower.includes("linkedin")) {
-      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
-    } else if (chLower.includes("email") || (!rawPhone && l.email)) {
-      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
-    } else if (chLower.includes("whatsapp") || rawPhone) {
-      channelBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
+    // 1. Nom & Canal
+    let fullName = "";
+    if (l.prenom || l.nom) {
+      fullName = `${l.prenom || ""} ${l.nom || ""}`.trim();
+    }
+    if (!fullName) {
+      fullName = l.nom_complet || l.nom_lead || `Prospect #${leadId}`;
     }
 
+    const canalSource = (l.canal_source || l.source_contact || l.source_canal || "messenger").toLowerCase();
+    let canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 inline-flex items-center gap-1">🔵 Messenger</span>`;
+    if (canalSource.includes("whatsapp") || l.canal_id?.startsWith("wa_")) {
+      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">🟢 WhatsApp</span>`;
+    } else if (canalSource.includes("linkedin") || l.canal_id?.startsWith("li_")) {
+      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-800 border border-sky-200 inline-flex items-center gap-1">🔷 LinkedIn</span>`;
+    } else if (canalSource.includes("email") || l.canal_id?.startsWith("email_")) {
+      canalBadge = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 inline-flex items-center gap-1">📧 Email</span>`;
+    }
+
+    const dateCreationStr = formatRelativeTime(l.created_at || l.date_creation);
+
+    // 2. Contact
+    const rawWa = l.whatsapp || l.telephone || "";
+    const cleanWa = rawWa ? rawWa.replace(/[^0-9]/g, "") : "";
+    const emailVal = l.email || "";
+    const liVal = l.linkedin_url || "";
+
+    // 3. Douleur identifiée
+    const douleurVal = l.douleur_identifiee || "";
+
+    // 4. Score DUR (Barre de progression + D / U / R)
+    const scoreVal = Math.min(100, Math.max(0, Number(l.score_dur || l.score_qualification || 0)));
+    let scoreBarColor = "bg-slate-400";
+    let scoreTextColor = "text-slate-600";
+    if (scoreVal >= 70) {
+      scoreBarColor = "bg-emerald-500";
+      scoreTextColor = "text-emerald-700";
+    } else if (scoreVal >= 40) {
+      scoreBarColor = "bg-amber-500";
+      scoreTextColor = "text-amber-700";
+    } else {
+      scoreBarColor = "bg-blue-400";
+      scoreTextColor = "text-blue-700";
+    }
+
+    const hasDouleur = Boolean(l.douleur_identifiee && l.douleur_identifiee.trim().length > 3);
+    const urgenceLevel = (l.urgence_niveau || "").toLowerCase();
+    const hasUrgence = (urgenceLevel === "haute" || urgenceLevel === "moyenne" || scoreVal >= 60);
+    const hasRessources = (l.ressources_confirmees === 1 || l.ressources_confirmees === true || scoreVal >= 75);
+
+    // 5. Profil DISC
+    const discCode = (l.profil_disc || "C").charAt(0).toUpperCase();
+    const discMap = {
+      "D": { label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border-rose-200" },
+      "I": { label: "I (Influent)", color: "bg-amber-50 text-amber-800 border-amber-200" },
+      "S": { label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+      "C": { label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border-blue-200" }
+    };
+    const discInfo = discMap[discCode] || discMap["C"];
+
+    // 6. Offre matchée
+    const offreNom = l.offre_proposee || (l.offre_matchee_id ? `Offre #${l.offre_matchee_id}` : "");
+
+    // 7. Statut & Suivi
+    const statutVal = l.temperature || l.statut_lead || "Froid";
+    let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
+    if (statutVal === "Chaud") statusBadgeColor = "bg-amber-50 text-amber-800 border-amber-200";
+    else if (statutVal === "Converti") statusBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
+    else if (statutVal === "Tiède") statusBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
+    else if (statutVal.includes("Rejeté") || statutVal.includes("RGPD")) statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
+
+    const lastContactStr = formatRelativeTime(l.last_contact_at || l.updated_at);
+    const prochaineAction = l.prochaine_action || "";
+
     return `
-      <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
-        <td class="p-3.5">
-          <div class="font-bold text-slate-900">${escapeHtml(fullName)}</div>
-          <div class="text-[11px] text-slate-500 font-medium">${escapeHtml(phoneDisplay)}</div>
+      <tr id="lead-row-${leadId}" class="hover:bg-slate-50/90 transition-colors border-b border-slate-100 ${isSelected ? 'bg-blue-50/70' : ''}">
+        <!-- Col 0 : Checkbox -->
+        <td class="p-3.5 text-center w-10">
+          <input 
+            type="checkbox" 
+            data-lead-id="${leadId}"
+            class="lead-row-checkbox rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
+            ${isSelected ? 'checked' : ''}
+            onchange="toggleSelectLead(${leadId}, this.checked)"
+          />
         </td>
-        <td class="p-3.5 text-slate-700">
-          <div>${channelBadge}</div>
-          <div class="text-[10px] text-slate-500 font-medium mt-0.5 truncate max-w-[120px]">${escapeHtml(channel)}</div>
+
+        <!-- Col 1 : Lead -->
+        <td class="p-3.5 min-w-[140px]">
+          <div class="font-extrabold text-slate-900">${escapeHtml(fullName)}</div>
+          <div class="flex items-center gap-1.5 mt-1">
+            ${canalBadge}
+            <span class="text-[10px] text-slate-400" title="Création">${escapeHtml(dateCreationStr)}</span>
+          </div>
         </td>
-        <td class="p-3.5 text-slate-700">
-          <div class="font-medium truncate max-w-[150px]">${escapeHtml(interest)}</div>
-          <div class="text-[10px] text-slate-400 font-semibold">${escapeHtml(l.poste || 'Professionnel')}</div>
+
+        <!-- Col 2 : Contact -->
+        <td class="p-3.5 min-w-[130px] text-xs">
+          ${cleanWa ? `
+            <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-semibold mb-0.5">
+              <i data-lucide="message-circle" class="w-3 h-3 text-emerald-600"></i>
+              <span>${escapeHtml(rawWa)}</span>
+            </a>
+          ` : '<div class="text-slate-400 text-[11px]">WA : Non renseigné</div>'}
+          ${emailVal ? `
+            <a href="mailto:${emailVal}" class="flex items-center gap-1 text-slate-600 hover:text-slate-900 truncate max-w-[150px] text-[11px]">
+              <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
+              <span>${escapeHtml(emailVal)}</span>
+            </a>
+          ` : ''}
+          ${liVal ? `
+            <a href="${liVal}" target="_blank" class="flex items-center gap-1 text-sky-700 hover:text-sky-900 text-[11px]">
+              <i data-lucide="linkedin" class="w-3 h-3 text-sky-600"></i>
+              <span>LinkedIn</span>
+            </a>
+          ` : ''}
         </td>
-        <td class="p-3.5 font-black text-[#0062ff]">${score}/100</td>
-        <td class="p-3.5">
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${disc.color}">${disc.label}</span>
+
+        <!-- Col 3 : Douleur identifiée -->
+        <td class="p-3.5 max-w-[200px]">
+          ${douleurVal ? `
+            <div class="text-xs text-slate-800 font-medium line-clamp-2" title="${escapeHtml(douleurVal)}">
+              ${escapeHtml(douleurVal)}
+            </div>
+          ` : `
+            <span class="text-slate-400 italic text-[11px]">Diagnostic en cours...</span>
+          `}
         </td>
-        <td class="p-3.5"><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${badgeColor}">${escapeHtml(status)}</span></td>
+
+        <!-- Col 4 : Score DUR -->
+        <td class="p-3.5 min-w-[130px]">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-black ${scoreTextColor}">${scoreVal}/100</span>
+            <div class="flex items-center gap-1 text-[9px] font-bold">
+              <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
+              <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
+              <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
+            </div>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-300 ${scoreBarColor}" style="width: ${scoreVal}%"></div>
+          </div>
+        </td>
+
+        <!-- Col 5 : Profil DISC -->
+        <td class="p-3.5 whitespace-nowrap">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${discInfo.color}">
+            ${discInfo.label}
+          </span>
+        </td>
+
+        <!-- Col 6 : Offre matchée -->
+        <td class="p-3.5 max-w-[160px]">
+          ${offreNom ? `
+            <div class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(offreNom)}">
+              <i data-lucide="package" class="w-3 h-3 text-[#0062ff] inline mr-0.5"></i>${escapeHtml(offreNom)}
+            </div>
+          ` : `
+            <span class="text-slate-400 text-[11px] italic">Non assignée</span>
+          `}
+        </td>
+
+        <!-- Col 7 : Statut & Suivi -->
+        <td class="p-3.5 min-w-[130px]">
+          <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${statusBadgeColor}">
+            ${escapeHtml(statutVal)}
+          </span>
+          <div class="text-[10px] text-slate-500 mt-1">
+            Dernier : <strong class="text-slate-700">${escapeHtml(lastContactStr)}</strong>
+          </div>
+          ${prochaineAction ? `
+            <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px]" title="Action: ${escapeHtml(prochaineAction)}">
+              👉 ${escapeHtml(prochaineAction)}
+            </div>
+          ` : ''}
+        </td>
+
+        <!-- Col 8 : Actions -->
         <td class="p-3.5 text-right whitespace-nowrap">
-          <div class="flex items-center justify-end gap-1.5">
-            <button onclick="openLeadConversation(${l.id})" class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition">
+          <div class="flex items-center justify-end gap-1">
+            <button onclick="openLeadConversation(${leadId})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition" title="Voir les messages et répondre en direct">
               <i data-lucide="messages-square" class="w-3 h-3"></i>
               <span>Voir Conversation</span>
             </button>
-            ${rawPhone && !l.opt_out ? `
-              <a href="https://wa.me/${rawPhone.replace(/[^0-9]/g, '')}" target="_blank" title="Ouvrir WhatsApp direct" class="bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 p-1.5 rounded-lg text-[11px] inline-flex items-center transition">
-                <i data-lucide="message-circle" class="w-3 h-3"></i>
-              </a>
-            ` : ''}
+            <button onclick="openLeadEditModal(${leadId})" class="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition" title="Modifier la fiche lead">
+              <i data-lucide="edit-2" class="w-3 h-3"></i>
+            </button>
           </div>
         </td>
       </tr>
     `;
   }).join("");
 
+  updateBulkBarUI();
   lucide.createIcons();
 }
+
+// ============================================================================
+// GESTION DES BULK ACTIONS (SUPPRESSION, CHANGEMENT STATUT, PHASE, OFFRE, EXPORT)
+// ============================================================================
+async function executeBulkStatusChange(newStatus) {
+  if (selectedLeadIds.size === 0 || !newStatus) return;
+  const leadIds = Array.from(selectedLeadIds);
+  try {
+    const res = await fetch("/crm/leads/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_status", status: newStatus, lead_ids: leadIds })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`${data.affected} lead(s) passé(s) au statut "${newStatus}" !`, "success");
+      document.getElementById("bulk-status-select").value = "";
+      await loadLeads();
+    } else {
+      showToast(data.error || "Erreur lors de la mise à jour", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
+  }
+}
+
+async function executeBulkPhaseChange(newPhase) {
+  if (selectedLeadIds.size === 0 || !newPhase) return;
+  const leadIds = Array.from(selectedLeadIds);
+  try {
+    const res = await fetch("/crm/leads/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "update_phase", phase: newPhase, lead_ids: leadIds })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`${data.affected} lead(s) passé(s) en phase "${newPhase}" !`, "success");
+      document.getElementById("bulk-phase-select").value = "";
+      await loadLeads();
+    } else {
+      showToast(data.error || "Erreur lors de la mise à jour", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
+  }
+}
+
+async function executeBulkOfferChange(offerId) {
+  if (selectedLeadIds.size === 0 || !offerId) return;
+  const leadIds = Array.from(selectedLeadIds);
+  const selOffer = crmCatalogOffers.find(o => String(o.id) === String(offerId));
+  const offerName = selOffer ? (selOffer.nom || selOffer.titre || "") : "";
+
+  try {
+    const res = await fetch("/crm/leads/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "assign_offer", offer_id: offerId, offer_name: offerName, lead_ids: leadIds })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Offre assignée à ${data.affected} lead(s) !`, "success");
+      document.getElementById("bulk-offer-select").value = "";
+      await loadLeads();
+    } else {
+      showToast(data.error || "Erreur d'assignation", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
+  }
+}
+
+function bulkCopyContacts(type) {
+  if (selectedLeadIds.size === 0) return;
+  const selectedLeads = crmLeadsData.filter(l => selectedLeadIds.has(l.id));
+  let list = [];
+  if (type === "whatsapp") {
+    list = selectedLeads.map(l => (l.whatsapp || l.telephone || "").replace(/[^0-9+]/g, "")).filter(Boolean);
+  } else if (type === "email") {
+    list = selectedLeads.map(l => (l.email || "").trim()).filter(Boolean);
+  }
+
+  if (list.length === 0) {
+    showToast(`Aucun contact ${type === 'whatsapp' ? 'WhatsApp' : 'Email'} trouvé dans la sélection.`, "warning");
+    return;
+  }
+
+  const textToCopy = list.join(", ");
+  navigator.clipboard.writeText(textToCopy).then(() => {
+    showToast(`${list.length} contact(s) copié(s) dans le presse-papier !`, "success");
+  }).catch(() => {
+    prompt("Copiez manuellement les contacts :", textToCopy);
+  });
+}
+
+function openBulkDeleteModal() {
+  if (selectedLeadIds.size === 0) return;
+  const modal = document.getElementById("modal-bulk-delete");
+  const countEl = document.getElementById("delete-modal-lead-count");
+  const inputEl = document.getElementById("delete-confirm-input");
+  const btnEl = document.getElementById("btn-confirm-delete");
+
+  if (countEl) countEl.innerText = selectedLeadIds.size;
+  if (inputEl) inputEl.value = "";
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.className = "px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs opacity-50 cursor-not-allowed transition flex items-center gap-1.5";
+  }
+
+  if (modal) modal.classList.remove("hidden");
+  if (inputEl) inputEl.focus();
+}
+
+function closeBulkDeleteModal() {
+  const modal = document.getElementById("modal-bulk-delete");
+  if (modal) modal.classList.add("hidden");
+}
+
+function handleDeleteConfirmInput(val) {
+  const btnEl = document.getElementById("btn-confirm-delete");
+  if (!btnEl) return;
+  if (val.trim().toUpperCase() === "SUPPRIMER") {
+    btnEl.disabled = false;
+    btnEl.className = "px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer shadow-md shadow-rose-600/20 transition flex items-center gap-1.5";
+  } else {
+    btnEl.disabled = true;
+    btnEl.className = "px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs opacity-50 cursor-not-allowed transition flex items-center gap-1.5";
+  }
+}
+
+async function executeBulkDelete() {
+  if (selectedLeadIds.size === 0) return;
+  const leadIds = Array.from(selectedLeadIds);
+  try {
+    const res = await fetch("/crm/leads/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", lead_ids: leadIds, motif: "suppression_manuelle" })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`${data.affected} lead(s) supprimé(s) et archivé(s) avec succès !`, "success");
+      closeBulkDeleteModal();
+      deselectAllLeads();
+      await loadLeads();
+    } else {
+      showToast(data.error || "Erreur de suppression", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
+  }
+}
+
+// ============================================================================
+// MODAL DE MODIFICATION DU LEAD (EDITION RAPIDE)
+// ============================================================================
+function openLeadEditModal(leadId) {
+  const lead = crmLeadsData.find(l => l.id === leadId);
+  if (!lead) return;
+
+  const modal = document.getElementById("modal-lead-edit");
+  document.getElementById("edit-lead-id").value = lead.id;
+  document.getElementById("edit-lead-modal-title").innerText = `Modifier #${lead.id} - ${lead.prenom || lead.nom || lead.nom_complet || 'Prospect'}`;
+  document.getElementById("edit-lead-prenom").value = lead.prenom || "";
+  document.getElementById("edit-lead-nom").value = lead.nom || "";
+  document.getElementById("edit-lead-whatsapp").value = lead.whatsapp || lead.telephone || "";
+  document.getElementById("edit-lead-email").value = lead.email || "";
+  document.getElementById("edit-lead-linkedin").value = lead.linkedin_url || "";
+  document.getElementById("edit-lead-statut").value = lead.temperature || lead.statut_lead || "Froid";
+  document.getElementById("edit-lead-phase").value = lead.phase_actuelle || "prise_de_contact";
+  document.getElementById("edit-lead-douleur").value = lead.douleur_identifiee || "";
+  document.getElementById("edit-lead-disc").value = (lead.profil_disc || "C").charAt(0).toUpperCase();
+  document.getElementById("edit-lead-offre").value = lead.offre_matchee_id || "";
+  document.getElementById("edit-lead-prochaine-action").value = lead.prochaine_action || "";
+  document.getElementById("edit-lead-notes").value = lead.notes || "";
+
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeLeadEditModal() {
+  const modal = document.getElementById("modal-lead-edit");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function saveLeadEditForm() {
+  const leadId = document.getElementById("edit-lead-id").value;
+  if (!leadId) return;
+
+  const selOffreId = document.getElementById("edit-lead-offre").value;
+  const selOffre = crmCatalogOffers.find(o => String(o.id) === String(selOffreId));
+  const offreName = selOffre ? (selOffre.nom || selOffre.titre || "") : "";
+
+  const payload = {
+    id: parseInt(leadId, 10),
+    prenom: document.getElementById("edit-lead-prenom").value.trim(),
+    nom: document.getElementById("edit-lead-nom").value.trim(),
+    whatsapp: document.getElementById("edit-lead-whatsapp").value.trim(),
+    email: document.getElementById("edit-lead-email").value.trim(),
+    linkedin_url: document.getElementById("edit-lead-linkedin").value.trim(),
+    temperature: document.getElementById("edit-lead-statut").value,
+    phase_actuelle: document.getElementById("edit-lead-phase").value,
+    douleur_identifiee: document.getElementById("edit-lead-douleur").value.trim(),
+    profil_disc: document.getElementById("edit-lead-disc").value,
+    offre_matchee_id: selOffreId,
+    offre_proposee: offreName,
+    prochaine_action: document.getElementById("edit-lead-prochaine-action").value.trim(),
+    notes: document.getElementById("edit-lead-notes").value.trim()
+  };
+
+  try {
+    const res = await fetch("/crm/leads/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Fiche lead mise à jour avec succès !", "success");
+      closeLeadEditModal();
+      await loadLeads();
+    } else {
+      showToast(data.error || "Erreur de mise à jour", "error");
+    }
+  } catch (e) {
+    showToast("Erreur de connexion", "error");
+  }
+}
+
+// RACCOURCIS CLAVIER (Ctrl+A, Escape, Delete)
+document.addEventListener("keydown", (e) => {
+  // Uniquement si l'onglet actif est le CRM et pas en cours de saisie dans un input/textarea
+  const activeTab = document.querySelector(".nav-item.active, [data-tab='crm']");
+  const isInputActive = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
+
+  if (e.key === "Escape") {
+    closeBulkDeleteModal();
+    closeLeadEditModal();
+    if (!isInputActive && selectedLeadIds.size > 0) {
+      deselectAllLeads();
+    }
+  }
+
+  if (!isInputActive) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+      const crmSection = document.getElementById("tab-crm");
+      if (crmSection && !crmSection.classList.contains("hidden")) {
+        e.preventDefault();
+        toggleSelectAllLeads(true);
+      }
+    } else if (e.key === "Delete" && selectedLeadIds.size > 0) {
+      openBulkDeleteModal();
+    }
+  }
+});
 
 // ============================================================================
 // MODAL DE CONVERSATION OMNICANALE (MESSENGER, LINKEDIN, EMAIL, WHATSAPP)

@@ -178,8 +178,8 @@ def init_db():
             ("telephone", "TEXT"),
             ("source_canal", "TEXT"),
             ("poste", "TEXT"),
-            ("score_dur", "INTEGER DEFAULT 50"),
-            ("profil_disc", "TEXT DEFAULT 'S'"),
+            ("score_dur", "INTEGER DEFAULT 0"),
+            ("profil_disc", "TEXT DEFAULT 'inconnu'"),
             ("objections", "TEXT"),
             ("notes", "TEXT"),
             ("date_creation", "TEXT"),
@@ -199,23 +199,77 @@ def init_db():
             ("canal_id", "TEXT"),
             ("prenom", "TEXT"),
             ("nom", "TEXT"),
-            ("temperature", "TEXT DEFAULT 'Tiède'"),
+            ("linkedin_url", "TEXT"),
+            ("temperature", "TEXT DEFAULT 'tiede'"),
             ("douleur_identifiee", "TEXT"),
-            ("urgence_niveau", "INTEGER DEFAULT 3"),
-            ("ressources_confirmees", "TEXT DEFAULT 'En cours'"),
+            ("urgence_niveau", "INTEGER DEFAULT 0"),
+            ("ressources_confirmees", "INTEGER DEFAULT 0"),
+            ("interet_principal", "TEXT"),
             ("offre_matchee", "TEXT"),
+            ("offre_matchee_id", "INTEGER"),
+            ("offre_proposee", "INTEGER DEFAULT 0"),
+            ("offre_convertie", "INTEGER DEFAULT 0"),
             ("diagnostic_complet", "INTEGER DEFAULT 0"),
             ("diagnostic_etape", "TEXT DEFAULT 'none'"),
             ("diagnostic_questions_count", "INTEGER DEFAULT 0"),
             ("conversation_count", "INTEGER DEFAULT 1"),
-            ("last_contact_at", "TEXT")
+            ("messages_envoyes", "INTEGER DEFAULT 0"),
+            ("last_contact_at", "TEXT"),
+            ("prochaine_action", "TEXT"),
+            ("prochaine_action_at", "TEXT"),
+            ("source_detail", "TEXT"),
+            ("referral_code", "TEXT"),
+            ("updated_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
             if col_name not in existing_cols:
                 cursor.execute(f"ALTER TABLE crm_leads ADD COLUMN {col_name} {col_type}")
 
-        # Nettoyage et déduplication des leads ayant le même facebook_psid ou canal_id
+        # Table d'archivage des leads (Restauration d'urgence, Audit, RGPD)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS crm_leads_archived (
+            archive_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lead_id INTEGER,
+            canal_source TEXT,
+            canal_id TEXT,
+            prenom TEXT,
+            nom TEXT,
+            email TEXT,
+            whatsapp TEXT,
+            temperature TEXT,
+            phase_actuelle TEXT,
+            douleur_identifiee TEXT,
+            score_dur INTEGER,
+            offre_matchee_id INTEGER,
+            created_at TEXT,
+            last_contact_at TEXT,
+            conversation_count INTEGER,
+            archived_at TEXT DEFAULT (datetime('now')),
+            motif TEXT DEFAULT 'suppression_manuelle'
+        )
+        """)
+
+        # Nettoyage et déduplication des leads ayant le même canal_id ou facebook_psid
         try:
+            # Déduplication préalable sur canal_id avant création de l'index UNIQUE
+            cursor.execute("""
+                SELECT canal_id, MIN(id) as primary_id, COUNT(*) as cnt 
+                FROM crm_leads 
+                WHERE canal_id IS NOT NULL AND canal_id != ''
+                GROUP BY canal_id HAVING cnt > 1
+            """)
+            dup_canals = cursor.fetchall()
+            for dup in dup_canals:
+                cid_val, primary_id = dup[0], dup[1]
+                cursor.execute("""
+                    UPDATE crm_lead_messages 
+                    SET lead_id = ? 
+                    WHERE lead_id IN (
+                        SELECT id FROM crm_leads WHERE canal_id = ? AND id != ?
+                    )
+                """, (primary_id, cid_val, primary_id))
+                cursor.execute("DELETE FROM crm_leads WHERE canal_id = ? AND id != ?", (cid_val, primary_id))
+
             cursor.execute("""
                 SELECT facebook_psid, MIN(id) as primary_id, COUNT(*) as cnt 
                 FROM crm_leads 
@@ -234,8 +288,8 @@ def init_db():
                 """, (primary_id, psid_val, primary_id))
                 cursor.execute("DELETE FROM crm_leads WHERE facebook_psid = ? AND id != ?", (psid_val, primary_id))
 
-            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_leads_facebook_psid ON crm_leads(facebook_psid) WHERE facebook_psid IS NOT NULL")
             cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_leads_canal_id ON crm_leads(canal_id) WHERE canal_id IS NOT NULL")
+            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_crm_leads_facebook_psid ON crm_leads(facebook_psid) WHERE facebook_psid IS NOT NULL")
         except Exception as e_dedup:
             logger.warning(f"Note index unique déduplication crm_leads : {e_dedup}")
 
@@ -1246,6 +1300,250 @@ def clear_crm_data() -> Dict[str, Any]:
     finally:
         conn.close()
 
+
+def get_or_create_lead(
+    canal_source: str,
+    canal_id: str,
+    prenom: Optional[str] = None,
+    nom: Optional[str] = None,
+    **kwargs
+) -> tuple:
+    """
+    Logique universelle de déduplication par canal_id (Partie 2) :
+    canal_id doit être UNIQUE.
+    Si le lead existe déjà -> met à jour last_contact_at, conversation_count et updated_at.
+    Si le lead est nouveau -> INSERT complet.
+    Retourne (lead_id, is_new: bool).
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("SELECT id, prenom, nom, nom_complet, conversation_count FROM crm_leads WHERE canal_id = ?", (canal_id,))
+        lead = c.fetchone()
+
+        if lead:
+            lead_id = lead[0]
+            existing_count = lead[4] or 1
+            upd_fields = [
+                "last_contact_at = datetime('now')",
+                "conversation_count = ?",
+                "updated_at = datetime('now')"
+            ]
+            upd_params = [existing_count + 1]
+
+            if prenom and not lead[1]:
+                upd_fields.append("prenom = ?")
+                upd_params.append(prenom)
+            if nom and not lead[2]:
+                upd_fields.append("nom = ?")
+                upd_params.append(nom)
+            if (prenom or nom) and (not lead[3] or "Prospect" in lead[3]):
+                full = f"{prenom or ''} {nom or ''}".strip()
+                if full:
+                    upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
+                    upd_params.extend([full, full])
+
+            # Champs optionnels passés en kwargs (ex: email, whatsapp, telephone, facebook_psid)
+            for k in ["email", "whatsapp", "telephone", "facebook_psid", "linkedin_url"]:
+                val = kwargs.get(k)
+                if val:
+                    upd_fields.append(f"{k} = COALESCE({k}, ?)")
+                    upd_params.append(val)
+
+            upd_params.append(lead_id)
+            c.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
+            conn.commit()
+            return lead_id, False
+        else:
+            full_name = f"{prenom or ''} {nom or ''}".strip() or kwargs.get("nom_complet") or kwargs.get("nom_lead") or ""
+            phone = kwargs.get("whatsapp") or kwargs.get("telephone") or ""
+            email = kwargs.get("email") or ""
+            psid = kwargs.get("facebook_psid") or ""
+            li_url = kwargs.get("linkedin_url") or ""
+            notes = kwargs.get("notes") or kwargs.get("centre_interet") or ""
+
+            c.execute("""
+                INSERT INTO crm_leads (
+                    canal_source, canal_id, prenom, nom, nom_complet, nom_lead,
+                    telephone, whatsapp, email, facebook_psid, linkedin_url,
+                    source_canal, source_contact, canal_source, canal_actuel,
+                    statut_lead, temperature, phase_actuelle,
+                    score_dur, score_qualification,
+                    notes, centre_interet,
+                    created_at, date_creation, last_contact_at, last_interaction, updated_at,
+                    conversation_count
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?,
+                    'Nouveau', 'tiede', 'setter',
+                    0, 0,
+                    ?, ?,
+                    datetime('now'), datetime('now'), datetime('now'), datetime('now'), datetime('now'),
+                    1
+                )
+            """, (
+                canal_source, canal_id, prenom, nom, full_name, full_name,
+                phone, phone, email, psid, li_url,
+                canal_source, canal_source, canal_source, canal_source.upper(),
+                notes, notes
+            ))
+            new_id = c.lastrowid
+            conn.commit()
+            return new_id, True
+    finally:
+        conn.close()
+
+
+def calculer_score_dur(lead_id: int) -> int:
+    """
+    Calcule et met à jour le score DUR en temps réel après chaque échange (Partie 4) :
+    - Douleur identifiée : 40 points max
+    - Urgence (niveau 1 à 5) : 30 points max (niveau * 6)
+    - Ressources confirmées : 30 points max
+    Score total : 0 à 100.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT douleur_identifiee, urgence_niveau, ressources_confirmees 
+            FROM crm_leads WHERE id = ?
+        """, (lead_id,))
+        row = c.fetchone()
+        if not row:
+            return 0
+
+        douleur = row[0]
+        urgence = row[1] or 0
+        ressources = row[2]
+
+        score = 0
+        if douleur and str(douleur).strip():
+            score += 40
+
+        # Urgence 1 à 5 -> max 5 * 6 = 30
+        try:
+            u_val = min(max(int(urgence), 0), 5)
+        except (ValueError, TypeError):
+            u_val = 0
+        score += u_val * 6
+
+        # Ressources confirmées (1 ou 'oui' ou True) -> 30 pts
+        if ressources in (1, "1", "oui", "Oui", True):
+            score += 30
+
+        score = min(max(score, 0), 100)
+
+        c.execute("""
+            UPDATE crm_leads 
+            SET score_dur = ?, score_qualification = ?, updated_at = datetime('now')
+            WHERE id = ?
+        """, (score, score, lead_id))
+        conn.commit()
+        return score
+    finally:
+        conn.close()
+
+
+def archive_before_delete(lead_ids: list, motif: str = "suppression_manuelle") -> int:
+    """
+    Archive les leads dans crm_leads_archived avant suppression définitive (Partie 7 - Niveau 2).
+    Permet la restauration d'urgence, la traçabilité RGPD et l'audit.
+    Supprime également les messages associés dans crm_lead_messages.
+    """
+    if not lead_ids:
+        return 0
+
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        placeholders = ','.join('?' * len(lead_ids))
+
+        # Copie dans la table d'archives avec sélection explicite
+        c.execute(f"""
+            INSERT INTO crm_leads_archived (
+                lead_id, canal_source, canal_id, prenom, nom, email, whatsapp,
+                temperature, phase_actuelle, douleur_identifiee, score_dur,
+                offre_matchee_id, created_at, last_contact_at, conversation_count,
+                archived_at, motif
+            )
+            SELECT 
+                id, canal_source, canal_id, prenom, nom, email, whatsapp,
+                temperature, phase_actuelle, douleur_identifiee, score_dur,
+                offre_matchee_id, created_at, last_contact_at, conversation_count,
+                datetime('now'), ?
+            FROM crm_leads
+            WHERE id IN ({placeholders})
+        """, (motif, *lead_ids))
+
+        # Suppression des messages associés
+        c.execute(f"DELETE FROM crm_lead_messages WHERE lead_id IN ({placeholders})", tuple(lead_ids))
+
+        # Suppression dans crm_leads
+        c.execute(f"DELETE FROM crm_leads WHERE id IN ({placeholders})", tuple(lead_ids))
+        deleted_count = c.rowcount
+        conn.commit()
+        return deleted_count
+    finally:
+        conn.close()
+
+
+def clean_test_leads() -> Dict[str, Any]:
+    """
+    Nettoie les faux leads contenant 'Test' ou 'test' dans leur nom ou prénom (Partie 6).
+    Fusionne les doublons par canal_id en conservant le lead le plus ancien.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        # 1. Identifier les leads de test
+        c.execute("""
+            SELECT id FROM crm_leads 
+            WHERE nom_complet LIKE '%Test%' 
+               OR nom_lead LIKE '%Test%' 
+               OR prenom LIKE '%Test%' 
+               OR prenom LIKE '%test%'
+               OR nom LIKE '%Test%'
+        """)
+        test_ids = [r[0] for r in c.fetchall()]
+
+        deleted_tests = 0
+        if test_ids:
+            deleted_tests = archive_before_delete(test_ids, motif="nettoyage_tests")
+
+        # 2. Fusionner d'éventuels doublons par canal_id (garder le plus ancien, migrer messages)
+        c.execute("""
+            SELECT canal_id, MIN(id) as primary_id, COUNT(*) as cnt
+            FROM crm_leads
+            WHERE canal_id IS NOT NULL AND canal_id != ''
+            GROUP BY canal_id HAVING cnt > 1
+        """)
+        dup_canals = c.fetchall()
+        merged_count = 0
+        for dup in dup_canals:
+            cid_val, primary_id = dup[0], dup[1]
+            c.execute("""
+                UPDATE crm_lead_messages 
+                SET lead_id = ? 
+                WHERE lead_id IN (
+                    SELECT id FROM crm_leads WHERE canal_id = ? AND id != ?
+                )
+            """, (primary_id, cid_val, primary_id))
+            c.execute("DELETE FROM crm_leads WHERE canal_id = ? AND id != ?", (cid_val, primary_id))
+            merged_count += c.rowcount
+
+        conn.commit()
+        return {
+            "success": True,
+            "deleted_test_leads": deleted_tests,
+            "merged_duplicates": merged_count
+        }
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     init_db()
     print("=== Base de données initialisée avec succès ===")
+

@@ -1072,18 +1072,47 @@
           </div>
         </div>
 
-        <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE SANS SCROLLER ==================== -->
-        <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 shadow-sm space-y-0">
+        <!-- KPI WIDGETS CRM EN HAUT -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <span class="text-slate-500 font-semibold text-xs">Total Leads</span>
+            <div class="text-2xl font-black text-slate-900 mt-1" id="crm-stat-total">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Base de contacts</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <span class="text-slate-500 font-semibold text-xs">Leads Chauds 🔥</span>
+            <div class="text-2xl font-black text-amber-600 mt-1" id="crm-stat-chauds">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Forte intention d'achat</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <span class="text-slate-500 font-semibold text-xs">Clients Convertis ✅</span>
+            <div class="text-2xl font-black text-emerald-600 mt-1" id="crm-stat-convertis">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Transactions conclues</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
+            <span class="text-slate-500 font-semibold text-xs">Score DUR Moyen</span>
+            <div class="text-2xl font-black text-[#0062ff] mt-1" id="crm-stat-dur-moyen">0/100</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Qualification moyenne</div>
+          </div>
+          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs" id="crm-stat-48h-card">
+            <span class="text-slate-500 font-semibold text-xs">Inactifs > 48h ⚠️</span>
+            <div class="text-2xl font-black text-slate-600 mt-1" id="crm-stat-inactifs">0</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Relance requise</div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE ==================== -->
+        <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 shadow-sm space-y-0 relative">
           <!-- Barre d'outils de Recherche & Filtres Avancés -->
           <div class="p-4 bg-white border-b border-slate-200 flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
-            <!-- Champ de Recherche Rapide (Recherche instantanée sans scroller) -->
+            <!-- Champ de Recherche Rapide -->
             <div class="relative flex-1 min-w-[280px] max-w-xl">
               <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
               <input 
                 id="crm-lead-search" 
                 type="text" 
                 oninput="handleLeadSearchInput(this.value)"
-                placeholder="Rechercher par nom, téléphone (+229...), WhatsApp, intérêt, source, pays..." 
+                placeholder="Rechercher par nom, téléphone (+229...), WhatsApp, email, douleur, offre..." 
                 class="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 placeholder-slate-400 transition"
               />
               <button 
@@ -1097,11 +1126,14 @@
 
             <!-- Filtres par Statut et Compteur -->
             <div class="flex items-center gap-2 flex-wrap">
-              <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs" id="crm-status-chips">
+              <div class="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs flex-wrap" id="crm-status-chips">
                 <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition">Tous</button>
                 <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-semibold transition">Chauds 🔥</button>
                 <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-emerald-800 font-semibold transition">Clients ✅</button>
                 <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-800 font-semibold transition">Tièdes</button>
+                <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-800 font-semibold transition">Froids</button>
+                <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition">Sans contact 48h ⚠️</button>
+                <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-indigo-800 font-semibold transition">Diagnostic sans offre 🎯</button>
                 <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition">Rejetés / RGPD</button>
               </div>
 
@@ -1112,24 +1144,255 @@
             </div>
           </div>
 
+          <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS FLOATING BAR) -->
+          <div id="crm-bulk-bar" class="hidden bg-slate-900 text-white px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 transition-all duration-200">
+            <div class="flex items-center gap-3">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#0062ff] animate-ping"></span>
+              <span class="text-xs font-bold"><strong id="bulk-selected-count" class="text-[#38bdf8] text-sm">0</strong> lead(s) sélectionné(s)</span>
+              <button onclick="deselectAllLeads()" class="text-[11px] text-slate-400 hover:text-white underline ml-2">Désélectionner tout (Échap)</button>
+            </div>
+            
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Changer statut -->
+              <div class="relative inline-block">
+                <select id="bulk-status-select" onchange="executeBulkStatusChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
+                  <option value="" disabled selected>Changer Statut...</option>
+                  <option value="Chaud">🔥 Marquer Chaud</option>
+                  <option value="Tiède">Marquer Tiède</option>
+                  <option value="Froid">Marquer Froid</option>
+                  <option value="Converti">✅ Marquer Client</option>
+                  <option value="Rejeté">❌ Marquer Rejeté</option>
+                </select>
+              </div>
+
+              <!-- Changer phase -->
+              <div class="relative inline-block">
+                <select id="bulk-phase-select" onchange="executeBulkPhaseChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
+                  <option value="" disabled selected>Changer Phase...</option>
+                  <option value="prise_de_contact">1. Prise de contact</option>
+                  <option value="diagnostic">2. Diagnostic</option>
+                  <option value="proposition">3. Proposition</option>
+                  <option value="closing">4. Closing / Paiement</option>
+                  <option value="suivi_client">5. Suivi Client</option>
+                </select>
+              </div>
+
+              <!-- Assigner offre -->
+              <div class="relative inline-block">
+                <select id="bulk-offer-select" onchange="executeBulkOfferChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
+                  <option value="" disabled selected>Assigner Offre...</option>
+                  <!-- Rempli dynamiquement par les offres du catalogue -->
+                </select>
+              </div>
+
+              <!-- Export rapide -->
+              <button onclick="bulkCopyContacts('whatsapp')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="Copier les numéros WhatsApp séparés par des virgules">
+                <i data-lucide="copy" class="w-3 h-3"></i> Copier WA
+              </button>
+              <button onclick="bulkCopyContacts('email')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="Copier les emails séparés par des virgules">
+                <i data-lucide="mail" class="w-3 h-3"></i> Copier Emails
+              </button>
+
+              <!-- Supprimer (Niveau 1 Modal) -->
+              <button onclick="openBulkDeleteModal()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> Supprimer
+              </button>
+            </div>
+          </div>
+
           <!-- Tableau avec En-tête Fixe (Sticky) & Défilement Fluide -->
-          <div class="overflow-x-auto max-h-[580px] overflow-y-auto">
+          <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
             <table class="w-full text-left text-xs">
               <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
                 <tr>
-                  <th class="p-3.5">Nom & Contact</th>
-                  <th class="p-3.5">Canal d'Attraction</th>
-                  <th class="p-3.5">Intérêt & Rôle</th>
+                  <!-- Colonne 0 : Sélection Checkbox -->
+                  <th class="p-3.5 w-10 text-center">
+                    <input 
+                      type="checkbox" 
+                      id="crm-select-all" 
+                      onchange="toggleSelectAllLeads(this.checked)" 
+                      class="rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
+                    />
+                  </th>
+                  <!-- Colonne 1 : Lead -->
+                  <th class="p-3.5">Lead</th>
+                  <!-- Colonne 2 : Contact -->
+                  <th class="p-3.5">Contact</th>
+                  <!-- Colonne 3 : Douleur identifiée -->
+                  <th class="p-3.5">Douleur Identifiée</th>
+                  <!-- Colonne 4 : Score DUR -->
                   <th class="p-3.5">Score DUR</th>
+                  <!-- Colonne 5 : Profil DISC -->
                   <th class="p-3.5">Profil DISC</th>
-                  <th class="p-3.5">Statut</th>
-                  <th class="p-3.5 text-right">Actions & Échanges</th>
+                  <!-- Colonne 6 : Offre matchée -->
+                  <th class="p-3.5">Offre Matchée</th>
+                  <!-- Colonne 7 : Statut & Suivi -->
+                  <th class="p-3.5">Statut & Suivi</th>
+                  <!-- Colonne 8 : Actions -->
+                  <th class="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 text-slate-800 bg-white">
                 <!-- Rempli par JavaScript -->
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- ==================== MODAL DE CONFIRMATION DE SUPPRESSION (NIVEAU 1) ==================== -->
+        <div id="modal-bulk-delete" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="p-5 border-b border-rose-100 bg-rose-50/70 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-black text-rose-900">Confirmation de Suppression</h3>
+                <p class="text-xs text-rose-700 mt-0.5">Double vérification requise</p>
+              </div>
+            </div>
+            <div class="p-5 space-y-4 text-xs text-slate-600">
+              <p>
+                Vous êtes sur le point de supprimer <strong id="delete-modal-lead-count" class="text-rose-600 font-bold">0</strong> lead(s).
+              </p>
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-[11px] text-slate-500">
+                <div class="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-600"></i> Protection Automatique Niveau 2
+                </div>
+                <p>Les leads et leurs historiques seront archivés de manière sécurisée dans <code class="text-slate-800 font-mono bg-white px-1 py-0.5 rounded border border-slate-200">crm_leads_archived</code> pour permettre un audit ou une restauration ultérieure.</p>
+              </div>
+              <div class="space-y-1.5">
+                <label class="block text-slate-700 font-bold">
+                  Tapez <span class="text-rose-600 font-black">SUPPRIMER</span> pour confirmer :
+                </label>
+                <input 
+                  type="text" 
+                  id="delete-confirm-input" 
+                  oninput="handleDeleteConfirmInput(this.value)" 
+                  placeholder="SUPPRIMER" 
+                  class="w-full p-2.5 border border-slate-200 rounded-xl font-bold uppercase text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button onclick="closeBulkDeleteModal()" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition">
+                Annuler
+              </button>
+              <button 
+                id="btn-confirm-delete" 
+                onclick="executeBulkDelete()" 
+                disabled 
+                class="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold text-xs opacity-50 cursor-not-allowed transition flex items-center gap-1.5"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Confirmer la Suppression
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== MODAL DE MODIFICATION DU LEAD (EDITION RAPIDE) ==================== -->
+        <div id="modal-lead-edit" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[92vh] flex flex-col">
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <span class="p-2 rounded-xl bg-blue-50 text-[#0062ff] border border-blue-100">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </span>
+                <div>
+                  <h3 class="text-sm font-black text-slate-900" id="edit-lead-modal-title">Modifier le Prospect</h3>
+                  <p class="text-[11px] text-slate-500">Mise à jour directe de la fiche commerciale</p>
+                </div>
+              </div>
+              <button onclick="closeLeadEditModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 transition">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-3.5 text-xs">
+              <input type="hidden" id="edit-lead-id" />
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Prénom</label>
+                  <input type="text" id="edit-lead-prenom" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" />
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Nom</label>
+                  <input type="text" id="edit-lead-nom" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">WhatsApp / Tél</label>
+                  <input type="text" id="edit-lead-whatsapp" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="+229..." />
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Email</label>
+                  <input type="email" id="edit-lead-email" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="exemple@mail.com" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-600 font-semibold mb-1">Profil LinkedIn URL</label>
+                <input type="text" id="edit-lead-linkedin" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="https://linkedin.com/in/..." />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Statut / Température</label>
+                  <select id="edit-lead-statut" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800 bg-white">
+                    <option value="Chaud">🔥 Chaud</option>
+                    <option value="Tiède">Tiède</option>
+                    <option value="Froid">Froid</option>
+                    <option value="Converti">✅ Converti (Client)</option>
+                    <option value="Rejeté">❌ Rejeté</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Phase du Funnel</label>
+                  <select id="edit-lead-phase" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800 bg-white">
+                    <option value="prise_de_contact">1. Prise de contact</option>
+                    <option value="diagnostic">2. Diagnostic</option>
+                    <option value="proposition">3. Proposition</option>
+                    <option value="closing">4. Closing / Paiement</option>
+                    <option value="suivi_client">5. Suivi Client</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-600 font-semibold mb-1">Douleur Identifiée</label>
+                <textarea id="edit-lead-douleur" rows="2" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="Ex: Manque de visibilité, prospection irrégulière..."></textarea>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Profil DISC</label>
+                  <select id="edit-lead-disc" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800 bg-white">
+                    <option value="D">D (Dominant - Direct, rapide)</option>
+                    <option value="I">I (Influent - Chaleureux, relationnel)</option>
+                    <option value="S">S (Stable - Prudent, méthodique)</option>
+                    <option value="C">C (Conforme - Analytique, factuel)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-semibold mb-1">Offre Matchée</label>
+                  <select id="edit-lead-offre" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800 bg-white">
+                    <option value="">Aucune offre matchée</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-600 font-semibold mb-1">Prochaine Action Planifiée</label>
+                <input type="text" id="edit-lead-prochaine-action" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="Ex: Relance WhatsApp 48h..." />
+              </div>
+              <div>
+                <label class="block text-slate-600 font-semibold mb-1">Notes Internes</label>
+                <textarea id="edit-lead-notes" rows="2" class="w-full p-2 border border-slate-200 rounded-lg text-slate-800" placeholder="Notes commerciales confidentielles..."></textarea>
+              </div>
+            </div>
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+              <button onclick="closeLeadEditModal()" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition">
+                Annuler
+              </button>
+              <button onclick="saveLeadEditForm()" class="px-4 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Enregistrer
+              </button>
+            </div>
           </div>
         </div>
 
