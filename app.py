@@ -139,9 +139,15 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.serve_file(file_path, mime_type or "application/octet-stream")
             return
 
-        # 3. ROUTES PAGES DE VENTE PUBLIQUES HAUTE CONVERSION
+        # 3. ROUTES PUBLIQUES (VENTE, POLITIQUE DE CONFIDENTIALITÉ, SUPPRESSION DES DONNÉES)
         if path.startswith("/vente/") or path.startswith("/p/"):
             self.handle_sales_page(path)
+            return
+        elif path in ("/politique-confidentialite", "/privacy", "/confidentialite"):
+            self.handle_privacy_page()
+            return
+        elif path in ("/suppression-donnees", "/data-deletion"):
+            self.handle_data_deletion_page()
             return
 
         # 4. VÉRIFICATION D'AUTHENTIFICATION PUBLIQUE
@@ -999,6 +1005,117 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "success": success,
             "message": "Historique réinitialisé avec succès."
         })
+
+    def handle_privacy_page(self):
+        html = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Politique de Confidentialité | Commercial IA Autonome</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen py-10 px-4">
+  <div class="max-w-3xl mx-auto bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200">
+    <div class="border-b border-slate-200 pb-6 mb-8">
+      <span class="inline-block px-3 py-1 bg-blue-50 text-blue-700 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">Conformité RGPD & Meta</span>
+      <h1 class="text-3xl font-black text-slate-900 tracking-tight">Politique de Confidentialité</h1>
+      <p class="text-slate-500 text-sm mt-1">Dernière mise à jour : Octobre 2026 &bull; Plateforme Commerciale Autonome & Page Facebook « Agent Plus »</p>
+    </div>
+
+    <div class="space-y-6 text-sm text-slate-700 leading-relaxed">
+      <section>
+        <h2 class="text-base font-bold text-slate-900 mb-2">1. Responsable du Traitement</h2>
+        <p>L'application <strong>Autonome agent</strong> et la Page Facebook <strong>Agent Plus</strong> sont éditées et exploitées par la Direction Commerciale (Responsable : Dave Sagbo).</p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-slate-900 mb-2">2. Données Collectées</h2>
+        <p>Dans le cadre strict des échanges avec nos services via Facebook Messenger, WhatsApp ou notre plateforme, nous pouvons traiter les données suivantes :</p>
+        <ul class="list-disc pl-5 mt-2 space-y-1">
+          <li>Nom et prénom publics de votre compte de messagerie ;</li>
+          <li>Identifiant technique de messagerie (Page-Scoped ID / PSID) ;</li>
+          <li>Contenu des messages, questions et demandes d'information transmis volontairement ;</li>
+          <li>Numéro de téléphone ou adresse e-mail (uniquement si vous nous les transmettez pour être recontacté(e)).</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-slate-900 mb-2">3. Finalité du Traitement</h2>
+        <p>Vos données sont exclusivement utilisées pour :</p>
+        <ul class="list-disc pl-5 mt-2 space-y-1">
+          <li>Répondre en direct à vos questions sur nos offres, catalogues et services ;</li>
+          <li>Établir des propositions commerciales, devis ou liens de paiement sécurisés à votre demande ;</li>
+          <li>Assurer le suivi relationnel et le service après-vente.</li>
+        </ul>
+        <p class="mt-2 text-slate-600 font-medium">Nous ne vendons, ne louons et ne cédons aucune donnée personnelle à des tiers.</p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-slate-900 mb-2">4. Durée de Conservation</h2>
+        <p>Les données de contact sont conservées pendant la durée nécessaire à la relation commerciale, avec un archivage conforme aux recommandations de protection des données (durée maximale de 24 mois sans interaction).</p>
+      </section>
+
+      <section>
+        <h2 class="text-base font-bold text-slate-900 mb-2">5. Vos Droits & Suppression des Données</h2>
+        <p>Conformément aux réglementations sur la protection des données (RGPD), vous disposez d'un droit permanent d'accès, de rectification et de suppression de vos données.</p>
+        <p class="mt-2">Pour demander la suppression immédiate de vos données personnelles :</p>
+        <ul class="list-disc pl-5 mt-1 space-y-1">
+          <li>Envoyez simplement le mot <strong>STOP</strong> dans la conversation Messenger ou WhatsApp ;</li>
+          <li>Ou consultez notre page d'instructions de suppression : <a href="/suppression-donnees" class="text-blue-600 underline font-semibold">Instructions de suppression des données</a>.</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="mt-10 pt-6 border-t border-slate-200 text-xs text-slate-500 text-center">
+      &copy; 2026 Commercial IA Autonome &bull; Tous droits réservés.
+    </div>
+  </div>
+</body>
+</html>"""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(html.encode("utf-8"))))
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
+
+    def handle_data_deletion_page(self):
+        html = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suppression des Données | Commercial IA Autonome</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen py-10 px-4">
+  <div class="max-w-2xl mx-auto bg-white p-8 md:p-10 rounded-2xl shadow-sm border border-slate-200">
+    <div class="border-b border-slate-200 pb-5 mb-6">
+      <h1 class="text-2xl font-black text-slate-900">Demande de Suppression des Données Utilisateur</h1>
+      <p class="text-slate-500 text-xs mt-1">Conformité aux politiques de plateforme Meta Facebook & WhatsApp</p>
+    </div>
+
+    <div class="space-y-4 text-sm text-slate-700 leading-relaxed">
+      <p>Si vous souhaitez supprimer définitivement toutes les informations associées à votre profil Facebook ou WhatsApp de notre système, voici les démarches simples :</p>
+      
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <h3 class="font-bold text-slate-900 mb-1">Option 1 : Suppression automatique par mot-clé</h3>
+        <p class="text-xs text-slate-600">Envoyez simplement le mot <strong>STOP</strong> ou <strong>OUBLI</strong> dans votre messagerie Messenger sur notre Page <strong>Agent Plus</strong>. Notre agent traitera votre désinscription et anonymisera vos données sous 24 heures.</p>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+        <h3 class="font-bold text-slate-900 mb-1">Option 2 : Suppression depuis les paramètres Facebook</h3>
+        <p class="text-xs text-slate-600">Rendez-vous dans vos Paramètres Facebook &gt; Applications et sites web &gt; Sélectionnez <strong>Autonome agent</strong> et cliquez sur <strong>Supprimer</strong>.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>"""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(html.encode("utf-8"))))
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
 
     def handle_sales_page(self, path):
         parts = [p for p in path.split("/") if p]
