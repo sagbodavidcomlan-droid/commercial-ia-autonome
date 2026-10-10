@@ -10,10 +10,12 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Invo.">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
-  <!-- Google Font: Plus Jakarta Sans -->
+  <!-- Google Fonts: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Design System Fasty CSS -->
+  <link rel="stylesheet" href="/static/css/design-system.css">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Chart.js (Local bundle with CDN fallback) -->
@@ -22,7 +24,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    * { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    * { font-family: var(--font-sans); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f5f9; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -222,171 +224,161 @@
     </div>
   </div>
 
-  <!-- TOP HEADER (INVO STYLE) -->
-  <header class="h-16 border-b border-slate-200/80 bg-white px-3 sm:px-6 flex items-center justify-between z-20">
+  <!-- TOP BAR FIXE (FASTY STYLE) -->
+  <header class="topbar">
     <!-- Left: Mobile Hamburger & Search Bar -->
-    <div class="flex items-center gap-2 sm:gap-3">
+    <div class="flex items-center gap-3 flex-1 max-w-xl">
       <!-- Mobile Hamburger Toggle -->
       <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors focus:outline-none" aria-label="Menu de Navigation">
         <i data-lucide="menu" class="w-5 h-5"></i>
       </button>
 
       <!-- Logo on Mobile Header -->
-      <div class="flex items-center gap-1.5 md:hidden">
+      <div class="flex items-center gap-2 md:hidden">
         <div class="w-7 h-7 rounded-lg bg-[#0062ff] flex items-center justify-center text-white">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
         </div>
-        <span class="text-lg font-black text-slate-900 tracking-tight">Invo<span class="text-[#0062ff]">.</span></span>
+        <span class="text-base font-extrabold text-slate-900 tracking-tight">Invo<span class="text-[#0062ff]">.</span></span>
       </div>
 
-      <!-- Search Bar -->
-      <div class="hidden sm:block relative w-44 md:w-72 lg:w-80">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-        <input type="text" placeholder="Tap to search..." class="w-full pl-10 pr-4 py-2 bg-slate-100/80 hover:bg-slate-100 border-none rounded-full text-xs text-slate-700 placeholder-slate-400 focus:bg-white focus:ring-2 focus:ring-[#0062ff]/20 transition-all">
+      <!-- Topbar Search Input (Pilule Fasty) -->
+      <div class="topbar-search hidden sm:block w-full max-w-md">
+        <i data-lucide="search" class="topbar-search-icon"></i>
+        <input type="text" id="global-topbar-search" oninput="handleGlobalTopbarSearch(this.value)" placeholder="Rechercher prospect, offre, analyse..." />
       </div>
     </div>
 
     <!-- Right: Autopilot Sprint, Exports & User Profile -->
-    <div class="flex items-center gap-2 sm:gap-3">
-
+    <div class="topbar-right">
       <!-- Evaluation Grade Pill -->
-      <div class="hidden lg:flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/60 px-3 py-1.5 rounded-full text-xs text-emerald-700 font-semibold">
+      <div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
         <i data-lucide="award" class="w-3.5 h-3.5 text-emerald-600"></i>
         <span id="header-eval-grade">Grade A (78/100)</span>
       </div>
 
       <!-- Bouton Master Pause / Autonomie IA -->
-      <button onclick="toggleAutopilot24h()" id="btn-header-status-toggle" title="Cliquez pour basculer entre Mode 100% Autonome et Mode Pause / Supervision" class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="status-pulse-dot"></span>
+      <button onclick="toggleAutopilot24h()" id="btn-header-status-toggle" title="Basculer entre Mode Autonome et Mode Pause" class="btn btn-sm btn-secondary">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="status-pulse-dot"></span>
         <span id="header-status-text">🟢 IA Active</span>
       </button>
 
       <!-- Autopilot Sprint Action -->
-      <button onclick="triggerAutopilotSprint()" id="btn-header-autopilot" class="flex items-center gap-1.5 sm:gap-2 bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-bold px-2.5 sm:px-3.5 py-2 rounded-xl transition-all shadow-md shadow-blue-500/20">
+      <button onclick="triggerAutopilotSprint()" id="btn-header-autopilot" class="btn btn-sm btn-primary">
         <i data-lucide="zap" class="w-3.5 h-3.5"></i>
         <span class="hidden sm:inline">Sprint Autonome</span>
         <span class="sm:hidden">Sprint</span>
       </button>
 
       <!-- Dossier PDF -->
-      <button onclick="window.open('/api/export/dossier', '_blank')" class="hidden md:flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all">
+      <button onclick="window.open('/api/export/dossier', '_blank')" class="btn btn-sm btn-secondary hidden md:inline-flex">
         <i data-lucide="printer" class="w-3.5 h-3.5 text-slate-500"></i>
         <span>PDF</span>
       </button>
 
-      <!-- Rapport Directeur -->
-      <button onclick="openReportModal()" class="hidden lg:flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200/70 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all">
-        <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-500"></i>
-        <span>Rapport</span>
-      </button>
-
       <!-- Notification Bell -->
-      <button class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-all relative">
+      <button class="notif-btn" title="Notifications">
         <i data-lucide="bell" class="w-4 h-4"></i>
-        <span class="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-2 h-2 rounded-full bg-[#0062ff]"></span>
+        <span class="notif-badge"></span>
       </button>
 
       <!-- Lock Screen / Logout Button -->
-      <button onclick="logoutAdmin()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 text-xs font-bold transition shadow-2xs" title="Verrouiller la session (Protection Anti-Intrusion)">
+      <button onclick="logoutAdmin()" class="btn btn-sm btn-secondary" title="Verrouiller la session">
         <i data-lucide="lock" class="w-3.5 h-3.5"></i>
         <span class="hidden sm:inline">Verrouiller</span>
       </button>
 
       <!-- User Avatar Profile -->
-      <div class="flex items-center gap-2 pl-1 sm:pl-2 border-l border-slate-200">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-100 ring-2 ring-blue-500/20 flex items-center justify-center font-extrabold text-xs text-[#0062ff]">
-          DS
-        </div>
-        <div class="hidden xl:block text-left">
-          <div class="text-xs font-bold text-slate-900 leading-tight">David Spade</div>
-          <div class="text-[10px] text-slate-400 font-medium">Sales Admin</div>
-        </div>
+      <div class="avatar" title="Dave Sagbo (Administrateur)">
+        DS
       </div>
     </div>
   </header>
 
-  <!-- BODY CONTENT (SIDEBAR + MAIN TABS) -->
+  <!-- BODY CONTENT (SIDEBAR + MAIN CONTENT) -->
   <div class="flex-1 flex overflow-hidden relative">
 
     <!-- Mobile Backdrop Overlay -->
     <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 hidden md:hidden transition-opacity"></div>
 
-    <!-- LEFT SIDEBAR NAVIGATION (INVO STYLE & MOBILE DRAWER) -->
-    <aside id="main-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200/80 bg-white flex flex-col p-4 gap-1 select-none transform -translate-x-full md:translate-x-0 md:static md:z-auto transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none">
+    <!-- LEFT SIDEBAR NAVIGATION (240px FIXE FASTY) -->
+    <aside id="main-sidebar" class="sidebar">
       <!-- Logo Invo. + Mobile Close -->
-      <div class="flex items-center justify-between px-3 py-3 mb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-xl bg-[#0062ff] flex items-center justify-center text-white shadow-md shadow-blue-500/30">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>
-          </div>
-          <span class="text-2xl font-black text-slate-900 tracking-tight">Invo<span class="text-[#0062ff]">.</span></span>
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
         </div>
+        <span>Invo<span class="text-[#0062ff]">.</span></span>
         <!-- Mobile close button -->
-        <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100" title="Fermer le menu">
+        <button onclick="toggleMobileSidebar()" class="md:hidden ml-auto text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100" title="Fermer le menu">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">Modules Opérationnels</div>
+      <div class="sidebar-nav">
+        <div class="nav-section-title">Opérations</div>
 
-      <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-btn active flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-white bg-[#0062ff] shadow-md shadow-blue-500/25">
-        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-        Tableau de Bord
-      </button>
+        <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-item active">
+          <i data-lucide="layout-dashboard" class="nav-icon"></i>
+          <span>Dashboard</span>
+        </button>
 
-      <button onclick="showTab('director')" id="nav-director" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="target" class="w-4 h-4 text-slate-400"></i>
-        Objectifs & Évaluation
-      </button>
+        <button onclick="showTab('crm')" id="nav-crm" class="nav-item">
+          <i data-lucide="users" class="nav-icon"></i>
+          <span>CRM Leads</span>
+        </button>
 
-      <button onclick="showTab('simulator')" id="nav-simulator" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="messages-square" class="w-4 h-4 text-slate-400"></i>
-        Cockpit de Négociation IA
-      </button>
+        <button onclick="showTab('simulator')" id="nav-simulator" class="nav-item">
+          <i data-lucide="messages-square" class="nav-icon"></i>
+          <span>Conversations</span>
+        </button>
 
-      <button onclick="showTab('agenda')" id="nav-agenda" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="calendar-days" class="w-4 h-4 text-slate-400"></i>
-        Calendrier Commercial
-      </button>
+        <button onclick="showTab('pipeline')" id="nav-pipeline" class="nav-item">
+          <i data-lucide="columns-3" class="nav-icon"></i>
+          <span>Pipeline</span>
+        </button>
 
-      <button onclick="showTab('crm')" id="nav-crm" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
-        CRM & Audit Conversions
-      </button>
+        <button onclick="showTab('director')" id="nav-director" class="nav-item">
+          <i data-lucide="bar-chart-3" class="nav-icon"></i>
+          <span>Analytics</span>
+        </button>
 
-      <button onclick="showTab('catalog')" id="nav-catalog" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="package" class="w-4 h-4 text-slate-400"></i>
-        Catalogue & Gestion Stocks
-      </button>
+        <button onclick="showTab('catalog')" id="nav-catalog" class="nav-item">
+          <i data-lucide="package" class="nav-icon"></i>
+          <span>Catalogue</span>
+        </button>
 
-      <button onclick="showTab('history')" id="nav-history" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="history" class="w-4 h-4 text-slate-400"></i>
-        <span>Historique d'Activité</span>
-        <span class="ml-auto flex h-2 w-2 relative" title="Synchronisation en continu active">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-      </button>
+        <button onclick="showTab('agenda')" id="nav-agenda" class="nav-item">
+          <i data-lucide="calendar-days" class="nav-icon"></i>
+          <span>Calendrier</span>
+        </button>
 
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 mt-4 mb-2">Configuration</div>
+        <button onclick="showTab('history')" id="nav-history" class="nav-item">
+          <i data-lucide="history" class="nav-icon"></i>
+          <span>Historique</span>
+        </button>
 
-      <button onclick="showTab('settings')" id="nav-settings" class="nav-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100/80">
-        <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
-        Paramètres & Moteur IA
-      </button>
+        <div class="nav-section-title">Configuration</div>
 
-      <!-- Bottom Mini-Info -->
-      <div class="mt-auto p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
-        <div class="flex items-center gap-2 font-bold text-slate-800">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Agent IA Connecté
+        <button onclick="showTab('settings')" id="nav-settings" class="nav-item">
+          <i data-lucide="sliders-horizontal" class="nav-icon"></i>
+          <span>Paramètres</span>
+        </button>
+      </div>
+
+      <!-- Bottom Mini-Info (Fasty Status) -->
+      <div class="sidebar-footer">
+        <div class="agent-status-mini">
+          <div class="flex items-center">
+            <span class="status-dot"></span>
+            <strong class="text-slate-800 text-xs">Agent IA Actif</strong>
+          </div>
+          <span class="text-[11px] text-slate-500">Ronde toutes les 2 min</span>
         </div>
-        <p class="text-[11px] text-slate-500 mt-1 font-medium">Moteur Hybride Autonome</p>
       </div>
     </aside>
 
-    <!-- MAIN VIEW AREA -->
-    <main class="flex-1 overflow-y-auto p-6 bg-[#f4f7fe]">
+    <!-- MAIN VIEW AREA (FASTY LAYOUT) -->
+    <main class="main-content flex-1 overflow-y-auto">
 
       <!-- ==================== TAB 1 : TABLEAU DE BORD (INVO STYLE) ==================== -->
       <section id="tab-dashboard" class="tab-pane space-y-6">
@@ -1072,247 +1064,212 @@
           </div>
         </div>
 
-        <!-- BANNIÈRE ÉTAT EN TEMPS RÉEL DE L'AGENT IA (POLLER 24/7) -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 border border-slate-200/90 bg-white shadow-xs">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-            <!-- Identité & Statut Agent -->
-            <div class="flex items-center gap-3.5 min-w-[280px]">
-              <div class="w-11 h-11 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black text-xl shrink-0 shadow-2xs border border-blue-100">
-                🤖
+        <!-- BANNIÈRE ÉTAT EN TEMPS RÉEL DE L'AGENT IA (POLLER FASTY) -->
+        <div class="agent-dashboard">
+          <div class="agent-dashboard-left">
+            <div class="agent-avatar-wrap">🤖</div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-slate-900 tracking-tight">AGENT IA COMMERCIAL</h3>
+                <span id="poller-status-badge" class="poller-badge actif">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)
+                </span>
               </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="text-sm font-black text-slate-900 tracking-tight">AGENT IA COMMERCIAL</h3>
-                  <span id="poller-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Ronde Active (2 min)
-                  </span>
-                </div>
-                <p class="text-xs text-slate-500 mt-0.5" id="poller-last-run-text">
-                  Dernière ronde d'inspection : <strong class="text-slate-700">Il y a quelques instants</strong>
-                </p>
-              </div>
+              <p class="text-xs text-slate-500 mt-0.5" id="poller-last-run-text">
+                Dernière ronde d'inspection : <strong class="text-slate-700">Il y a quelques instants</strong>
+              </p>
             </div>
+          </div>
 
-            <!-- Séparateur visuel desktop -->
-            <div class="hidden lg:block w-px h-10 bg-slate-200"></div>
-
-            <!-- Stats temps réel du Poller + Bouton déclencheur explicite -->
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-xs">
-              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Traités aujourd'hui</span>
-                <span class="text-sm font-black text-slate-800" id="poller-today-count">0</span>
-              </div>
-              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs" id="poller-pending-box">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">En attente active</span>
-                <span class="text-sm font-black text-slate-800" id="poller-pending-count">0</span>
-              </div>
-              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Temps moyen</span>
-                <span class="text-sm font-black text-[#0062ff]" id="poller-avg-time">2.4 min</span>
-              </div>
-              <div class="px-3 py-1.5 rounded-xl bg-slate-50/80 border border-slate-200/80 shadow-2xs">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Taux &lt; 5 min</span>
-                <span class="text-sm font-black text-emerald-600" id="poller-rate-5m">95%</span>
-              </div>
-              <button onclick="triggerPollerInspection()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-xs font-bold transition shadow-2xs" title="Lancer une ronde d'inspection manuelle immédiate">
-                <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                <span>Lancer ronde</span>
-              </button>
+          <!-- Stats temps réel du Poller + Bouton déclencheur -->
+          <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-xs">
+            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Traités aujourd'hui</span>
+              <span class="text-sm font-black text-slate-800" id="poller-today-count">0</span>
             </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200" id="poller-pending-box">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">En attente active</span>
+              <span class="text-sm font-black text-slate-800" id="poller-pending-count">0</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Temps moyen</span>
+              <span class="text-sm font-black text-[#0062ff]" id="poller-avg-time">2.4 min</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Taux &lt; 5 min</span>
+              <span class="text-sm font-black text-emerald-600" id="poller-rate-5m">95%</span>
+            </div>
+            <button onclick="triggerPollerInspection()" class="btn btn-sm btn-primary" title="Lancer une ronde d'inspection immédiate">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              <span>Lancer ronde</span>
+            </button>
           </div>
         </div>
 
-        <!-- KPI WIDGETS CRM EN HAUT -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
-            <span class="text-slate-500 font-semibold text-xs">Total Leads</span>
-            <div class="text-2xl font-black text-slate-900 mt-1" id="crm-stat-total">0</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Base de contacts</div>
+        <!-- KPI WIDGETS CRM EN HAUT (FASTY GRID 5 COLONNES) -->
+        <div class="kpi-grid">
+          <div class="kpi-card fade-in-up">
+            <span class="kpi-label">Total Leads</span>
+            <div class="kpi-value primary" id="crm-stat-total">0</div>
+            <div class="kpi-sublabel">Base de contacts</div>
           </div>
-          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
-            <span class="text-slate-500 font-semibold text-xs">Leads Chauds 🔥</span>
-            <div class="text-2xl font-black text-amber-600 mt-1" id="crm-stat-chauds">0</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Forte intention d'achat</div>
+          <div class="kpi-card fade-in-up">
+            <span class="kpi-label">Leads Chauds 🔥</span>
+            <div class="kpi-value warning" id="crm-stat-chauds">0</div>
+            <div class="kpi-sublabel">Forte intention d'achat</div>
           </div>
-          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
-            <span class="text-slate-500 font-semibold text-xs">Clients Convertis ✅</span>
-            <div class="text-2xl font-black text-emerald-600 mt-1" id="crm-stat-convertis">0</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Transactions conclues</div>
+          <div class="kpi-card fade-in-up">
+            <span class="kpi-label">Clients Convertis ✅</span>
+            <div class="kpi-value success" id="crm-stat-convertis">0</div>
+            <div class="kpi-sublabel">Transactions conclues</div>
           </div>
-          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs">
-            <span class="text-slate-500 font-semibold text-xs">Score DUR Moyen</span>
-            <div class="text-2xl font-black text-[#0062ff] mt-1" id="crm-stat-dur-moyen">0/100</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Qualification moyenne</div>
+          <div class="kpi-card fade-in-up">
+            <span class="kpi-label">Score DUR Moyen</span>
+            <div class="kpi-value primary" id="crm-stat-dur-moyen">0/100</div>
+            <div class="kpi-sublabel">Qualification moyenne</div>
           </div>
-          <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs" id="crm-stat-48h-card">
-            <span class="text-slate-500 font-semibold text-xs">Inactifs > 48h ⚠️</span>
-            <div class="text-2xl font-black text-slate-600 mt-1" id="crm-stat-inactifs">0</div>
-            <div class="text-[11px] text-slate-400 mt-0.5">Relance requise</div>
+          <div class="kpi-card fade-in-up" id="crm-stat-48h-card">
+            <span class="kpi-label">Inactifs > 48h ⚠️</span>
+            <div class="kpi-value danger" id="crm-stat-inactifs">0</div>
+            <div class="kpi-sublabel">Relance requise</div>
           </div>
         </div>
 
         <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE ==================== -->
-        <div class="glass-card rounded-2xl overflow-hidden border border-slate-200 shadow-sm space-y-0 relative">
-          <!-- Barre d'outils de Recherche & Filtres Avancés -->
-          <div class="p-4 bg-white border-b border-slate-200 flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
-            <!-- Champ de Recherche Rapide -->
-            <div class="relative flex-1 min-w-[280px] max-w-md">
-              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-              <input 
-                id="crm-lead-search" 
-                type="text" 
-                oninput="handleLeadSearchInput(this.value)"
-                placeholder="Rechercher nom, téléphone, WhatsApp, email, douleur, offre..." 
-                class="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 placeholder-slate-400 transition"
-              />
-              <button 
-                id="crm-lead-search-clear" 
-                onclick="clearLeadSearch()" 
-                title="Effacer la recherche"
-                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded transition">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-
-            <!-- Filtres par Statut sur une seule ligne défilable et Compteur -->
-            <div class="flex items-center gap-3 overflow-hidden w-full xl:w-auto justify-between xl:justify-end">
-              <div class="filter-bar-wrapper flex-1 xl:flex-initial overflow-x-auto py-1 scrollbar-none" style="overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">
-                <div class="inline-flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs" id="crm-status-chips">
-                  <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Tous</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0062ff] font-bold" id="tab-count-Tous">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-amber-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Chauds 🔥</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Chaud">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-emerald-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Clients ✅</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Converti">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-blue-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Tièdes</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Tiède">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Froids</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Froid">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Sans contact 48h ⚠️</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-48h_inactif">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-indigo-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Diagnostic sans offre 🎯</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-diag_sans_offre">0</span>
-                  </button>
-                  <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-rose-800 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap">
-                    <span>Rejetés / RGPD</span>
-                    <span class="tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold" id="tab-count-Rejeté">0</span>
-                  </button>
-                </div>
-              </div>
-
-              <!-- Compteur contextuel -->
-              <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 whitespace-nowrap shrink-0">
-                0 leads
-              </div>
-            </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-4 flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
+          <!-- Champ de Recherche Rapide -->
+          <div class="relative flex-1 min-w-[280px] max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            <input 
+              id="crm-lead-search" 
+              type="text" 
+              oninput="handleLeadSearchInput(this.value)"
+              placeholder="Rechercher nom, téléphone, WhatsApp, email, douleur, offre..." 
+              class="input pl-10 pr-9 py-2 text-xs rounded-full"
+            />
+            <button 
+              id="crm-lead-search-clear" 
+              onclick="clearLeadSearch()" 
+              title="Effacer la recherche"
+              class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded transition">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
 
-          <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS FLOATING BAR) -->
-          <div id="crm-bulk-bar" class="hidden bg-slate-900 text-white px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3 border-b border-slate-800 transition-all duration-200">
-            <div class="flex items-center gap-3">
-              <span class="w-2.5 h-2.5 rounded-full bg-[#0062ff] animate-ping"></span>
-              <span class="text-xs font-bold"><strong id="bulk-selected-count" class="text-[#38bdf8] text-sm">0</strong> lead(s) sélectionné(s)</span>
-              <button onclick="deselectAllLeads()" class="text-[11px] text-slate-400 hover:text-white underline ml-2">Désélectionner tout (Échap)</button>
-            </div>
-            
-            <div class="flex items-center gap-2 flex-wrap">
-              <!-- Changer statut -->
-              <div class="relative inline-block">
-                <select id="bulk-status-select" onchange="executeBulkStatusChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
-                  <option value="" disabled selected>Changer Statut...</option>
-                  <option value="Chaud">🔥 Marquer Chaud</option>
-                  <option value="Tiède">Marquer Tiède</option>
-                  <option value="Froid">Marquer Froid</option>
-                  <option value="Converti">✅ Marquer Client</option>
-                  <option value="Rejeté">❌ Marquer Rejeté</option>
-                </select>
-              </div>
-
-              <!-- Changer phase -->
-              <div class="relative inline-block">
-                <select id="bulk-phase-select" onchange="executeBulkPhaseChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
-                  <option value="" disabled selected>Changer Phase...</option>
-                  <option value="prise_de_contact">1. Prise de contact</option>
-                  <option value="diagnostic">2. Diagnostic</option>
-                  <option value="proposition">3. Proposition</option>
-                  <option value="closing">4. Closing / Paiement</option>
-                  <option value="suivi_client">5. Suivi Client</option>
-                </select>
-              </div>
-
-              <!-- Assigner offre -->
-              <div class="relative inline-block">
-                <select id="bulk-offer-select" onchange="executeBulkOfferChange(this.value)" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium">
-                  <option value="" disabled selected>Assigner Offre...</option>
-                  <!-- Rempli dynamiquement par les offres du catalogue -->
-                </select>
-              </div>
-
-              <!-- Export rapide -->
-              <button onclick="bulkCopyContacts('whatsapp')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="Copier les numéros WhatsApp séparés par des virgules">
-                <i data-lucide="copy" class="w-3 h-3"></i> Copier WA
+          <!-- Filtres pilules Fasty -->
+          <div class="flex items-center gap-3 overflow-hidden w-full xl:w-auto justify-between xl:justify-end">
+            <div class="filter-bar" id="crm-status-chips">
+              <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="filter-tab active">
+                <span>Tous</span>
+                <span class="tab-count" id="tab-count-Tous">0</span>
               </button>
-              <button onclick="bulkCopyContacts('email')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 text-xs font-semibold flex items-center gap-1 transition" title="Copier les emails séparés par des virgules">
-                <i data-lucide="mail" class="w-3 h-3"></i> Copier Emails
+              <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="filter-tab">
+                <span>Chauds 🔥</span>
+                <span class="tab-count" id="tab-count-Chaud">0</span>
               </button>
-
-              <!-- Supprimer (Niveau 1 Modal) -->
-              <button onclick="openBulkDeleteModal()" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 shadow-sm transition">
-                <i data-lucide="trash-2" class="w-3 h-3"></i> Supprimer
+              <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="filter-tab">
+                <span>Clients ✅</span>
+                <span class="tab-count" id="tab-count-Converti">0</span>
+              </button>
+              <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="filter-tab">
+                <span>Tièdes</span>
+                <span class="tab-count" id="tab-count-Tiède">0</span>
+              </button>
+              <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="filter-tab">
+                <span>Froids</span>
+                <span class="tab-count" id="tab-count-Froid">0</span>
+              </button>
+              <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="filter-tab">
+                <span>Sans contact 48h ⚠️</span>
+                <span class="tab-count" id="tab-count-48h_inactif">0</span>
+              </button>
+              <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="filter-tab">
+                <span>Diagnostic sans offre 🎯</span>
+                <span class="tab-count" id="tab-count-diag_sans_offre">0</span>
+              </button>
+              <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="filter-tab">
+                <span>Rejetés / RGPD</span>
+                <span class="tab-count" id="tab-count-Rejeté">0</span>
               </button>
             </div>
-          </div>
 
-          <!-- Tableau avec En-tête Fixe (Sticky) & Défilement Fluide -->
-          <div class="overflow-x-auto max-h-[620px] overflow-y-auto">
-            <table class="w-full text-left text-xs">
-              <thead class="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-sm text-slate-700 border-b border-slate-200 font-bold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <!-- Colonne 0 : Sélection Checkbox -->
-                  <th class="p-3.5 w-10 text-center">
-                    <input 
-                      type="checkbox" 
-                      id="crm-select-all" 
-                      onchange="toggleSelectAllLeads(this.checked)" 
-                      class="rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
-                    />
-                  </th>
-                  <!-- Colonne 1 : Lead -->
-                  <th class="p-3.5">Lead</th>
-                  <!-- Colonne 2 : Contact -->
-                  <th class="p-3.5">Contact</th>
-                  <!-- Colonne 3 : Douleur identifiée -->
-                  <th class="p-3.5">Douleur Identifiée</th>
-                  <!-- Colonne 4 : Score DUR -->
-                  <th class="p-3.5">Score DUR</th>
-                  <!-- Colonne 5 : Profil DISC -->
-                  <th class="p-3.5">Profil DISC</th>
-                  <!-- Colonne 6 : Offre matchée -->
-                  <th class="p-3.5">Offre Matchée</th>
-                  <!-- Colonne 7 : Statut & Suivi -->
-                  <th class="p-3.5">Statut & Suivi</th>
-                  <!-- Colonne 8 : Actions -->
-                  <th class="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 text-slate-800 bg-white">
-                <!-- Rempli par JavaScript -->
-              </tbody>
-            </table>
+            <!-- Compteur contextuel -->
+            <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 whitespace-nowrap shrink-0">
+              0 leads
+            </div>
           </div>
+        </div>
+
+        <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS FASTY STYLE) -->
+        <div id="crm-bulk-bar" class="hidden bulk-bar">
+          <div class="bulk-label">
+            <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+            <span><strong id="bulk-selected-count" class="text-white text-sm">0</strong> lead(s) sélectionné(s)</span>
+            <button onclick="deselectAllLeads()" class="text-[11px] text-white/80 hover:text-white underline ml-2">Désélectionner tout (Échap)</button>
+          </div>
+          
+          <div class="flex items-center gap-2 flex-wrap">
+            <select id="bulk-status-select" onchange="executeBulkStatusChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
+              <option value="" disabled selected>Changer Statut...</option>
+              <option value="Chaud">🔥 Marquer Chaud</option>
+              <option value="Tiède">Marquer Tiède</option>
+              <option value="Froid">Marquer Froid</option>
+              <option value="Converti">✅ Marquer Client</option>
+              <option value="Rejeté">❌ Marquer Rejeté</option>
+            </select>
+
+            <select id="bulk-phase-select" onchange="executeBulkPhaseChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
+              <option value="" disabled selected>Changer Phase...</option>
+              <option value="prise_de_contact">1. Setter / Prise de contact</option>
+              <option value="diagnostic">2. Closer / Diagnostic</option>
+              <option value="proposition">3. Closer / Proposition</option>
+              <option value="closing">4. CRM / Closing</option>
+              <option value="suivi_client">5. Conclu / Suivi Client</option>
+            </select>
+
+            <select id="bulk-offer-select" onchange="executeBulkOfferChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
+              <option value="" disabled selected>Assigner Offre...</option>
+            </select>
+
+            <button onclick="bulkCopyContacts('whatsapp')" class="btn btn-sm" title="Copier les numéros WhatsApp">
+              <i data-lucide="copy" class="w-3 h-3"></i> WA
+            </button>
+            <button onclick="bulkCopyContacts('email')" class="btn btn-sm" title="Copier les emails">
+              <i data-lucide="mail" class="w-3 h-3"></i> Emails
+            </button>
+            <button onclick="openBulkDeleteModal()" class="btn btn-sm btn-danger-bulk">
+              <i data-lucide="trash-2" class="w-3 h-3"></i> Supprimer
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLEAU CRM FASTY (STICKY HEADER, PILL BADGES, DUR BAR) -->
+        <div class="table-wrapper">
+          <table class="crm-table">
+            <thead>
+              <tr>
+                <th class="w-10 text-center">
+                  <input 
+                    type="checkbox" 
+                    id="crm-select-all" 
+                    onchange="toggleSelectAllLeads(this.checked)" 
+                    class="rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
+                  />
+                </th>
+                <th>Lead</th>
+                <th>Contact</th>
+                <th>Douleur Identifiée</th>
+                <th>Score DUR</th>
+                <th>Profil DISC</th>
+                <th>Offre Matchée</th>
+                <th>Statut & Suivi</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="crm-leads-tbody">
+              <!-- Rempli par JavaScript -->
+            </tbody>
+          </table>
         </div>
 
         <!-- ==================== MODAL DE CONFIRMATION DE SUPPRESSION (NIVEAU 1) ==================== -->
@@ -1552,6 +1509,83 @@
                   <i data-lucide="send" class="w-3.5 h-3.5"></i> Envoyer
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB : PIPELINE COMMERCIAL (KANBAN FASTY) ==================== -->
+      <section id="tab-pipeline" class="tab-pane hidden space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-blue-50 text-[#0062ff] border border-blue-100">
+                <i data-lucide="columns-3" class="w-4 h-4"></i>
+              </span>
+              <h2 class="text-xl font-black text-slate-900">Pipeline Commercial & Cycle de Persuasion</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Glissez-déposez les leads d'une phase à l'autre pour actualiser leur progression dans le tunnel.</p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="loadKanbanPipeline()" class="btn btn-sm btn-secondary">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0062ff]"></i>
+              <span>Actualiser Pipeline</span>
+            </button>
+            <button onclick="showTab('crm')" class="btn btn-sm btn-primary">
+              <i data-lucide="table" class="w-3.5 h-3.5"></i>
+              <span>Vue Tableau CRM</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4-Column Kanban Board Grid -->
+        <div class="kanban-board">
+          <!-- Col 1: Setter -->
+          <div class="kanban-col" id="col-setter" data-phase="setter">
+            <div class="kanban-col-header">
+              <span class="col-dot setter"></span>
+              <span class="col-title">Setter (Prise de contact)</span>
+              <span class="badge" id="kanban-count-setter">0</span>
+            </div>
+            <div class="kanban-cards" id="kanban-cards-setter">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Col 2: Closer -->
+          <div class="kanban-col" id="col-closer" data-phase="closer">
+            <div class="kanban-col-header">
+              <span class="col-dot closer"></span>
+              <span class="col-title">Closer (Diagnostic & Offre)</span>
+              <span class="badge" id="kanban-count-closer">0</span>
+            </div>
+            <div class="kanban-cards" id="kanban-cards-closer">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Col 3: CRM -->
+          <div class="kanban-col" id="col-crm" data-phase="crm">
+            <div class="kanban-col-header">
+              <span class="col-dot crm"></span>
+              <span class="col-title">CRM (Closing & Négociation)</span>
+              <span class="badge" id="kanban-count-crm">0</span>
+            </div>
+            <div class="kanban-cards" id="kanban-cards-crm">
+              <!-- Dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Col 4: Conclu -->
+          <div class="kanban-col" id="col-conclu" data-phase="conclu">
+            <div class="kanban-col-header">
+              <span class="col-dot conclu"></span>
+              <span class="col-title">Conclu (Converti / Succès)</span>
+              <span class="badge" id="kanban-count-conclu">0</span>
+            </div>
+            <div class="kanban-cards" id="kanban-cards-conclu">
+              <!-- Dynamically rendered -->
             </div>
           </div>
         </div>
@@ -3001,6 +3035,115 @@
       </div>
     </div>
   </div>
+
+  <!-- FASTY SLIDE-IN LATERAL DRAWER (FICHE LEAD & CONVERSATION) -->
+  <div id="drawerOverlay" class="drawer-overlay" onclick="closeDrawer()"></div>
+  <aside id="leadDrawer" class="drawer">
+    <!-- Drawer Header -->
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <span id="drawer-lead-avatar" class="avatar">--</span>
+        <div>
+          <div id="drawer-lead-name" class="text-sm font-black text-slate-900 leading-tight">Dossier Prospect</div>
+          <div id="drawer-lead-subtitle" class="text-[11px] text-slate-400 font-normal">Diagnostic & Historique</div>
+        </div>
+      </div>
+      <button onclick="closeDrawer()" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="Fermer le panneau">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Drawer Body (Profil, Badges, DUR, Chat Feed) -->
+    <div class="drawer-body">
+      <!-- Section 1 : Carte Profil & Coordonnées -->
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <span id="drawer-status-badge" class="badge">--</span>
+          <span id="drawer-disc-badge" class="badge">DISC: --</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+          <div>
+            <span class="text-[10px] text-slate-400 font-bold uppercase block">Téléphone / WhatsApp</span>
+            <div id="drawer-lead-phone" class="font-semibold text-slate-800 text-xs mt-0.5">Non renseigné</div>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 font-bold uppercase block">Email</span>
+            <div id="drawer-lead-email" class="font-semibold text-slate-800 text-xs mt-0.5 truncate">Non renseigné</div>
+          </div>
+        </div>
+
+        <div class="text-xs pt-1 border-t border-slate-200/60">
+          <span class="text-[10px] text-slate-400 font-bold uppercase block">Offre Matchée</span>
+          <div id="drawer-lead-offer" class="font-bold text-[#0062ff] text-xs mt-0.5">Non assignée</div>
+        </div>
+
+        <div class="text-xs pt-1 border-t border-slate-200/60">
+          <span class="text-[10px] text-slate-400 font-bold uppercase block">Douleur Exprimée</span>
+          <p id="drawer-lead-pain" class="text-xs text-slate-700 font-medium mt-0.5 italic">Aucune douleur formalisée.</p>
+        </div>
+      </div>
+
+      <!-- Section 2 : Qualification DUR Score Bar -->
+      <div class="p-3.5 rounded-xl bg-white border border-slate-200/80 space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-700">Score DUR Global</span>
+          <span id="drawer-dur-score" class="font-black text-[#0062ff]">-- / 100</span>
+        </div>
+        <div class="score-bar-track">
+          <div id="drawer-dur-bar" class="score-bar-fill" style="width: 0%" data-score="0"></div>
+        </div>
+        <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+          <span id="drawer-dur-d" class="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">Douleur: --</span>
+          <span id="drawer-dur-u" class="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">Urgence: --</span>
+          <span id="drawer-dur-r" class="px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">Ressources: --</span>
+        </div>
+      </div>
+
+      <!-- Section 3 : Historique des Messages (Chat Feed) -->
+      <div class="space-y-2 flex-1 flex flex-col min-h-[220px]">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="messages-square" class="w-3.5 h-3.5 text-[#0062ff]"></i>
+            Fil des Échanges
+          </span>
+          <span id="drawer-conv-channel" class="text-[10px] text-slate-400">Canal: Détecté</span>
+        </div>
+        <div id="drawer-messages-feed" class="flex-1 bg-slate-50/70 border border-slate-200/80 rounded-xl p-3 space-y-2.5 overflow-y-auto max-h-[280px]">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer Footer (Saisie Réponse Rapide Dave Sagbo) -->
+    <div class="drawer-footer space-y-2">
+      <div class="flex items-center justify-between text-[11px] text-slate-500">
+        <span class="font-medium flex items-center gap-1">
+          <i data-lucide="shield-check" class="w-3 h-3 text-[#0062ff]"></i>
+          Émetteur : Dave Sagbo
+        </span>
+        <button onclick="generateDrawerAiReply()" class="text-[#0062ff] hover:underline font-bold text-[11px] flex items-center gap-1">
+          <i data-lucide="sparkles" class="w-3 h-3"></i> Suggérer IA
+        </button>
+      </div>
+      <div class="flex items-end gap-2">
+        <textarea 
+          id="drawer-reply-input" 
+          rows="2" 
+          placeholder="Répondre en direct en tant que Dave Sagbo..."
+          class="flex-1 p-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 resize-none transition"
+        ></textarea>
+        <button 
+          onclick="sendDrawerMessage()" 
+          id="drawer-reply-send-btn"
+          class="btn btn-primary h-[38px] px-3.5"
+          title="Envoyer la réponse"
+        >
+          <i data-lucide="send" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
 
   <!-- TOAST NOTIFICATIONS CONTAINER -->
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>

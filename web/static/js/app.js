@@ -340,11 +340,8 @@ function showTab(tabId) {
   closeMobileSidebar();
 
   document.querySelectorAll(".tab-pane").forEach(el => el.classList.add("hidden"));
-  document.querySelectorAll(".nav-btn").forEach(el => {
-    el.classList.remove("active", "bg-[#0062ff]", "text-white", "shadow-md", "shadow-blue-500/25");
-    el.classList.add("text-slate-600");
-    const icon = el.querySelector("i");
-    if (icon) icon.classList.add("text-slate-400");
+  document.querySelectorAll(".nav-item, .nav-btn").forEach(el => {
+    el.classList.remove("active");
   });
 
   const targetPane = document.getElementById(`tab-${tabId}`);
@@ -352,10 +349,7 @@ function showTab(tabId) {
 
   if (targetPane) targetPane.classList.remove("hidden");
   if (targetNav) {
-    targetNav.classList.add("active", "bg-[#0062ff]", "text-white", "shadow-md", "shadow-blue-500/25");
-    targetNav.classList.remove("text-slate-600");
-    const icon = targetNav.querySelector("i");
-    if (icon) icon.classList.remove("text-slate-400");
+    targetNav.classList.add("active");
   }
 
   lucide.createIcons();
@@ -376,6 +370,8 @@ function showTab(tabId) {
     loadDirectorTab();
   } else if (tabId === "simulator") {
     initSimulator();
+  } else if (tabId === "pipeline") {
+    loadKanbanPipeline();
   } else if (tabId === "agenda") {
     renderCalendar(calCurrentMonth, calCurrentYear);
   } else if (tabId === "crm") {
@@ -1598,20 +1594,12 @@ function applyLeadsFilterAndRender() {
         // 3. Douleur identifiée
         const douleurVal = l.douleur_identifiee ? String(l.douleur_identifiee) : "";
 
-        // 4. Score DUR (Barre de progression + D / U / R)
+        // 4. Score DUR (Barre de progression Fasty + D / U / R)
         const scoreVal = Math.min(100, Math.max(0, Number(l.score_dur || l.score_qualification || 0)));
-        let scoreBarColor = "bg-slate-400";
-        let scoreTextColor = "text-slate-600";
-        if (scoreVal >= 70) {
-          scoreBarColor = "bg-emerald-500";
-          scoreTextColor = "text-emerald-700";
-        } else if (scoreVal >= 40) {
-          scoreBarColor = "bg-amber-500";
-          scoreTextColor = "text-amber-700";
-        } else {
-          scoreBarColor = "bg-blue-400";
-          scoreTextColor = "text-blue-700";
-        }
+        let scoreLevel = "low";
+        if (scoreVal >= 75) scoreLevel = "high";
+        else if (scoreVal >= 55) scoreLevel = "good";
+        else if (scoreVal >= 35) scoreLevel = "mid";
 
         const hasDouleur = Boolean(douleurVal && douleurVal.trim().length > 3);
         const urgenceVal = (l.urgence_niveau !== undefined && l.urgence_niveau !== null) ? l.urgence_niveau : "";
@@ -1620,15 +1608,15 @@ function applyLeadsFilterAndRender() {
         const resValStr = String(l.ressources_confirmees || "").toLowerCase();
         const hasRessources = (l.ressources_confirmees === 1 || l.ressources_confirmees === true || resValStr.includes("oui") || resValStr.includes("cours") || scoreVal >= 75);
 
-        // 5. Profil DISC
+        // 5. Profil DISC (Fasty Badges)
         const discCode = String(l.profil_disc || "C").charAt(0).toUpperCase();
         const discMap = {
-          "D": { label: "D (Dominant)", color: "bg-rose-50 text-rose-700 border-rose-200" },
-          "I": { label: "I (Influent)", color: "bg-amber-50 text-amber-800 border-amber-200" },
-          "S": { label: "S (Stable)", color: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-          "C": { label: "C (Analytique)", color: "bg-blue-50 text-blue-800 border-blue-200" }
+          "D": { label: "D (Dominant)", cls: "badge-disc-D" },
+          "I": { label: "I (Influent)", cls: "badge-disc-I" },
+          "S": { label: "S (Stable)", cls: "badge-disc-S" },
+          "C": { label: "C (Analytique)", cls: "badge-disc-C" }
         };
-        const discInfo = discMap[discCode] || discMap["C"];
+        const discInfo = discMap[discCode] || { label: discCode || "Inconnu", cls: "badge-disc-inconnu" };
 
         // 6. Offre matchée (Priorité au texte d'offre_matchee puis offre_proposee puis offre_matchee_id)
         let offreNom = "";
@@ -1640,21 +1628,21 @@ function applyLeadsFilterAndRender() {
           offreNom = `Offre #${l.offre_matchee_id}`;
         }
 
-        // 7. Statut & Suivi
+        // 7. Statut & Suivi (Fasty Badges)
         const statutVal = String(l.temperature || l.statut_lead || "Froid");
-        let statusBadgeColor = "bg-slate-100 text-slate-700 border-slate-200";
-        if (statutVal === "Chaud") statusBadgeColor = "bg-amber-50 text-amber-800 border-amber-200";
-        else if (statutVal === "Converti") statusBadgeColor = "bg-emerald-50 text-emerald-800 border-emerald-200";
-        else if (statutVal === "Tiède") statusBadgeColor = "bg-blue-50 text-blue-800 border-blue-200";
-        else if (statutVal.includes("Rejeté") || statutVal.includes("RGPD")) statusBadgeColor = "bg-rose-50 text-rose-800 border-rose-200";
+        let statusBadgeClass = "badge-froid";
+        if (statutVal === "Chaud") statusBadgeClass = "badge-chaud";
+        else if (statutVal === "Converti") statusBadgeClass = "badge-client";
+        else if (statutVal === "Tiède") statusBadgeClass = "badge-tiede";
+        else if (statutVal.includes("Rejeté") || statutVal.includes("RGPD")) statusBadgeClass = "badge-rejete";
 
         const lastContactStr = formatRelativeTime(l.last_contact_at || l.last_interaction || l.updated_at || l.date_creation || l.created_at);
         const prochaineAction = l.prochaine_action ? String(l.prochaine_action) : "";
 
         return `
-          <tr id="lead-row-${leadId}" class="hover:bg-slate-50/90 transition-colors border-b border-slate-100 ${isSelected ? 'bg-blue-50/70' : ''}">
+          <tr id="lead-row-${leadId}" class="transition-colors ${isSelected ? 'selected' : ''}">
             <!-- Col 0 : Checkbox -->
-            <td class="p-3.5 text-center w-10">
+            <td class="text-center w-10">
               <input 
                 type="checkbox" 
                 data-lead-id="${leadId}"
@@ -1665,7 +1653,7 @@ function applyLeadsFilterAndRender() {
             </td>
 
             <!-- Col 1 : Lead -->
-            <td class="p-3.5 min-w-[140px]">
+            <td class="min-w-[140px]">
               <div class="font-extrabold text-slate-900">${escapeHtml(fullName)}</div>
               <div class="flex items-center gap-1.5 mt-1">
                 ${canalBadge}
@@ -1674,7 +1662,7 @@ function applyLeadsFilterAndRender() {
             </td>
 
             <!-- Col 2 : Contact -->
-            <td class="p-3.5 min-w-[130px] text-xs">
+            <td class="min-w-[130px] text-xs">
               ${cleanWa ? `
                 <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-semibold mb-0.5">
                   <i data-lucide="message-circle" class="w-3 h-3 text-emerald-600"></i>
@@ -1696,7 +1684,7 @@ function applyLeadsFilterAndRender() {
             </td>
 
             <!-- Col 3 : Douleur identifiée -->
-            <td class="p-3.5 max-w-[200px]">
+            <td class="max-w-[200px]">
               ${douleurVal ? `
                 <div class="text-xs text-slate-800 font-medium line-clamp-2" title="${escapeHtml(douleurVal)}">
                   ${escapeHtml(douleurVal)}
@@ -1706,30 +1694,32 @@ function applyLeadsFilterAndRender() {
               `}
             </td>
 
-            <!-- Col 4 : Score DUR -->
-            <td class="p-3.5 min-w-[130px]">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-black ${scoreTextColor}">${scoreVal}/100</span>
-                <div class="flex items-center gap-1 text-[9px] font-bold">
-                  <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
-                  <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
-                  <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
+            <!-- Col 4 : Score DUR (Fasty Bar) -->
+            <td class="min-w-[130px]">
+              <div class="score-cell">
+                <div class="flex items-center justify-between mb-0.5">
+                  <span class="score-label">${scoreVal}/100</span>
+                  <div class="flex items-center gap-1 text-[9px] font-bold">
+                    <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
+                    <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
+                    <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
+                  </div>
                 </div>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-300 ${scoreBarColor}" style="width: ${scoreVal}%"></div>
+                <div class="score-bar-track">
+                  <div class="score-bar-fill" style="width: ${scoreVal}%" data-score="${scoreLevel}"></div>
+                </div>
               </div>
             </td>
 
             <!-- Col 5 : Profil DISC -->
-            <td class="p-3.5 whitespace-nowrap">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${discInfo.color}">
+            <td class="whitespace-nowrap">
+              <span class="badge ${discInfo.cls}">
                 ${discInfo.label}
               </span>
             </td>
 
             <!-- Col 6 : Offre matchée -->
-            <td class="p-3.5 max-w-[160px]">
+            <td class="max-w-[160px]">
               ${offreNom ? `
                 <div class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(offreNom)}">
                   <i data-lucide="package" class="w-3 h-3 text-[#0062ff] inline mr-0.5"></i>${escapeHtml(offreNom)}
@@ -1740,8 +1730,8 @@ function applyLeadsFilterAndRender() {
             </td>
 
             <!-- Col 7 : Statut & Suivi -->
-            <td class="p-3.5 min-w-[130px]">
-              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border ${statusBadgeColor}">
+            <td class="min-w-[130px]">
+              <span class="badge ${statusBadgeClass}">
                 ${escapeHtml(statutVal)}
               </span>
               <div class="text-[10px] text-slate-500 mt-1">
@@ -1754,15 +1744,15 @@ function applyLeadsFilterAndRender() {
               ` : ''}
             </td>
 
-            <!-- Col 8 : Actions -->
-            <td class="p-3.5 text-right whitespace-nowrap">
-              <div class="flex items-center justify-end gap-1">
-                <button onclick="openLeadConversation(${leadId})" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-[#0062ff] text-[#0062ff] hover:text-white border border-blue-200 text-[11px] font-bold inline-flex items-center gap-1 shadow-xs transition" title="Voir les messages et répondre en direct">
+            <!-- Col 8 : Actions (Fasty Slide-in Drawer + Edit) -->
+            <td class="text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                <button onclick="openDrawer(${leadId})" class="btn btn-sm btn-primary" title="Ouvrir le panneau latéral avec dossier et conversation">
                   <i data-lucide="messages-square" class="w-3 h-3"></i>
-                  <span>Voir Conversation</span>
+                  <span>Conversation</span>
                 </button>
-                <button onclick="openLeadEditModal(${leadId})" class="p-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition" title="Modifier la fiche lead">
-                  <i data-lucide="edit-2" class="w-3 h-3"></i>
+                <button onclick="openLeadEditModal(${leadId})" class="btn btn-sm btn-secondary p-1.5" title="Modifier la fiche lead">
+                  <i data-lucide="edit-2" class="w-3.5 h-3.5 text-slate-600"></i>
                 </button>
               </div>
             </td>
@@ -2420,6 +2410,456 @@ async function loadConversionAudit(isUserTriggered = false) {
     if (isUserTriggered) {
       showToast("Erreur lors de l'actualisation de l'audit", "error");
     }
+  }
+}
+
+// ============================================================================
+// FASTY SLIDE-IN LATERAL DRAWER (PANNEAU CONVERSATION & PROSPECT)
+// ============================================================================
+let activeDrawerLeadId = null;
+let activeDrawerChannel = "FACEBOOK_MESSENGER";
+let activeDrawerData = null;
+
+async function openDrawer(leadId) {
+  activeDrawerLeadId = leadId;
+  const overlay = document.getElementById("drawerOverlay");
+  const drawer = document.getElementById("leadDrawer");
+  if (!drawer) return;
+
+  if (overlay) overlay.classList.add("open");
+  drawer.classList.add("open");
+
+  const feed = document.getElementById("drawer-messages-feed");
+  if (feed) {
+    feed.innerHTML = `
+      <div class="p-8 text-center text-slate-400 space-y-2">
+        <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto text-[#0062ff]"></i>
+        <div class="text-xs font-semibold">Chargement du dossier...</div>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+
+  // Chercher les infos du lead dans crmLeadsData en cache
+  const cachedLead = (crmLeadsData || []).find(l => Number(l.id) === Number(leadId));
+  if (cachedLead) {
+    renderDrawerLeadHeader(cachedLead);
+  }
+
+  try {
+    const res = await fetch(`/api/crm/leads/${leadId}/conversation`);
+    const data = await res.json();
+    if (!data.success) {
+      showToast(data.error || "Erreur de chargement", "error");
+      return;
+    }
+
+    activeDrawerData = data;
+    activeDrawerChannel = data.active_channel || "FACEBOOK_MESSENGER";
+    const lead = data.lead || cachedLead;
+    if (lead) {
+      renderDrawerLeadHeader(lead);
+    }
+
+    renderDrawerMessages(data.messages || [], lead ? lead.nom_complet : "Prospect");
+  } catch (err) {
+    console.error("Erreur openDrawer:", err);
+    showToast("Impossible d'ouvrir le dossier du prospect", "error");
+  }
+}
+
+function renderDrawerLeadHeader(lead) {
+  const nameEl = document.getElementById("drawer-lead-name");
+  const avatarEl = document.getElementById("drawer-lead-avatar");
+  const statusEl = document.getElementById("drawer-status-badge");
+  const discEl = document.getElementById("drawer-disc-badge");
+  const phoneEl = document.getElementById("drawer-lead-phone");
+  const emailEl = document.getElementById("drawer-lead-email");
+  const offerEl = document.getElementById("drawer-lead-offer");
+  const painEl = document.getElementById("drawer-lead-pain");
+  const durScoreEl = document.getElementById("drawer-dur-score");
+  const durBarEl = document.getElementById("drawer-dur-bar");
+  const durDEl = document.getElementById("drawer-dur-d");
+  const durUEl = document.getElementById("drawer-dur-u");
+  const durREl = document.getElementById("drawer-dur-r");
+
+  const fullName = lead.nom_complet || (lead.prenom ? `${lead.prenom} ${lead.nom || ''}` : lead.nom_lead || 'Prospect');
+  if (nameEl) nameEl.textContent = fullName;
+  if (avatarEl) {
+    const parts = fullName.trim().split(" ");
+    avatarEl.textContent = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+  }
+
+  // Statut
+  const statut = lead.statut || lead.statut_lead || lead.temperature || "Froid";
+  if (statusEl) {
+    let cls = "badge-froid";
+    if (statut === "Chaud") cls = "badge-chaud";
+    else if (statut === "Converti") cls = "badge-client";
+    else if (statut === "Tiède") cls = "badge-tiede";
+    else if (statut.includes("Rejeté") || statut.includes("RGPD")) cls = "badge-rejete";
+    statusEl.className = `badge ${cls}`;
+    statusEl.textContent = statut;
+  }
+
+  // DISC
+  const disc = String(lead.profil_disc || "C").charAt(0).toUpperCase();
+  const discMap = {
+    "D": { label: "DISC: Dominant (D)", cls: "badge-disc-D" },
+    "I": { label: "DISC: Influent (I)", cls: "badge-disc-I" },
+    "S": { label: "DISC: Stable (S)", cls: "badge-disc-S" },
+    "C": { label: "DISC: Analytique (C)", cls: "badge-disc-C" }
+  };
+  const dInfo = discMap[disc] || { label: `DISC: ${disc}`, cls: "badge-disc-inconnu" };
+  if (discEl) {
+    discEl.className = `badge ${dInfo.cls}`;
+    discEl.textContent = dInfo.label;
+  }
+
+  // Contacts
+  const phone = lead.whatsapp || lead.telephone || "";
+  if (phoneEl) {
+    phoneEl.textContent = phone || "Non renseigné";
+  }
+  if (emailEl) {
+    emailEl.textContent = lead.email || "Non renseigné";
+  }
+
+  // Offre
+  const offer = lead.offre_matchee || lead.offre_proposee || (lead.offre_matchee_id ? `Offre #${lead.offre_matchee_id}` : "Non assignée");
+  if (offerEl) offerEl.textContent = offer;
+
+  // Douleur
+  const pain = lead.douleur_identifiee || lead.douleur || "";
+  if (painEl) {
+    painEl.textContent = pain ? `« ${pain} »` : "Diagnostic en cours...";
+  }
+
+  // DUR Score
+  const score = Math.min(100, Math.max(0, Number(lead.score_dur || lead.score_qualification || 0)));
+  if (durScoreEl) durScoreEl.textContent = `${score} / 100`;
+  if (durBarEl) {
+    durBarEl.style.width = `${score}%`;
+    let scoreLvl = "low";
+    if (score >= 75) scoreLvl = "high";
+    else if (score >= 55) scoreLvl = "good";
+    else if (score >= 35) scoreLvl = "mid";
+    durBarEl.setAttribute("data-score", scoreLvl);
+  }
+
+  if (durDEl) durDEl.textContent = pain ? "Douleur: Validée (40)" : "Douleur: --";
+  if (durUEl) durUEl.textContent = (score >= 60) ? "Urgence: Haute (30)" : "Urgence: Moyenne";
+  if (durREl) durREl.textContent = (score >= 75) ? "Ressources: Oui (30)" : "Ressources: En cours";
+}
+
+function renderDrawerMessages(messages, leadName) {
+  const feed = document.getElementById("drawer-messages-feed");
+  if (!feed) return;
+
+  if (!messages || messages.length === 0) {
+    feed.innerHTML = `
+      <div class="p-6 text-center text-slate-400 space-y-1">
+        <i data-lucide="message-square" class="w-6 h-6 mx-auto text-slate-300"></i>
+        <div class="text-xs font-bold text-slate-600">Aucun message pour l'instant</div>
+        <p class="text-[11px] text-slate-400">Lancez la discussion ci-dessous en tant que Dave Sagbo.</p>
+      </div>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  const parts = (leadName || "Prospect").trim().split(" ");
+  const initials = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+
+  feed.innerHTML = messages.map(m => {
+    const isLead = m.sender === "LEAD";
+    if (isLead) {
+      return `
+        <div class="flex items-start gap-2 max-w-[90%]">
+          <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+            ${initials}
+          </div>
+          <div class="p-2.5 rounded-2xl rounded-tl-xs bg-white text-slate-800 text-xs border border-slate-200 shadow-2xs leading-relaxed whitespace-pre-wrap">
+            ${escapeHtml(m.text || m.message || "")}
+            <div class="text-[9px] text-slate-400 mt-1 text-right">${escapeHtml(m.time || "")}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="flex items-start justify-end gap-2 max-w-[90%] ml-auto">
+          <div class="p-2.5 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-2xs leading-relaxed whitespace-pre-wrap">
+            ${escapeHtml(m.text || m.message || "")}
+            <div class="text-[9px] text-blue-200 mt-1 text-right">Dave Sagbo • ${escapeHtml(m.time || "")}</div>
+          </div>
+          <div class="w-6 h-6 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+            DS
+          </div>
+        </div>
+      `;
+    }
+  }).join("");
+
+  feed.scrollTop = feed.scrollHeight;
+  lucide.createIcons();
+}
+
+function closeDrawer() {
+  const overlay = document.getElementById("drawerOverlay");
+  const drawer = document.getElementById("leadDrawer");
+  if (overlay) overlay.classList.remove("open");
+  if (drawer) drawer.classList.remove("open");
+  activeDrawerLeadId = null;
+  activeDrawerData = null;
+}
+
+async function sendDrawerMessage() {
+  const input = document.getElementById("drawer-reply-input");
+  if (!input || !activeDrawerLeadId) return;
+
+  const text = input.value.trim();
+  if (!text) {
+    showToast("Veuillez saisir une réponse.", "error");
+    return;
+  }
+
+  const btn = document.getElementById("drawer-reply-send-btn");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/crm/leads/conversation/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeDrawerLeadId,
+        channel: activeDrawerChannel,
+        message: text,
+        sender: "AGENT"
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      input.value = "";
+      renderDrawerMessages(data.messages, activeDrawerData?.lead?.nom_complet);
+      showToast("Message envoyé avec succès !", "success");
+      loadHistoryFeed();
+    } else {
+      showToast(data.error || "Erreur lors de l'envoi", "error");
+    }
+  } catch (err) {
+    console.error("Erreur envoi drawer:", err);
+    showToast("Échec de la communication.", "error");
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function generateDrawerAiReply() {
+  if (!activeDrawerLeadId) return;
+  const input = document.getElementById("drawer-reply-input");
+  if (!input) return;
+
+  try {
+    input.value = "Rédaction de la suggestion Dave Sagbo...";
+    const res = await fetch("/api/crm/leads/conversation/generate-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeDrawerLeadId,
+        channel: activeDrawerChannel
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.suggested_message) {
+      input.value = data.suggested_message;
+      input.focus();
+      showToast("Suggestion commerciale générée !", "success");
+    } else {
+      input.value = "";
+      showToast("Impossible de suggérer une réponse.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur generateDrawerAiReply:", err);
+    if (input) input.value = "";
+  }
+}
+
+// ============================================================================
+// KANBAN PIPELINE COMMERCIAL (DRAG & DROP NATIVE HTML5)
+// ============================================================================
+let kanbanDraggedLeadId = null;
+
+async function loadKanbanPipeline() {
+  try {
+    // Si la liste des leads n'est pas encore en mémoire, la charger
+    if (!crmLeadsData || crmLeadsData.length === 0) {
+      const res = await fetch("/api/crm/leads?status=Tous");
+      const data = await res.json();
+      crmLeadsData = data.leads || [];
+    }
+
+    const columns = {
+      setter: document.getElementById("kanban-cards-setter"),
+      closer: document.getElementById("kanban-cards-closer"),
+      crm: document.getElementById("kanban-cards-crm"),
+      conclu: document.getElementById("kanban-cards-conclu")
+    };
+
+    if (!columns.setter || !columns.closer || !columns.crm || !columns.conclu) return;
+
+    // Réinitialiser les colonnes
+    Object.values(columns).forEach(col => col.innerHTML = "");
+
+    const counts = { setter: 0, closer: 0, crm: 0, conclu: 0 };
+
+    crmLeadsData.forEach(lead => {
+      const phase = mapLeadToKanbanPhase(lead);
+      counts[phase] = (counts[phase] || 0) + 1;
+
+      const card = createKanbanCardElement(lead);
+      if (columns[phase]) {
+        columns[phase].appendChild(card);
+      }
+    });
+
+    // Mettre à jour les compteurs de badge
+    ["setter", "closer", "crm", "conclu"].forEach(ph => {
+      const countEl = document.getElementById(`kanban-count-${ph}`);
+      if (countEl) countEl.textContent = counts[ph] || 0;
+    });
+
+    // Attacher les écouteurs Drag & Drop sur les colonnes
+    setupKanbanDropZones();
+
+    lucide.createIcons();
+  } catch (err) {
+    console.error("Erreur chargement pipeline Kanban:", err);
+    showToast("Impossible de charger le pipeline", "error");
+  }
+}
+
+function mapLeadToKanbanPhase(lead) {
+  const phase = String(lead.phase_actuelle || "").toLowerCase().trim();
+  const statut = String(lead.statut_lead || lead.temperature || "").toLowerCase();
+
+  if (statut.includes("converti") || phase === "conclu" || phase === "converti" || phase === "suivi_client") {
+    return "conclu";
+  }
+  if (phase === "crm" || phase === "closing") {
+    return "crm";
+  }
+  if (phase === "closer" || phase === "diagnostic" || phase === "proposition") {
+    return "closer";
+  }
+  return "setter";
+}
+
+function createKanbanCardElement(lead) {
+  const card = document.createElement("div");
+  card.className = "kanban-card";
+  card.setAttribute("draggable", "true");
+  card.setAttribute("data-lead-id", lead.id);
+
+  const fullName = lead.nom_complet || (lead.prenom ? `${lead.prenom} ${lead.nom || ''}` : lead.nom_lead || 'Prospect');
+  const canal = lead.source_contact || lead.canal_source || lead.source || "Messenger";
+  const score = Math.min(100, Math.max(0, Number(lead.score_dur || lead.score_qualification || 0)));
+  const statut = lead.statut_lead || lead.temperature || "Froid";
+
+  let statusBadgeClass = "badge-froid";
+  if (statut === "Chaud") statusBadgeClass = "badge-chaud";
+  else if (statut === "Converti") statusBadgeClass = "badge-client";
+  else if (statut === "Tiède") statusBadgeClass = "badge-tiede";
+  else if (statut.includes("Rejeté")) statusBadgeClass = "badge-rejete";
+
+  card.innerHTML = `
+    <div class="card-top">
+      <div>
+        <div class="card-name">${escapeHtml(fullName)}</div>
+        <div class="card-canal">${escapeHtml(canal)}</div>
+      </div>
+      <span class="badge ${statusBadgeClass}">${escapeHtml(statut)}</span>
+    </div>
+    <div class="card-bottom">
+      <span class="card-score-mini">DUR: ${score}/100</span>
+      <button onclick="openDrawer(${lead.id})" class="btn btn-sm btn-secondary p-1 text-[11px]" title="Voir conversation">
+        <i data-lucide="messages-square" class="w-3 h-3"></i>
+      </button>
+    </div>
+  `;
+
+  // HTML5 Drag Events
+  card.addEventListener("dragstart", (e) => {
+    kanbanDraggedLeadId = lead.id;
+    card.classList.add("dragging");
+    e.dataTransfer.setData("text/plain", String(lead.id));
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  card.addEventListener("dragend", () => {
+    card.classList.remove("dragging");
+    kanbanDraggedLeadId = null;
+    document.querySelectorAll(".kanban-col").forEach(col => col.classList.remove("drag-over"));
+  });
+
+  return card;
+}
+
+function setupKanbanDropZones() {
+  const cols = document.querySelectorAll(".kanban-col");
+  cols.forEach(col => {
+    col.ondragover = (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      col.classList.add("drag-over");
+    };
+
+    col.ondragleave = (e) => {
+      // Éviter le clignotement si on survole un élément enfant
+      if (!col.contains(e.relatedTarget)) {
+        col.classList.remove("drag-over");
+      }
+    };
+
+    col.ondrop = async (e) => {
+      e.preventDefault();
+      col.classList.remove("drag-over");
+      const leadId = e.dataTransfer.getData("text/plain") || kanbanDraggedLeadId;
+      const targetPhase = col.getAttribute("data-phase");
+
+      if (leadId && targetPhase) {
+        await updateLeadPipelinePhase(Number(leadId), targetPhase);
+      }
+    };
+  });
+}
+
+async function updateLeadPipelinePhase(leadId, newPhase) {
+  try {
+    const res = await fetch("/crm/leads/bulk-action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "update_phase",
+        phase: newPhase,
+        lead_ids: [leadId]
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Phase mise à jour : ${newPhase.toUpperCase()}`, "success");
+      // Mettre à jour en cache local
+      const lead = (crmLeadsData || []).find(l => Number(l.id) === Number(leadId));
+      if (lead) {
+        lead.phase_actuelle = newPhase;
+        if (newPhase === "conclu") lead.statut_lead = "Converti";
+      }
+      loadKanbanPipeline();
+    } else {
+      showToast(data.error || "Échec du déplacement", "error");
+    }
+  } catch (err) {
+    console.error("Erreur updateLeadPipelinePhase:", err);
+    showToast("Erreur de connexion au CRM", "error");
   }
 }
 

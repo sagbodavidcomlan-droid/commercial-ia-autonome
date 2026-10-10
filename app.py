@@ -181,6 +181,11 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_leads(query)
         elif path == "/api/crm/leads/conversation":
             self.handle_api_get_lead_conversation(query)
+        elif path.startswith("/api/crm/leads/") and path.endswith("/conversation"):
+            parts = path.strip("/").split("/")
+            if len(parts) >= 4:
+                query["lead_id"] = [parts[3]]
+            self.handle_api_get_lead_conversation(query)
         elif path == "/api/crm/customers":
             self.handle_api_get_customers()
         elif path == "/api/compliance":
