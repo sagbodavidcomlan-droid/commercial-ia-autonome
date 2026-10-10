@@ -681,3 +681,285 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
             })
 
     return results
+
+
+def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Traite le payload entrant envoyé par le Webhook Meta Cloud API WhatsApp.
+    1. Parse l'objet 'whatsapp_business_account' et les événements 'messages'
+    2. Identifie ou enregistre le lead dans crm_leads avec déduplication stricte (whatsapp / telephone)
+    3. Consigne le message reçu du prospect dans crm_lead_messages (channel='WHATSAPP')
+    4. Génère automatiquement la réponse experte d'acquisition/closing de Dave Sagbo
+    5. Dispatche la réponse en direct sur WhatsApp via send_whatsapp_cloud_message
+    """
+    results = []
+
+    if payload.get("object") != "whatsapp_business_account":
+        return results
+
+    entries = payload.get("entry", [])
+    for entry in entries:
+        changes = entry.get("changes", [])
+        for change in changes:
+            value = change.get("value", {})
+            if not isinstance(value, dict):
+                continue
+
+            metadata = value.get("metadata", {})
+            display_phone_number = metadata.get("display_phone_number")
+            phone_number_id = metadata.get("phone_number_id")
+
+            contacts = value.get("contacts", [])
+            contacts_map = {}
+            for c in contacts:
+                wa_id = c.get("wa_id")
+                profile_name = c.get("profile", {}).get("name", "")
+                if wa_id:
+                    contacts_map[wa_id] = profile_name
+
+            messages = value.get("messages", [])
+            for msg in messages:
+                msg_type = msg.get("type")
+                sender_wa_id = str(msg.get("from") or "").strip()
+                if not sender_wa_id:
+                    continue
+
+                user_text = ""
+                if msg_type == "text":
+                    user_text = (msg.get("text", {}).get("body") or "").strip()
+                elif msg_type == "button":
+                    user_text = (msg.get("button", {}).get("text") or "").strip()
+                elif msg_type == "interactive":
+                    interactive_obj = msg.get("interactive", {})
+                    i_type = interactive_obj.get("type")
+                    if i_type == "button_reply":
+                        user_text = interactive_obj.get("button_reply", {}).get("title", "")
+                    elif i_type == "list_reply":
+                        user_text = interactive_obj.get("list_reply", {}).get("title", "")
+
+                if not user_text:
+                    continue
+
+                # Normaliser le numéro WhatsApp en format international (+...)
+                clean_phone_digits = re.sub(r"[^\d]", "", sender_wa_id)
+                formatted_phone = f"+{clean_phone_digits}" if not sender_wa_id.startswith("+") else sender_wa_id
+                sender_profile_name = contacts_map.get(sender_wa_id, "")
+
+                logger.info(f"Nouveau message WhatsApp reçu de {formatted_phone} ({sender_profile_name}) : '{user_text}'")
+
+                # Extraction de coordonnées supplémentaires dans le corps du texte
+                extracted_info = _extract_lead_contact_info(user_text)
+
+                conn = get_connection()
+                cursor = conn.cursor()
+                canal_id_val = f"WA_{clean_phone_digits}"
+
+                # Déduplication stricte dans crm_leads par whatsapp, telephone ou canal_id
+                cursor.execute("""
+                    SELECT id, nom_complet, nom_lead, prenom, nom, facebook_psid, canal_id,
+                           telephone, whatsapp, email, source_canal, canal_source, canal_actuel,
+                           statut_lead, temperature, score_qualification, score_dur, profil_disc,
+                           douleur_identifiee, urgence_niveau, ressources_confirmees, offre_matchee,
+                           diagnostic_complet, diagnostic_etape, conversation_count, notes
+                    FROM crm_leads 
+                    WHERE whatsapp = ? 
+                       OR telephone = ? 
+                       OR canal_id = ?
+                       OR whatsapp = ?
+                       OR telephone = ?
+                    ORDER BY id ASC LIMIT 1
+                """, (formatted_phone, formatted_phone, canal_id_val, clean_phone_digits, clean_phone_digits))
+                lead_row = cursor.fetchone()
+
+                lead_id = None
+                lead_name = ""
+
+                if lead_row:
+                    lead_id = lead_row["id"]
+                    current_count = lead_row["conversation_count"] or 1
+                    lead_name = lead_row["nom_complet"] or lead_row["nom_lead"] or (sender_profile_name if sender_profile_name else f"Contact WhatsApp {formatted_phone}")
+
+                    upd_fields = [
+                        "last_interaction = datetime('now')",
+                        "last_contact_at = datetime('now')",
+                        "conversation_count = ?",
+                        "canal_actuel = 'WHATSAPP'"
+                    ]
+                    upd_params = [current_count + 1]
+
+                    if sender_profile_name and ("Contact WhatsApp" in lead_name or not lead_row["nom_complet"]):
+                        lead_name = sender_profile_name
+                        upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
+                        upd_params.extend([lead_name, lead_name])
+
+                    if "email" in extracted_info and not lead_row["email"]:
+                        upd_fields.append("email = ?")
+                        upd_params.append(extracted_info["email"])
+
+                    if not lead_row["whatsapp"]:
+                        upd_fields.append("whatsapp = ?")
+                        upd_params.append(formatted_phone)
+
+                    if not lead_row["canal_id"]:
+                        upd_fields.append("canal_id = ?")
+                        upd_params.append(canal_id_val)
+
+                    upd_params.append(lead_id)
+                    cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
+                    conn.commit()
+                else:
+                    lead_name = sender_profile_name if sender_profile_name else (extracted_info.get("nom") or f"Prospect WhatsApp {formatted_phone[-4:]}")
+                    extracted_email = extracted_info.get("email")
+
+                    cursor.execute("""
+                        INSERT INTO crm_leads (
+                            nom_lead, nom_complet, prenom, nom, canal_id,
+                            telephone, whatsapp, email, source_canal, source_contact,
+                            canal_source, canal_actuel, statut_lead, temperature,
+                            score_qualification, score_dur, centre_interet,
+                            notes, conversation_count, date_creation, last_interaction, last_contact_at
+                        ) VALUES (
+                            ?, ?, ?, ?, ?,
+                            ?, ?, ?, 'WhatsApp Business', 'WhatsApp Business',
+                            'WHATSAPP', 'WHATSAPP', 'Nouveau', 'Tiède',
+                            65, 65, ?,
+                            ?, 1, datetime('now'), datetime('now'), datetime('now')
+                        )
+                    """, (
+                        lead_name, lead_name, lead_name.split()[0] if lead_name else "", "", canal_id_val,
+                        formatted_phone, formatted_phone, extracted_email,
+                        user_text[:120],
+                        f"Inbound WhatsApp Cloud API. Premier message : '{user_text}'"
+                    ))
+                    lead_id = cursor.lastrowid
+                    conn.commit()
+
+                    log_activity(
+                        category="PROSPECTION_INBOUND",
+                        action="Nouveau lead réel capturé via WhatsApp Business",
+                        lead_name=lead_name,
+                        lead_phone=formatted_phone,
+                        status="SUCCESS",
+                        details=f"Lead créé suite à un message sur WhatsApp Business ({formatted_phone}). Message : {user_text}"
+                    )
+
+                # Consigner le message reçu du prospect
+                log_lead_message(
+                    lead_id=lead_id,
+                    channel="WHATSAPP",
+                    sender="LEAD",
+                    message=user_text,
+                    status="RECEIVED",
+                    metadata={
+                        "whatsapp_phone": formatted_phone,
+                        "raw_message_id": msg.get("id"),
+                        "phone_number_id": phone_number_id
+                    }
+                )
+
+                # Générer la réponse experte d'acquisition & closing
+                lead_data = {
+                    "id": lead_id,
+                    "nom_complet": lead_name,
+                    "nom_lead": lead_name,
+                    "whatsapp": formatted_phone,
+                    "telephone": formatted_phone,
+                    "source_canal": "WhatsApp Business",
+                    "centre_interet": user_text,
+                    "notes": user_text
+                }
+
+                from modules.ai_sales_agent import AISalesAgent
+                ai_agent = AISalesAgent()
+                reply_text = ai_agent.generate_conversational_reply(
+                    lead_id=lead_id,
+                    user_message=user_text,
+                    channel="WHATSAPP",
+                    lead_data=lead_data
+                )
+
+                # Synchronisation automatique de la qualification au CRM si offre close
+                if "automatisation-whatsapp" in reply_text.lower() or "audit-commercial" in reply_text.lower() or "formations.sagbodavid.com" in reply_text.lower():
+                    try:
+                        cursor.execute("""
+                            UPDATE crm_leads 
+                            SET diagnostic_complet = 1,
+                                statut_lead = 'Chaud',
+                                temperature = 'Chaud',
+                                score_qualification = 85,
+                                score_dur = 85,
+                                offre_matchee = ?,
+                                phase_actuelle = 'closer'
+                            WHERE id = ?
+                        """, ("Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)", lead_id))
+                        conn.commit()
+                    except Exception as e_upd:
+                        logger.warning(f"Note mise à jour état CRM après closing WhatsApp : {e_upd}")
+
+                # Vérifier si l'IA est en mode Autonome
+                from core.autopilot_daemon import is_autopilot_active
+                autopilot_enabled = is_autopilot_active()
+
+                if autopilot_enabled:
+                    send_res = send_whatsapp_cloud_message(
+                        recipient_phone=formatted_phone,
+                        text=reply_text,
+                        phone_number_id=phone_number_id
+                    )
+                    dispatch_status = "DELIVERED" if send_res.get("success") else "FAILED"
+                    log_lead_message(
+                        lead_id=lead_id,
+                        channel="WHATSAPP",
+                        sender="AGENT",
+                        message=reply_text,
+                        status=dispatch_status,
+                        metadata={
+                            "whatsapp_phone": formatted_phone,
+                            "wamid": send_res.get("message_id"),
+                            "error": send_res.get("error")
+                        }
+                    )
+
+                    log_activity(
+                        category="WHATSAPP_CLOUD",
+                        action="Réponse experte envoyée sur WhatsApp",
+                        lead_name=lead_name,
+                        lead_phone=formatted_phone,
+                        status="SUCCESS" if send_res.get("success") else "ERROR",
+                        details=f"Réponse envoyée au {formatted_phone}. Succès: {send_res.get('success')}. Extrait: {reply_text[:80]}..."
+                    )
+                else:
+                    send_res = {"success": False, "mode": "PAUSE_SUPERVISION", "message": "Envoi suspendu (Mode Pause)"}
+                    log_lead_message(
+                        lead_id=lead_id,
+                        channel="WHATSAPP",
+                        sender="AGENT",
+                        message=reply_text,
+                        status="DRAFT_SUPERVISION",
+                        metadata={
+                            "whatsapp_phone": formatted_phone,
+                            "supervision": True,
+                            "note": "IA en Pause. Brouillon préparé."
+                        }
+                    )
+
+                    log_activity(
+                        category="WHATSAPP_SUPERVISION",
+                        action="Message WhatsApp capté - En attente (Mode Pause)",
+                        lead_name=lead_name,
+                        lead_phone=formatted_phone,
+                        status="INFO",
+                        details=f"Lead enregistré au CRM. IA en Pause. Brouillon préparé : {reply_text[:80]}..."
+                    )
+
+                conn.close()
+
+                results.append({
+                    "lead_id": lead_id,
+                    "phone": formatted_phone,
+                    "user_text": user_text,
+                    "reply_sent": reply_text,
+                    "send_status": send_res
+                })
+
+    return results

@@ -1702,7 +1702,9 @@ async function loadSettings() {
     const s = await res.json();
     if (document.getElementById("setting-meta-token")) document.getElementById("setting-meta-token").value = s.meta_token || "";
     if (document.getElementById("setting-linkedin-token")) document.getElementById("setting-linkedin-token").value = s.linkedin_token || "";
-    if (document.getElementById("setting-wati-token")) document.getElementById("setting-wati-token").value = s.wati_token || "";
+    if (document.getElementById("setting-wati-token")) document.getElementById("setting-wati-token").value = s.wati_token || s.whatsapp_token || "";
+    if (document.getElementById("setting-whatsapp-phone-number-id")) document.getElementById("setting-whatsapp-phone-number-id").value = s.whatsapp_phone_number_id || "";
+    if (document.getElementById("setting-whatsapp-waba-id")) document.getElementById("setting-whatsapp-waba-id").value = s.whatsapp_waba_id || "";
     if (document.getElementById("setting-admin-phone")) document.getElementById("setting-admin-phone").value = s.admin_phone || "";
     if (document.getElementById("setting-payment-url")) document.getElementById("setting-payment-url").value = s.payment_url || "";
     if (document.getElementById("setting-anthropic-key")) document.getElementById("setting-anthropic-key").value = s.anthropic_key || "";
@@ -1759,9 +1761,12 @@ async function checkConnectionsHealth() {
     // Badge WhatsApp
     const waBadge = document.getElementById("wa-status-badge");
     if (waBadge && data.whatsapp) {
-      if (data.whatsapp.configured) {
+      if (data.whatsapp.status === "PRET") {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
-        waBadge.innerText = "Token Configuré";
+        waBadge.innerText = `✓ WhatsApp Cloud Actif (ID: ${data.whatsapp.phone_number_id})`;
+      } else if (data.whatsapp.status === "TOKEN_SEUL") {
+        waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        waBadge.innerText = "Phone Number ID manquant";
       } else {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
         waBadge.innerText = "Non configuré";
@@ -1831,6 +1836,9 @@ async function saveSettings(e) {
     meta_token: document.getElementById("setting-meta-token")?.value || "",
     linkedin_token: document.getElementById("setting-linkedin-token")?.value || "",
     wati_token: document.getElementById("setting-wati-token")?.value || "",
+    whatsapp_token: document.getElementById("setting-wati-token")?.value || "",
+    whatsapp_phone_number_id: document.getElementById("setting-whatsapp-phone-number-id")?.value || "",
+    whatsapp_waba_id: document.getElementById("setting-whatsapp-waba-id")?.value || "",
     admin_phone: document.getElementById("setting-admin-phone")?.value || "",
     payment_url: document.getElementById("setting-payment-url")?.value || "",
     anthropic_key: document.getElementById("setting-anthropic-key")?.value || "",

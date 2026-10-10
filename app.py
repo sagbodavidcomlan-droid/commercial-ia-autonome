@@ -43,6 +43,7 @@ from core.database_store import get_lead_messages, get_lead_channels
 from core.meta_messenger_sync import (
     verify_meta_token,
     handle_facebook_webhook_payload,
+    handle_whatsapp_webhook_payload,
     get_stored_meta_credentials,
     send_messenger_message,
     send_whatsapp_cloud_message
@@ -755,7 +756,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "meta_token": settings_dict.get("meta_token", os.getenv("META_GRAPH_ACCESS_TOKEN", "")),
             "linkedin_token": settings_dict.get("linkedin_token", os.getenv("LINKEDIN_ACCESS_TOKEN", "")),
             "wati_token": settings_dict.get("wati_token", os.getenv("WATI_BEARER_TOKEN", "")),
-            "admin_phone": settings_dict.get("admin_phone", os.getenv("ADMIN_WHATSAPP_PHONE", "+22997000000")),
+            "whatsapp_token": settings_dict.get("whatsapp_token", os.getenv("WHATSAPP_TOKEN", "")),
+            "whatsapp_phone_number_id": settings_dict.get("whatsapp_phone_number_id", os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")),
+            "whatsapp_waba_id": settings_dict.get("whatsapp_waba_id", os.getenv("WHATSAPP_WABA_ID", "")),
+            "admin_phone": settings_dict.get("admin_phone", os.getenv("ADMIN_WHATSAPP_PHONE", "+2290194933458")),
             "payment_gateway": settings_dict.get("payment_gateway", "Systeme.io / PayTech Mobile Money"),
             "llm_provider": settings_dict.get("llm_provider", "OpenAI / Claude"),
             "rgpd_optout_auto": settings_dict.get("rgpd_optout_auto", "true"),
@@ -838,10 +842,18 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.wfile.write(b"Forbidden")
 
     def handle_webhook_whatsapp_post(self, body):
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(b"EVENT_RECEIVED")
+        try:
+            results = handle_whatsapp_webhook_payload(body)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"EVENT_RECEIVED")
+        except Exception as e:
+            logger.error(f"Erreur traitement Webhook WhatsApp : {e}")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"EVENT_RECEIVED")
 
     def handle_api_connections_status(self):
         meta_status = verify_meta_token()
@@ -851,6 +863,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         c.execute("SELECT setting_key, setting_value FROM system_settings")
         s_dict = {r[0]: r[1] for r in c.fetchall()}
         conn.close()
+
+        has_wa = bool(s_dict.get("whatsapp_phone_number_id") or s_dict.get("wati_token") or s_dict.get("whatsapp_token"))
+        wa_status = "PRET" if s_dict.get("whatsapp_phone_number_id") else ("TOKEN_SEUL" if has_wa else "NON_CONFIGURE")
 
         res = {
             "facebook": {
@@ -864,8 +879,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "verify_token": creds.get("webhook_verify_token", "commercial_ia_verify_2026")
             },
             "whatsapp": {
-                "configured": bool(s_dict.get("wati_token")),
-                "status": "NON_CONFIGURE" if not s_dict.get("wati_token") else "PRET",
+                "configured": has_wa,
+                "status": wa_status,
+                "phone_number_id": s_dict.get("whatsapp_phone_number_id", ""),
                 "webhook_url": "/webhook/whatsapp",
                 "verify_token": creds.get("webhook_verify_token", "commercial_ia_verify_2026")
             },
