@@ -207,7 +207,7 @@
       </p>
 
       <!-- Formulaire de Déverrouillage -->
-      <form onsubmit="handleMasterPassSubmit(event)" class="mt-6 space-y-4 text-left">
+      <form id="auth-lock-form" onsubmit="event.preventDefault(); handleMasterPassSubmit(event); return false;" class="mt-6 space-y-4 text-left">
         <div>
           <label class="block text-slate-700 text-xs font-bold mb-1.5 flex items-center justify-between">
             <span>Master Pass Sécurisé</span>
@@ -216,6 +216,7 @@
           <div class="relative">
             <i data-lucide="key-round" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
             <input type="password" id="input-master-pass" required placeholder="Entrez le Master Pass..." autofocus
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();handleMasterPassSubmit(event);}"
                    class="w-full pl-10 pr-10 py-3 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-[#0062ff] rounded-xl text-sm text-slate-900 font-mono tracking-wider focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
             <button type="button" onclick="togglePassVisibility('input-master-pass', 'btn-toggle-eye')" id="btn-toggle-eye" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none">
               <i data-lucide="eye" class="w-4 h-4"></i>
@@ -228,7 +229,7 @@
           <span id="auth-error-text">Mot de passe incorrect.</span>
         </div>
 
-        <button type="submit" id="btn-unlock-submit" class="w-full py-3 px-4 bg-[#0062ff] hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all">
+        <button type="button" onclick="handleMasterPassSubmit(event)" id="btn-unlock-submit" class="w-full py-3 px-4 bg-[#0062ff] hover:bg-blue-700 active:scale-[0.98] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all cursor-pointer">
           <i data-lucide="unlock" class="w-4 h-4"></i>
           <span>Déverrouiller le Système</span>
         </button>
@@ -3414,7 +3415,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Application Logic (Versionnée anti-cache) -->
-  <script src="/static/js/app.js?v=13.0"></script>
+  <script src="/static/js/app.js?v=14.0"></script>
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {
