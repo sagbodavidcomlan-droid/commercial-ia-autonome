@@ -11,6 +11,8 @@ Direction Artistique IA, Graphisme Haute Conversion & Motion Design.
 import os
 import sys
 import json
+import re
+import requests
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -22,6 +24,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from core.database_store import get_connection
+from core.catalog_engine import CatalogEngine
 
 # ==============================================================================
 # SECTION 1 : BRAND BIBLE OFFICIELLE (DAVE SAGBO)
@@ -68,10 +71,93 @@ class CreativeStudioEngine:
 
     def __init__(self):
         self.brand_bible = BRAND_BIBLE
+        self.catalog_engine = CatalogEngine()
 
     def get_brand_bible(self) -> Dict[str, Any]:
         """Retourne la charte d'identité visuelle complète."""
         return self.brand_bible
+
+    def get_gemini_api_key(self) -> Optional[str]:
+        """
+        Récupère la clé API Gemini soit depuis SQLite (system_settings), soit depuis l'environnement.
+        """
+        try:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'gemini_key'")
+            row = c.fetchone()
+            conn.close()
+            if row and row[0] and row[0].strip():
+                return row[0].strip()
+        except Exception as e:
+            logger.warning(f"Erreur lecture clé Gemini en DB: {e}")
+        
+        env_key = os.getenv("GEMINI_API_KEY")
+        if env_key and env_key.strip():
+            return env_key.strip()
+        return None
+
+    def get_catalog_context(self) -> str:
+        """
+        Extrait les offres clés actives du catalogue pour enrichir le contexte IA.
+        """
+        try:
+            items = self.catalog_engine.get_items(statut="Actif")
+            if not items:
+                items = self.catalog_engine.get_items()
+            if not items:
+                return "Offres clés Dave Sagbo : Accompagnement Systèmes Commerciaux, Automatisation WhatsApp & Closing B2B."
+            
+            lines = []
+            for it in items[:6]:
+                nom = it.get("nom", "")
+                prix = it.get("prix_vente", "")
+                devise = it.get("devise", "FCFA")
+                cat = it.get("categorie", "")
+                lines.append(f"- {nom} ({cat}) : {prix} {devise}")
+            return "Offres réelles du catalogue Dave Sagbo :\n" + "\n".join(lines)
+        except Exception as e:
+            logger.warning(f"Erreur extraction catalogue: {e}")
+            return "Offres clés : Systèmes Commerciaux B2B, Automatisation WhatsApp & Closing."
+
+    def _call_gemini_json(self, prompt: str, system_instruction: str = "") -> Optional[Dict[str, Any]]:
+        """
+        Appelle Gemini avec le modèle gemini-flash-lite-latest et parse la réponse JSON strictement.
+        """
+        api_key = self.get_gemini_api_key()
+        if not api_key:
+            logger.warning("Aucune clé API Gemini disponible.")
+            return None
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={api_key}"
+        
+        full_prompt = prompt
+        if system_instruction:
+            full_prompt = f"{system_instruction}\n\n---\nTÂCHE DEMANDÉE :\n{prompt}"
+
+        payload = {
+            "contents": [{"parts": [{"text": full_prompt}]}],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "temperature": 0.4
+            }
+        }
+
+        try:
+            resp = requests.post(url, json=payload, timeout=25)
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                # Nettoyage si markdown
+                cleaned = re.sub(r"^```(?:json)?\s*", "", text.strip())
+                cleaned = re.sub(r"\s*```$", "", cleaned)
+                return json.loads(cleaned)
+            else:
+                logger.error(f"Gemini API error ({resp.status_code}): {resp.text[:300]}")
+                return None
+        except Exception as e:
+            logger.error(f"Erreur appel Gemini JSON: {e}")
+            return None
 
     def generate_carousel_blueprint(
         self,
@@ -80,18 +166,71 @@ class CreativeStudioEngine:
         target_audience: str = "Entrepreneurs, Prestataires & PME"
     ) -> Dict[str, Any]:
         """
-        Génère un carrousel complet haute conversion (8 slides optimisées).
+        Génère un carrousel complet haute conversion (8 slides optimisées) propulsé par Gemini.
         Chaque slide comprend : titre d'accroche, texte d'appui, recommandation visuelle,
         couleurs suggérées et call-to-action.
         """
         topic_clean = (topic or "Automatiser ses relances clients").strip()
+        catalog_ctx = self.get_catalog_context()
 
+        sys_prompt = f"""Tu es le Directeur Artistique & Concepteur de Contenu Haute Conversion de Dave Sagbo.
+Identité de marque : Dave Sagbo — Systèmes Commerciaux & Automatisation d'Acquisition B2B / PME.
+Ton de voix : Sobre, tranchant, clinique, pragmatique, axé ROI et statut, jamais familier, aucun emoji puéril.
+Palette : Deep Onyx #0B0F19, Bleu Royal #0062FF, Or Mat #E5A93C, Émeraude #10B981.
+
+{catalog_ctx}
+
+Règles impératives :
+1. Crée exactement 8 slides progressives (Hook -> Douleur cachée -> Diagnostic chiffré -> Méthode étape 1 -> Méthode étape 2 -> Preuve d'autorité -> Récapitulatif -> Call-to-Action).
+2. Titres de slides courts et percutants (max 7-9 mots).
+3. Le CTA final doit inciter à commenter un mot-clé précis en majuscules (ex: SYSTÈME, CLOSING, AUDIT, CLIENTS).
+4. Fournis une légende (caption) de post captivante avec storytelling et appel à l'action.
+5. Format de sortie : JSON STRICT."""
+
+        user_prompt = f"""Génère un carrousel de 8 slides sur le sujet : "{topic_clean}" pour le canal {channel} et l'audience {target_audience}.
+Structure JSON attendue :
+{{
+  "title": "Titre explicite du carrousel",
+  "trigger_keyword": "MOTCLÉ",
+  "caption": "Texte complet de la publication avec retours à la ligne",
+  "slides": [
+    {{
+      "slide_number": 1,
+      "type": "HOOK",
+      "title": "Titre choc de la slide",
+      "subtitle": "Explication limpide et percutante en 2 phrases max",
+      "visual_layout": "Indication visuelle (mise en page, contraste)",
+      "badge": "TITRE DU BADGE",
+      "cta_hint": "Glisser vers la droite 👉"
+    }}
+  ]
+}}"""
+
+        ai_res = self._call_gemini_json(user_prompt, sys_prompt)
+        if ai_res and "slides" in ai_res and len(ai_res["slides"]) >= 5:
+            # Assurer les clés
+            for idx, s in enumerate(ai_res["slides"]):
+                s["slide_number"] = idx + 1
+            return {
+                "title": ai_res.get("title", f"Carrousel : {topic_clean}"),
+                "channel": channel.upper(),
+                "format": "CAROUSEL",
+                "slides_count": len(ai_res["slides"]),
+                "slides": ai_res["slides"],
+                "caption": ai_res.get("caption", ""),
+                "trigger_keyword": ai_res.get("trigger_keyword", "SYSTÈME").upper(),
+                "brand_palette": self.brand_bible["visual_palette"],
+                "ai_generated": True,
+                "created_at": datetime.now().isoformat()
+            }
+
+        # Fallback de qualité
         slides = [
             {
                 "slide_number": 1,
                 "type": "HOOK",
                 "title": f"Pourquoi 80% de vos prospects disparaissent sans acheter",
-                "subtitle": f"Et comment un simple ajustement de tempo double vos conversions.",
+                "subtitle": f"Et comment un simple ajustement de tempo double vos conversions sur '{topic_clean}'.",
                 "visual_layout": "Titre centré massif, fond sombre #0B0F19, mot clé 'disparaissent' surligné en or mat #E5A93C.",
                 "badge": "STRATÉGIE CONVERSION",
                 "cta_hint": "Glisser vers la droite 👉"
@@ -149,13 +288,13 @@ class CreativeStudioEngine:
                 "type": "CALL_TO_ACTION",
                 "title": "Vous voulez déployer ce système sur vos opportunités ?",
                 "subtitle": "Commentez 'SYSTÈME' sous ce post et je vous partage en message privé la grille de qualification exacte.",
-                "visual_layout": "Carte de conclusion premium avec photo de profil Dave Sagbo, logo Invo et bouton CTA.",
+                "visual_layout": "Carte de conclusion premium avec logo Dave Sagbo et bouton CTA.",
                 "badge": "ACTION IMMÉDIATE",
                 "trigger_keyword": "SYSTÈME"
             }
         ]
 
-        caption = "La plupart des entreprises ne manquent pas de contacts, elles manquent de méthode de conversion.\n\nDans ce carrousel, je vous détaille étape par étape comment transformer des interactions hésitantes en accords fermes, sans insistance et sans brader votre tarif.\n\n👉 Commentez 'SYSTÈME' ci-dessous pour recevoir la grille de qualification directe en MP."
+        caption = f"La plupart des entreprises ne manquent pas de contacts, elles manquent de méthode de conversion sur le sujet : {topic_clean}.\n\nDans ce carrousel, je vous détaille étape par étape comment transformer des interactions hésitantes en accords fermes, sans insistance et sans brader votre tarif.\n\n👉 Commentez 'SYSTÈME' ci-dessous pour recevoir la grille de qualification directe en MP."
 
         return {
             "title": f"Carrousel : {topic_clean}",
@@ -166,6 +305,7 @@ class CreativeStudioEngine:
             "caption": caption,
             "trigger_keyword": "SYSTÈME",
             "brand_palette": self.brand_bible["visual_palette"],
+            "ai_generated": False,
             "created_at": datetime.now().isoformat()
         }
 
@@ -175,55 +315,132 @@ class CreativeStudioEngine:
         channel: str = "TIKTOK"
     ) -> Dict[str, Any]:
         """
-        Génère un storyboard de Motion Design & vidéo courte (30 à 45 secondes)
-        avec découpage à la seconde, animations typographiques, zooms et SFX.
+        Génère un script Motion Video (Reel / TikTok 9:16) dynamique propulsé par Gemini.
+        Découpage scène par scène avec texte parlé minuté, mots clés cinétiques style Hormozi,
+        actions visuelles et SFX.
         """
         topic_clean = (topic or "Comment closer un prospect qui dit que c'est trop cher").strip()
+        catalog_ctx = self.get_catalog_context()
 
+        sys_prompt = f"""Tu es le Directeur Motion Design & Scénariste Vidéo Court Format (Reels, TikTok, Shorts 9:16) de Dave Sagbo.
+Identité de marque : Dave Sagbo — Systèmes Commerciaux & Automatisation d'Acquisition B2B / PME.
+Ton de voix : Percutant, direct, charismatique, autorité naturelle, pas de politesses superflues.
+Esthétique : Style Alex Hormozi haut de gamme, fond Deep Onyx (#0B0F19), mots clés en jaune or (#E5A93C) et bleu (#0062FF), animations franches, rythme soutenu.
+
+{catalog_ctx}
+
+Règles impératives :
+1. Durée totale : entre 30 et 45 secondes réparties en 4 à 6 scènes clés.
+2. Structure vidéo :
+   - Scène 1 : HOOK brutal / rupture de pattern (0 à 4s).
+   - Scène 2 : Dénonciation de l'erreur commune / coût de l'inaction (4 à 12s).
+   - Scène 3 : La règle clinique / le shift psychologique (12 à 22s).
+   - Scène 4 : L'application concrète ou preuve tangible (22 à 32s).
+   - Scène 5 : CTA social selling avec mot-clé à commenter en majuscules (32 à 38s).
+3. Pour chaque scène :
+   - timecode précis (ex: '00:00 - 00:04')
+   - duration_seconds (durée de la scène en secondes, ex: 4)
+   - phase (nom de la phase)
+   - audio_spoken (phrase exacte dite par la voix-off masculine de Dave Sagbo)
+   - highlight_words (liste de 2 à 4 mots clés majeurs à animer en gros plan)
+   - visual_action (mouvement caméra, zoom, cadrage)
+   - motion_graphic (animation typographique cinétique)
+   - sfx (effet sonore d'accompagnement)
+4. Format de sortie : JSON STRICT."""
+
+        user_prompt = f"""Génère un storyboard vidéo court format 9:16 complet pour {channel} sur le sujet : "{topic_clean}".
+Structure JSON attendue :
+{{
+  "title": "Titre accrocheur du Reel/TikTok",
+  "duration_seconds": 38,
+  "trigger_keyword": "CLOSING",
+  "audio_style": "Voix masculine assurée, débit posé et percutant, fond sonore lofi discret",
+  "caption": "Texte complet de légende pour accompagner la vidéo avec hashtags stratégiques",
+  "scenes": [
+    {{
+      "timecode": "00:00 - 00:04",
+      "duration_seconds": 4,
+      "phase": "HOOK",
+      "audio_spoken": "Texte exact parlé",
+      "highlight_words": ["MOT1", "MOT2"],
+      "visual_action": "Plan serré avec punch-in rapide",
+      "motion_graphic": "Mots géants en surbrillance or",
+      "sfx": "Whoosh puissant"
+    }}
+  ]
+}}"""
+
+        ai_res = self._call_gemini_json(user_prompt, sys_prompt)
+        if ai_res and "scenes" in ai_res and len(ai_res["scenes"]) >= 3:
+            total_dur = sum(s.get("duration_seconds", 5) for s in ai_res["scenes"])
+            return {
+                "title": ai_res.get("title", f"Reel/TikTok : {topic_clean}"),
+                "channel": channel.upper(),
+                "format": "MOTION_VIDEO",
+                "duration_seconds": ai_res.get("duration_seconds", total_dur),
+                "scenes": ai_res["scenes"],
+                "caption": ai_res.get("caption", ""),
+                "trigger_keyword": ai_res.get("trigger_keyword", "CLOSING").upper(),
+                "audio_style": ai_res.get("audio_style", "Voix assurée, débit posé et percutant."),
+                "ai_generated": True,
+                "created_at": datetime.now().isoformat()
+            }
+
+        # Fallback de qualité
         scenes = [
             {
-                "timecode": "00:00 - 00:03",
+                "timecode": "00:00 - 00:04",
+                "duration_seconds": 4,
                 "phase": "HOOK_PATTERN_INTERRUPT",
-                "audio_spoken": "Si un prospect vous dit 'c'est trop cher', ne faites JAMAIS cette erreur.",
+                "audio_spoken": f"Si un prospect hésite sur vos tarifs pour {topic_clean}, ne faites JAMAIS cette erreur.",
+                "highlight_words": ["JAMAIS", "ERREUR"],
                 "visual_action": "Plan rapproché face caméra. Zoom rapide (punch-in).",
                 "motion_graphic": "Mot 'JAMAIS' apparaît en lettres géantes blanches sur fond noir avec secousse légère.",
                 "sfx": "Whoosh sonore percutant + arrêt net de la musique de fond."
             },
             {
-                "timecode": "00:03 - 00:09",
+                "timecode": "00:04 - 00:11",
+                "duration_seconds": 7,
                 "phase": "PROBLEM_REVEAL",
-                "audio_spoken": "L'erreur, c'est de baisser votre prix immédiatement ou d'insister lourdement.",
+                "audio_spoken": "L'erreur fatale, c'est de baisser votre prix immédiatement ou de justifier chaque ligne de votre devis.",
+                "highlight_words": ["PRIX", "DEVIS"],
                 "visual_action": "Incrustation d'un graphique animé montrant une courbe de valeur qui s'effondre.",
                 "motion_graphic": "Bannière rouge subtile : 'Dévalorisation immédiate'.",
                 "sfx": "Gong discret / son de friction."
             },
             {
-                "timecode": "00:09 - 00:20",
+                "timecode": "00:11 - 00:22",
+                "duration_seconds": 11,
                 "phase": "VALUE_PIVOT",
-                "audio_spoken": "Validez d'abord sa vigilance : 'Votre attention sur le budget est tout à fait légitime'. Puis montrez le coût de l'inaction.",
+                "audio_spoken": "Validez d'abord sa vigilance : 'Votre attention sur le budget est parfaitement légitime'. Puis montrez le coût réel de l'inaction.",
+                "highlight_words": ["BUDGET", "INACTION"],
                 "visual_action": "Transition fluide droite vers gauche. Texte cinétique synchronisé mot à mot.",
-                "motion_graphic": "Texte dynamique façon Hormozi : mots en surbrillance jaune/bleu #0062FF au rythme de la voix.",
+                "motion_graphic": "Texte dynamique façon Hormozi : mots en surbrillance or mat #E5A93C au rythme de la voix.",
                 "sfx": "Pop sonore léger sur chaque mot clé."
             },
             {
-                "timecode": "00:20 - 00:30",
+                "timecode": "00:22 - 00:31",
+                "duration_seconds": 9,
                 "phase": "PUNCHLINE_SOLUTION",
-                "audio_spoken": "Un prospect ne cherche pas le produit le moins cher. Il cherche la certitude que son investissement va rapporter.",
-                "visual_action": "Cadre resserré. Regard fixe. Fond tamisé élégant.",
+                "audio_spoken": "Un prospect ne cherche pas le produit le moins cher. Il cherche la certitude que son investissement va lui rapporter.",
+                "highlight_words": ["CERTITUDE", "ROI"],
+                "visual_action": "Cadre resserré. Regard fixe. Fond tamisé Deep Onyx.",
                 "motion_graphic": "Badge d'autorité minimaliste : 'Certitude > Remise'.",
                 "sfx": "Montée en tension musicale discrète."
             },
             {
-                "timecode": "00:30 - 00:38",
+                "timecode": "00:31 - 00:38",
+                "duration_seconds": 7,
                 "phase": "CALL_TO_ACTION",
                 "audio_spoken": "Si vous voulez mes 3 scripts exacts de closing pour répondre sereinement, écrivez 'CLOSING' en commentaire.",
+                "highlight_words": ["SCRIPTS", "CLOSING"],
                 "visual_action": "Flèche motion animée pointant vers la zone des commentaires.",
                 "motion_graphic": "Bouton d'interaction animé : 'Commentez CLOSING 💬'.",
                 "sfx": "Ding de validation cristallin."
             }
         ]
 
-        caption = "Ne baissez plus jamais vos prix sous la pression.\n\nVoici le cadrage exact pour faire comprendre la valeur de votre solution sans entrer dans une bataille de remises.\n\n👇 Commentez 'CLOSING' pour recevoir les scripts d'application directe."
+        caption = f"Ne baissez plus jamais vos prix sous la pression sur le sujet : {topic_clean}.\n\nVoici le cadrage exact pour faire comprendre la valeur de votre solution sans entrer dans une bataille de remises.\n\n👇 Commentez 'CLOSING' pour recevoir les scripts d'application directe."
 
         return {
             "title": f"Reel/TikTok : {topic_clean}",
@@ -234,6 +451,7 @@ class CreativeStudioEngine:
             "caption": caption,
             "trigger_keyword": "CLOSING",
             "audio_style": "Voix assurée, débit posé, musique lofi/business executive en fond sonore léger.",
+            "ai_generated": False,
             "created_at": datetime.now().isoformat()
         }
 
@@ -244,11 +462,49 @@ class CreativeStudioEngine:
     ) -> Dict[str, Any]:
         """
         Génère un post d'autorité narratif puissant (Storytelling + Leçon de terrain)
-        conforme à l'identité de Dave Sagbo.
+        conforme à l'identité de Dave Sagbo et enrichi par Gemini.
         """
         topic_clean = (topic or "La méthode de qualification DUR").strip()
+        catalog_ctx = self.get_catalog_context()
+
+        sys_prompt = f"""Tu es le Rédacteur Stratégique & Ghostwriter Exécutif de Dave Sagbo.
+Identité de marque : Dave Sagbo — Systèmes Commerciaux & Automatisation d'Acquisition B2B / PME.
+Style d'écriture : Post LinkedIn / Facebook narratif à haute autorité.
+Règles :
+- Pas de jargon creux.
+- Phrase d'accroche marquante basée sur une anecdote réelle de terrain.
+- Leçon pragmatique et chiffres concrets.
+- CTA social selling invitant à commenter un mot-clé précis pour recevoir une ressource en privé.
+
+{catalog_ctx}
+
+Format de sortie : JSON STRICT."""
+
+        user_prompt = f"""Rédige un post d'autorité percutant sur : "{topic_clean}" pour {channel}.
+Structure JSON attendue :
+{{
+  "title": "Titre du post",
+  "body": "Texte complet du post avec retours à la ligne aérés",
+  "trigger_keyword": "AUDIT",
+  "visual_recommendation": "Description du visuel suggéré"
+}}"""
+
+        ai_res = self._call_gemini_json(user_prompt, sys_prompt)
+        if ai_res and "body" in ai_res and len(ai_res["body"]) > 100:
+            return {
+                "title": ai_res.get("title", f"Post d'Autorité : {topic_clean}"),
+                "channel": channel.upper(),
+                "format": "AUTHORITY_POST",
+                "body": ai_res["body"],
+                "trigger_keyword": ai_res.get("trigger_keyword", "AUDIT").upper(),
+                "visual_recommendation": ai_res.get("visual_recommendation", "Photo épurée en situation de travail avec logo Dave Sagbo."),
+                "ai_generated": True,
+                "created_at": datetime.now().isoformat()
+            }
+
+        # Fallback de qualité
         post_content = (
-            "Hier soir à 21h, un entrepreneur m'a envoyé ce message :\n\n"
+            f"Hier soir à 21h, un entrepreneur m'a envoyé ce message à propos de {topic_clean} :\n\n"
             "« Dave, j'ai 40 personnes qui m'ont écrit cette semaine sur WhatsApp, mais dès que j'annonce mon tarif, plus personne ne répond. Qu'est-ce qui cloche ? »\n\n"
             "Ce qui cloche n'est ni son produit, ni son tarif.\n"
             "Ce qui cloche, c'est qu'il vendait un chiffre là où il devait qualifier une urgence.\n\n"
@@ -269,6 +525,7 @@ class CreativeStudioEngine:
             "body": post_content,
             "trigger_keyword": "AUDIT",
             "visual_recommendation": "Photo épurée en situation de travail ou visuel typographique sobre sur fond noir onyx #0B0F19 avec logo Invo.",
+            "ai_generated": False,
             "created_at": datetime.now().isoformat()
         }
 
@@ -457,9 +714,45 @@ class CreativeStudioEngine:
     def generate_google_meta_ads(self, topic: str, audience: str = "Dirigeants de PME") -> Dict[str, Any]:
         """
         Génère 3 variations publicitaires ultra-optimisées (Google Search & Meta Ads)
-        avec contraintes strictes de caractères (Titres < 30 car., Descriptions < 90 car.).
+        avec contraintes strictes de caractères (Titres < 30 car., Descriptions < 90 car.) via Gemini.
         """
         topic_clean = (topic or "Automatiser les relances clients").strip()
+        catalog_ctx = self.get_catalog_context()
+
+        sys_prompt = f"""Tu es le Copywriter Publicitaire Performance (Google Ads & Meta Ads) de Dave Sagbo.
+Identité : Systèmes Commerciaux B2B, Automatisation d'Acquisition.
+Contraintes Google Ads obligatoires :
+- Chaque headline (titre) doit faire MOINS DE 30 CARACTÈRES.
+- Chaque description doit faire MOINS DE 90 CARACTÈRES.
+
+{catalog_ctx}
+
+Format de sortie : JSON STRICT."""
+
+        user_prompt = f"""Génère 3 angles publicitaires (1. Bénéfice & ROI, 2. Coût de l'Inaction, 3. Offre Exclusive & Audit) pour "{topic_clean}" ciblant "{audience}".
+Structure JSON :
+{{
+  "variations": [
+    {{
+      "angle": "Bénéfice & ROI Rapide",
+      "headline_1": "Titre 1 (<30 car)",
+      "headline_2": "Titre 2 (<30 car)",
+      "headline_3": "Titre 3 (<30 car)",
+      "desc_1": "Description 1 percutante (<90 car)",
+      "desc_2": "Description 2 appel à l'action (<90 car)"
+    }}
+  ]
+}}"""
+
+        ai_res = self._call_gemini_json(user_prompt, sys_prompt)
+        if ai_res and "variations" in ai_res and len(ai_res["variations"]) >= 2:
+            return {
+                "topic": topic_clean,
+                "target_audience": audience,
+                "variations": ai_res["variations"],
+                "ai_generated": True
+            }
+
         variations = [
             {
                 "angle": "Bénéfice & ROI Rapide",
@@ -489,15 +782,17 @@ class CreativeStudioEngine:
         return {
             "topic": topic_clean,
             "target_audience": audience,
-            "variations": variations
+            "variations": variations,
+            "ai_generated": False
         }
 
     def generate_midjourney_prompt(self, topic: str, audience: str = "Dirigeants") -> Dict[str, Any]:
         """
-        Génère un prompt Midjourney / Flux d'image haute fidélité pour visuels de couverture.
+        Génère un prompt Midjourney / Flux d'image haute fidélité pour visuels de couverture adapté au sujet.
         """
         prompt = (
-            f"High-end corporate executive portrait of a focused tech entrepreneur in an ultra-modern minimalist glass office, "
+            f"High-end corporate executive portrait of a focused African tech entrepreneur in an ultra-modern minimalist glass office, "
+            f"topic context about '{topic}', "
             f"deep onyx and royal blue neon atmospheric lighting (#0B0F19 and #0062FF accents), matte gold reflections, "
             f"cinematic composition, shot on Hasselblad H6D-100c, 85mm f/1.4 lens, volumetric lighting, photorealistic 8k, "
             f"subtle depth of field, authentic boardroom atmosphere, symbolizing power, precision, and commercial growth --ar 4:5 --v 6.0 --style raw"

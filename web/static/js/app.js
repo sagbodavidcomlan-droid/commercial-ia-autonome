@@ -5064,8 +5064,47 @@ async function confirmClearCRM() {
 // MODULE STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DAVE SAGBO)
 // ==============================================================================
 let currentCreativeResult = null;
+let creativeMotionState = {
+  isPlaying: false,
+  isRecording: false,
+  currentSceneIndex: 0,
+  animationFrameId: null,
+  timerInterval: null,
+  elapsedSeconds: 0,
+  mediaRecorder: null,
+  recordedChunks: []
+};
+
+async function loadCreativeCatalogItems() {
+  const sel = document.getElementById("creative-catalog-item");
+  if (!sel) return;
+  try {
+    const res = await fetch("/api/catalog/items");
+    const data = await res.json();
+    if (data.success && data.items && data.items.length > 0) {
+      sel.innerHTML = `<option value="">-- Sujet Libre / Thématique Personnalisée --</option>` +
+        data.items.map(it => `<option value="${it.id}" data-name="${it.nom}" data-cat="${it.categorie || ''}" data-price="${it.prix_vente} ${it.devise}">${it.nom} (${it.prix_vente} ${it.devise})</option>`).join("");
+    }
+  } catch (e) {
+    console.error("Erreur chargement catalogue pour le studio créatif :", e);
+  }
+}
+
+function onCreativeCatalogItemChange() {
+  const sel = document.getElementById("creative-catalog-item");
+  const topicInput = document.getElementById("creative-topic");
+  if (!sel || !topicInput) return;
+  const opt = sel.options[sel.selectedIndex];
+  if (sel.value && opt) {
+    const name = opt.getAttribute("data-name");
+    const cat = opt.getAttribute("data-cat");
+    const price = opt.getAttribute("data-price");
+    topicInput.value = `Comment vendre '${name}' (${cat}) à ${price} avec un closing haut de gamme`;
+  }
+}
 
 async function loadCreativeCalendar() {
+  loadCreativeCatalogItems();
   const tbody = document.getElementById("creative-calendar-tbody");
   const countLabel = document.getElementById("calendar-count-label");
   if (!tbody) return;
@@ -5193,7 +5232,7 @@ function renderCarouselPreview(result) {
   if (!container) return;
 
   const slidesHtml = (result.slides || []).map((slide, sIdx) => `
-    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[270px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
+    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[290px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
       <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
         <span class="px-2 py-0.5 rounded-full bg-slate-800 text-blue-400 border border-slate-700">${slide.badge || 'SLIDE'}</span>
         <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-mono">${slide.slide_number}</span>
@@ -5202,22 +5241,38 @@ function renderCarouselPreview(result) {
         <h4 class="text-xs font-black text-white leading-snug">${slide.title}</h4>
         <p class="text-[11px] text-slate-300 leading-relaxed font-normal">${slide.subtitle}</p>
       </div>
-      <div class="text-[9px] text-slate-500 border-t border-slate-800/80 pt-1.5 flex items-center justify-between">
-        <span>${slide.visual_layout ? slide.visual_layout.slice(0, 24) + '...' : 'Direction Invo'}</span>
-        <button onclick="downloadSingleSlideSvg(${sIdx})" class="px-2 py-0.5 rounded bg-blue-600/80 hover:bg-blue-600 text-white font-bold flex items-center gap-1 transition-all">
-          <i data-lucide="download" class="w-3 h-3"></i> SVG
-        </button>
+      <div class="text-[9px] text-slate-400 border-t border-slate-800/80 pt-2 flex items-center justify-between gap-1">
+        <span class="truncate max-w-[90px] text-slate-500">${slide.visual_layout ? slide.visual_layout.slice(0, 16) + '...' : 'Direction Invo'}</span>
+        <div class="flex items-center gap-1">
+          <button onclick="downloadSingleSlideFormat(${sIdx}, 'svg')" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold text-[9px] transition-all" title="Télécharger SVG">
+            SVG
+          </button>
+          <button onclick="downloadSingleSlideFormat(${sIdx}, 'png')" class="px-1.5 py-0.5 rounded bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-[9px] transition-all" title="Télécharger PNG Haute Définition">
+            PNG
+          </button>
+          <button onclick="downloadSingleSlideFormat(${sIdx}, 'jpeg')" class="px-1.5 py-0.5 rounded bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-[9px] transition-all" title="Télécharger JPEG">
+            JPG
+          </button>
+        </div>
       </div>
     </div>
   `).join("");
 
   container.innerHTML = `
     <div class="w-full space-y-4">
-      <div class="flex items-center justify-between bg-slate-100 p-2.5 rounded-xl border border-slate-200">
-        <span class="text-xs font-bold text-slate-700">Carrousel 8 Slides Haute Fidélité (Norme 4:5 1080x1350)</span>
-        <button onclick="downloadAllSlidesSvg()" class="btn btn-xs btn-primary flex items-center gap-1 font-bold">
-          <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Télécharger Toutes les Slides (SVG)
-        </button>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-100 p-3 rounded-xl border border-slate-200">
+        <div class="text-xs font-bold text-slate-700 flex items-center gap-2">
+          <span>Carrousel ${result.slides_count || 8} Slides Haute Définition (Norme 4:5 1080x1350)</span>
+          ${result.ai_generated ? '<span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">Généré par Gemini</span>' : ''}
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="downloadAllSlidesInFormat('png')" class="btn btn-xs btn-primary flex items-center gap-1 font-bold">
+            <i data-lucide="image" class="w-3.5 h-3.5"></i> Tout en PNG
+          </button>
+          <button onclick="downloadAllSlidesInFormat('svg')" class="btn btn-xs btn-secondary flex items-center gap-1 font-bold">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Tout en SVG
+          </button>
+        </div>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         ${slidesHtml}
@@ -5322,7 +5377,29 @@ function renderOmnichannelPreview(pack) {
   if (window.lucide) lucide.createIcons();
 }
 
-function downloadSingleSlideSvg(slideIndex) {
+async function convertSvgUrlToRaster(svgUrl, format = 'png', width = 1080, height = 1350) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#0B0F19";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      const mime = format === "jpeg" ? "image/jpeg" : "image/png";
+      const quality = format === "jpeg" ? 0.92 : 1.0;
+      const dataUrl = canvas.toDataURL(mime, quality);
+      resolve(dataUrl);
+    };
+    img.onerror = (e) => reject(e);
+    img.src = svgUrl;
+  });
+}
+
+async function downloadSingleSlideFormat(slideIndex, format = 'svg') {
   let slides = [];
   if (currentCreativeResult && currentCreativeResult.slides) {
     slides = currentCreativeResult.slides;
@@ -5347,16 +5424,36 @@ function downloadSingleSlideSvg(slideIndex) {
   });
 
   const downloadUrl = `/api/creative/slide-svg?${query.toString()}`;
-  const a = document.createElement("a");
-  a.href = downloadUrl;
-  a.download = `slide_${slideIndex + 1}.svg`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast(`Slide #${slideIndex + 1} téléchargée en SVG !`, "success");
+
+  if (format === 'svg') {
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = `slide_${slideIndex + 1}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Slide #${slideIndex + 1} téléchargée en SVG !`, "success");
+    return;
+  }
+
+  showToast(`Conversion de la slide #${slideIndex + 1} en ${format.toUpperCase()}...`, "info");
+  try {
+    const rasterDataUrl = await convertSvgUrlToRaster(downloadUrl, format);
+    const a = document.createElement("a");
+    a.href = rasterDataUrl;
+    a.download = `slide_${slideIndex + 1}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Slide #${slideIndex + 1} téléchargée en ${format.toUpperCase()} !`, "success");
+  } catch (err) {
+    console.error("Erreur conversion raster :", err);
+    alert(`Impossible d'exporter en ${format.toUpperCase()}. Téléchargement SVG de secours.`);
+    window.open(downloadUrl, "_blank");
+  }
 }
 
-function downloadAllSlidesSvg() {
+function downloadAllSlidesInFormat(format = 'png') {
   let slides = [];
   if (currentCreativeResult && currentCreativeResult.slides) {
     slides = currentCreativeResult.slides;
@@ -5371,44 +5468,493 @@ function downloadAllSlidesSvg() {
 
   slides.forEach((_, idx) => {
     setTimeout(() => {
-      downloadSingleSlideSvg(idx);
-    }, idx * 250);
+      downloadSingleSlideFormat(idx, format);
+    }, idx * 400);
   });
-  showToast(`Téléchargement des ${slides.length} slides lancé !`, "info");
+  showToast(`Export de toutes les slides en ${format.toUpperCase()} en cours...`, "info");
+}
+
+function downloadAllSlidesSvg() {
+  downloadAllSlidesInFormat('svg');
+}
+
+// ------------------------------------------------------------------------------
+// MOTEUR VIDÉO MOTION DYNAMIQUE & PLAYER 9:16 (DAVE SAGBO)
+// ------------------------------------------------------------------------------
+function stopMotionVideo() {
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  if (creativeMotionState.timerInterval) {
+    clearInterval(creativeMotionState.timerInterval);
+    creativeMotionState.timerInterval = null;
+  }
+  creativeMotionState.isPlaying = false;
+  const playBtn = document.getElementById("btn-motion-play");
+  if (playBtn) {
+    playBtn.innerHTML = `<i data-lucide="play" class="w-4 h-4 fill-current"></i> <span>Lire la Vidéo</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
 }
 
 function renderMotionPreview(result) {
   const container = document.getElementById("creative-render-container");
   if (!container) return;
 
-  const scenesHtml = (result.scenes || []).map((sc, idx) => `
-    <div class="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 hover:border-[#0062ff] transition-all">
+  stopMotionVideo();
+  creativeMotionState.currentSceneIndex = 0;
+  creativeMotionState.elapsedSeconds = 0;
+
+  const scenes = result.scenes || [];
+  const scenesListHtml = scenes.map((sc, idx) => `
+    <div id="motion-scene-card-${idx}" onclick="jumpToMotionScene(${idx})" class="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-1.5 cursor-pointer hover:border-[#0062ff] transition-all">
       <div class="flex items-center justify-between text-[11px] font-bold">
         <span class="px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-100 font-mono">${sc.timecode}</span>
-        <span class="text-slate-500 uppercase text-[10px] tracking-wider">${sc.phase}</span>
+        <span class="text-slate-500 uppercase text-[9px] tracking-wider">${sc.phase}</span>
       </div>
-      <p class="text-xs text-slate-900 font-semibold bg-slate-50 p-2 rounded-lg border border-slate-100">
-        🗣️ « ${sc.audio_spoken} »
-      </p>
-      <div class="text-[11px] space-y-1 text-slate-600">
-        <div><strong>Action Caméra :</strong> ${sc.visual_action}</div>
-        <div><strong>Motion Typo :</strong> <span class="text-purple-700 font-medium">${sc.motion_graphic}</span></div>
-        <div class="text-[10px] text-emerald-700 font-mono">🔊 SFX : ${sc.sfx}</div>
-      </div>
+      <p class="text-xs text-slate-800 font-medium">🗣️ « ${sc.audio_spoken} »</p>
+      <div class="text-[10px] text-purple-700 font-medium">✨ Motion : ${sc.motion_graphic || 'Cinétique'}</div>
+      <div class="text-[9px] text-emerald-700 font-mono">🔊 SFX : ${sc.sfx || 'Whoosh'}</div>
     </div>
   `).join("");
 
   container.innerHTML = `
     <div class="w-full space-y-4">
-      <div class="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-xs text-blue-900 font-medium">
-        <span>Durée totale : <strong>${result.duration_seconds}s</strong> | Style Audio : ${result.audio_style || 'Voix posée'}</span>
-        <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">Storyboard Prêt</span>
+      <!-- Header du Lecteur Vidéo -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-sm">
+        <div class="text-xs font-bold flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>Lecteur Vidéo Motion 9:16 (Format TikTok / Reel / Short)</span>
+          ${result.ai_generated ? '<span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-black">100% IA Gemini</span>' : ''}
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span>Durée : <strong class="text-amber-400 font-mono">${result.duration_seconds}s</strong></span>
+          <span class="text-slate-600">|</span>
+          <span>Mot-clé : <strong class="text-blue-400 font-mono">${result.trigger_keyword || 'CLOSING'}</strong></span>
+        </div>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        ${scenesHtml}
+
+      <!-- Corps du Player : Vidéo 9:16 + Découpage Storyboard -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Écran Vidéo Vertical 9:16 Stylisé -->
+        <div class="lg:col-span-5 flex flex-col items-center">
+          <div class="relative w-full max-w-[300px] aspect-[9/16] bg-[#0B0F19] rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col justify-between p-5 select-none">
+            
+            <!-- Canvas Masqué pour l'enregistrement vidéo WebM/MP4 -->
+            <canvas id="motion-recorder-canvas" width="720" height="1280" class="hidden"></canvas>
+
+            <!-- Lueur d'ambiance Dave Sagbo -->
+            <div class="absolute -top-16 -right-16 w-48 h-48 bg-[#0062FF] opacity-20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-48 h-48 bg-[#E5A93C] opacity-15 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Top Bar Vidéo (Identité Dave Sagbo) -->
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0062FF] to-[#E5A93C] text-white font-black text-xs flex items-center justify-center">DS</div>
+                <div>
+                  <div class="text-[11px] font-black text-white tracking-wide">DAVE SAGBO</div>
+                  <div class="text-[8px] text-slate-400 uppercase tracking-widest font-bold">Systèmes B2B</div>
+                </div>
+              </div>
+              <span id="motion-phase-badge" class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-blue-950/80 text-blue-400 border border-blue-800/80 uppercase">
+                ${scenes[0] ? scenes[0].phase : 'HOOK'}
+              </span>
+            </div>
+
+            <!-- Centre Vidéo : Typographie Cinétique Style Hormozi -->
+            <div class="relative z-10 my-auto text-center space-y-3 px-2">
+              <div id="motion-action-hint" class="text-[9px] font-bold uppercase tracking-wider text-amber-400 bg-amber-950/40 border border-amber-800/40 py-1 px-2.5 rounded-full inline-block">
+                ${scenes[0] ? scenes[0].visual_action : 'Plan rapproché'}
+              </div>
+              <div id="motion-captions-box" class="min-h-[120px] flex items-center justify-center">
+                <h3 id="motion-kinetic-text" class="text-xl sm:text-2xl font-black text-white leading-tight transition-all duration-300">
+                  ${scenes[0] ? formatKineticWords(scenes[0].audio_spoken, scenes[0].highlight_words) : 'Vidéo Prête'}
+                </h3>
+              </div>
+              <div id="motion-sfx-hint" class="text-[9px] font-mono text-emerald-400">
+                🔊 ${scenes[0] ? scenes[0].sfx : 'Audio prêt'}
+              </div>
+            </div>
+
+            <!-- Bottom Bar Vidéo : Call-To-Action Social Selling & Timer -->
+            <div class="relative z-10 space-y-2">
+              <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-2 text-center">
+                <span class="text-[9px] text-slate-300 block">Commentez en dessous :</span>
+                <span id="motion-cta-badge" class="text-xs font-black text-[#E5A93C] tracking-wider font-mono">
+                  "${result.trigger_keyword || 'CLOSING'}"
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[9px] font-mono text-slate-400">
+                <span id="motion-timecode-display">00:00</span>
+                <span id="motion-total-duration">00:${String(result.duration_seconds).padStart(2, '0')}</span>
+              </div>
+              <!-- Barre de progression -->
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="motion-progress-bar" class="h-full bg-gradient-to-r from-[#0062FF] to-[#E5A93C] w-0 transition-all duration-300"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Contrôles du Lecteur Vidéo -->
+          <div class="w-full max-w-[300px] mt-3 space-y-2">
+            <div class="flex items-center gap-2">
+              <button id="btn-motion-play" onclick="toggleMotionPlay()" class="flex-1 py-2 px-3 bg-[#0062ff] hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition-all">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                <span>Lire la Vidéo</span>
+              </button>
+              <button onclick="restartMotionVideo()" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-200" title="Recommencer">
+                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+            <!-- Boutons d'export Vidéo & Voix -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button onclick="exportMotionVideoFile()" id="btn-export-video" class="py-1.5 px-2 bg-slate-900 hover:bg-black text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Exporter Vidéo</span>
+              </button>
+              <button onclick="speakCurrentSceneVoiceOnly()" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                <span>Voix-off Dave</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne Découpage Scène par Scène -->
+        <div class="lg:col-span-7 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-extrabold text-slate-900 uppercase tracking-wide">Storyboard Détaillé (${scenes.length} Scènes Clés)</h4>
+            <span class="text-[11px] text-slate-500">Cliquez sur une scène pour l'afficher</span>
+          </div>
+          <div class="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+            ${scenesListHtml}
+          </div>
+          <!-- Légende Social Selling Vidéo -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-700">
+            <strong class="text-slate-900 block font-bold">Texte de Légende Réseaux (TikTok / Reels) :</strong>
+            <p class="whitespace-pre-line text-slate-600 font-normal text-[11px] leading-relaxed">${result.caption || ''}</p>
+          </div>
+        </div>
+
       </div>
     </div>
   `;
+  if (window.lucide) lucide.createIcons();
+}
+
+function formatKineticWords(sentence, highlightWords = []) {
+  if (!sentence) return "";
+  const words = sentence.split(" ");
+  const cleanHighlights = (highlightWords || []).map(w => w.toLowerCase().trim());
+
+  return words.map(w => {
+    const cleanW = w.toLowerCase().replace(/[^a-z0-9àâäéèêëîïôöùûüç]/gi, "");
+    const isHighlight = cleanHighlights.some(hw => hw.includes(cleanW) || cleanW.includes(hw));
+    if (isHighlight) {
+      return `<span class="text-[#E5A93C] underline decoration-[#0062FF] decoration-4 font-black">${w}</span>`;
+    }
+    return w;
+  }).join(" ");
+}
+
+function jumpToMotionScene(index) {
+  if (!currentCreativeResult || !currentCreativeResult.scenes) return;
+  const scenes = currentCreativeResult.scenes;
+  if (index < 0 || index >= scenes.length) return;
+
+  creativeMotionState.currentSceneIndex = index;
+  const sc = scenes[index];
+
+  // Mise à jour visuelle du player
+  const badge = document.getElementById("motion-phase-badge");
+  const actionHint = document.getElementById("motion-action-hint");
+  const kineticText = document.getElementById("motion-kinetic-text");
+  const sfxHint = document.getElementById("motion-sfx-hint");
+
+  if (badge) badge.textContent = sc.phase;
+  if (actionHint) actionHint.textContent = sc.visual_action;
+  if (kineticText) kineticText.innerHTML = formatKineticWords(sc.audio_spoken, sc.highlight_words);
+  if (sfxHint) sfxHint.textContent = `🔊 ${sc.sfx || 'Audio synchronisé'}`;
+
+  // Surlignage de la carte active
+  scenes.forEach((_, idx) => {
+    const card = document.getElementById(`motion-scene-card-${idx}`);
+    if (card) {
+      if (idx === index) {
+        card.classList.add("border-[#0062ff]", "bg-blue-50/50");
+      } else {
+        card.classList.remove("border-[#0062ff]", "bg-blue-50/50");
+      }
+    }
+  });
+}
+
+function toggleMotionPlay() {
+  if (creativeMotionState.isPlaying) {
+    stopMotionVideo();
+  } else {
+    playMotionVideoSequence();
+  }
+}
+
+function restartMotionVideo() {
+  stopMotionVideo();
+  creativeMotionState.currentSceneIndex = 0;
+  creativeMotionState.elapsedSeconds = 0;
+  jumpToMotionScene(0);
+  const pb = document.getElementById("motion-progress-bar");
+  if (pb) pb.style.width = "0%";
+  const tc = document.getElementById("motion-timecode-display");
+  if (tc) tc.textContent = "00:00";
+}
+
+function playMotionVideoSequence() {
+  if (!currentCreativeResult || !currentCreativeResult.scenes) return;
+  const scenes = currentCreativeResult.scenes;
+  if (!scenes.length) return;
+
+  creativeMotionState.isPlaying = true;
+  const playBtn = document.getElementById("btn-motion-play");
+  if (playBtn) {
+    playBtn.innerHTML = `<i data-lucide="pause" class="w-4 h-4 fill-current"></i> <span>Pause</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  const totalDuration = currentCreativeResult.duration_seconds || 38;
+
+  // Lance la lecture vocale synchronisée
+  speakSceneWithVoice(creativeMotionState.currentSceneIndex);
+
+  // Timer pour la barre de progression
+  creativeMotionState.timerInterval = setInterval(() => {
+    creativeMotionState.elapsedSeconds += 1;
+    const pct = Math.min(100, (creativeMotionState.elapsedSeconds / totalDuration) * 100);
+    const pb = document.getElementById("motion-progress-bar");
+    if (pb) pb.style.width = `${pct}%`;
+
+    const tc = document.getElementById("motion-timecode-display");
+    if (tc) {
+      const mins = String(Math.floor(creativeMotionState.elapsedSeconds / 60)).padStart(2, '0');
+      const secs = String(creativeMotionState.elapsedSeconds % 60).padStart(2, '0');
+      tc.textContent = `${mins}:${secs}`;
+    }
+
+    if (creativeMotionState.elapsedSeconds >= totalDuration) {
+      stopMotionVideo();
+      showToast("Lecture de la vidéo terminée !", "success");
+    }
+  }, 1000);
+}
+
+function speakSceneWithVoice(sceneIndex) {
+  if (!creativeMotionState.isPlaying) return;
+  const scenes = currentCreativeResult.scenes;
+  if (sceneIndex >= scenes.length) {
+    stopMotionVideo();
+    return;
+  }
+
+  jumpToMotionScene(sceneIndex);
+  const sc = scenes[sceneIndex];
+
+  if (!window.speechSynthesis) {
+    // Si speech synth non disponible, défilement temporisé
+    const durationMs = (sc.duration_seconds || 6) * 1000;
+    setTimeout(() => {
+      if (creativeMotionState.isPlaying) {
+        speakSceneWithVoice(sceneIndex + 1);
+      }
+    }, durationMs);
+    return;
+  }
+
+  const utterance = new SpeechSynthesisUtterance(sc.audio_spoken);
+  utterance.lang = "fr-FR";
+  utterance.rate = 1.05; // Rythme punchy style vidéo courte
+  utterance.pitch = 0.95; // Voix grave et affirmée pour Dave Sagbo
+
+  const voices = window.speechSynthesis.getVoices();
+  const frenchVoice = voices.find(v => v.lang.startsWith("fr") && (v.name.includes("Male") || v.name.includes("Thomas") || v.name.includes("Nicolas") || v.name.includes("Paul")));
+  if (frenchVoice) utterance.voice = frenchVoice;
+
+  utterance.onend = () => {
+    if (creativeMotionState.isPlaying) {
+      setTimeout(() => {
+        speakSceneWithVoice(sceneIndex + 1);
+      }, 300);
+    }
+  };
+
+  utterance.onerror = () => {
+    if (creativeMotionState.isPlaying) {
+      speakSceneWithVoice(sceneIndex + 1);
+    }
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+function speakCurrentSceneVoiceOnly() {
+  if (!currentCreativeResult || !currentCreativeResult.scenes) return;
+  const sc = currentCreativeResult.scenes[creativeMotionState.currentSceneIndex];
+  if (!sc) return;
+
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(sc.audio_spoken);
+    utterance.lang = "fr-FR";
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    window.speechSynthesis.speak(utterance);
+    showToast(`Lecture vocale de la scène #${creativeMotionState.currentSceneIndex + 1}`, "info");
+  } else {
+    alert("La synthèse vocale n'est pas supportée par votre navigateur.");
+  }
+}
+
+// ------------------------------------------------------------------------------
+// EXPORT VIDÉO WEBM / MP4 VIA CANVAS & MEDIARECORDER
+// ------------------------------------------------------------------------------
+async function exportMotionVideoFile() {
+  if (!currentCreativeResult || !currentCreativeResult.scenes) {
+    alert("Aucun script vidéo chargé.");
+    return;
+  }
+
+  const canvas = document.getElementById("motion-recorder-canvas");
+  if (!canvas || !canvas.captureStream) {
+    alert("L'enregistrement vidéo Canvas n'est pas supporté par ce navigateur.");
+    return;
+  }
+
+  const btn = document.getElementById("btn-export-video");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Rendu Vidéo...`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  showToast("Génération du flux vidéo en cours...", "info");
+
+  const ctx = canvas.getContext("2d");
+  const scenes = currentCreativeResult.scenes;
+  const stream = canvas.captureStream(30); // 30 FPS
+  
+  let mimeType = 'video/webm;codecs=vp9';
+  if (!MediaRecorder.isTypeSupported(mimeType)) {
+    mimeType = 'video/webm';
+  }
+
+  const recorder = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
+  const chunks = [];
+
+  recorder.ondataavailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `video_dave_sagbo_${Date.now()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i data-lucide="download" class="w-3.5 h-3.5"></i> <span>Exporter Vidéo</span>`;
+      if (window.lucide) lucide.createIcons();
+    }
+    showToast("Vidéo exportée avec succès (Format WebM/MP4) !", "success");
+  };
+
+  recorder.start();
+
+  // Dessin animé sur le Canvas 720x1280
+  let currentScene = 0;
+  function drawFrame(sceneIdx) {
+    if (sceneIdx >= scenes.length) {
+      recorder.stop();
+      return;
+    }
+    const sc = scenes[sceneIdx];
+
+    // Fond Deep Onyx
+    ctx.fillStyle = "#0B0F19";
+    ctx.fillRect(0, 0, 720, 1280);
+
+    // Lueur Bleue & Or
+    const grad = ctx.createRadialGradient(600, 200, 50, 600, 200, 400);
+    grad.addColorStop(0, "rgba(0, 98, 255, 0.35)");
+    grad.addColorStop(1, "rgba(11, 15, 25, 0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 720, 1280);
+
+    // Header Dave Sagbo
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 32px sans-serif";
+    ctx.fillText("DAVE SAGBO", 60, 120);
+    ctx.fillStyle = "#94A3B8";
+    ctx.font = "20px sans-serif";
+    ctx.fillText("Systèmes Commerciaux B2B", 60, 155);
+
+    // Badge Phase
+    ctx.fillStyle = "#0062FF";
+    ctx.beginPath();
+    ctx.roundRect(500, 95, 160, 44, 22);
+    ctx.fill();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 18px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(sc.phase.slice(0, 12), 580, 123);
+    ctx.textAlign = "left";
+
+    // Action Caméra
+    ctx.fillStyle = "#E5A93C";
+    ctx.font = "bold 24px sans-serif";
+    ctx.fillText(sc.visual_action, 60, 420);
+
+    // Texte parlé au centre (découpé)
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 44px sans-serif";
+    const words = sc.audio_spoken.split(" ");
+    let line = "";
+    let y = 540;
+    for (let w of words) {
+      if ((line + w).length > 24) {
+        ctx.fillText(line, 60, y);
+        line = w + " ";
+        y += 65;
+      } else {
+        line += w + " ";
+      }
+    }
+    if (line) ctx.fillText(line, 60, y);
+
+    // Call-To-Action en bas
+    ctx.fillStyle = "#1E293B";
+    ctx.beginPath();
+    ctx.roundRect(60, 1080, 600, 100, 24);
+    ctx.fill();
+    ctx.fillStyle = "#E5A93C";
+    ctx.font = "bold 34px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`COMMENTEZ "${currentCreativeResult.trigger_keyword || 'CLOSING'}"`, 360, 1142);
+    ctx.textAlign = "left";
+
+    const sceneDurationMs = (sc.duration_seconds || 4) * 1000;
+    setTimeout(() => {
+      drawFrame(sceneIdx + 1);
+    }, sceneDurationMs);
+  }
+
+  drawFrame(0);
 }
 
 function renderAuthorityPostPreview(result) {
