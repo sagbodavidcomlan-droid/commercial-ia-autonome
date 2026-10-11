@@ -462,356 +462,433 @@
     <!-- MAIN VIEW AREA (FASTY LAYOUT) -->
     <main class="main-content flex-1 overflow-y-auto">
 
-      <!-- ==================== TAB 1 : TABLEAU DE BORD (DESIGN FINNOVA x INVO BRAND) ==================== -->
+      <!-- ==================== TAB 1 : TABLEAU DE BORD (DESIGN DONEZO x INVO ROYAL BLUE) ==================== -->
       <section id="tab-dashboard" class="tab-pane space-y-6">
 
-        <!-- En-tête Supérieur Style Finnova (Navigation Onglets Rapides & Outils) -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl shadow-xs border border-slate-100">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black">
-              <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+        <!-- En-tête Supérieur Style Donezo (Titre, sous-titre & boutons d'action épurés) -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff]">COCKPIT COMMERCIAL IA &bull; INVO</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Autopilot 24/7 Actif
+              </span>
             </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">FINNOVA COCKPIT &bull; INVO COMMERCIAL</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] text-[10px] font-bold">Live 24/7</span>
-              </div>
-              <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Tableau de Bord Exécutif</h2>
-            </div>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">Dashboard</h2>
+            <p class="text-xs sm:text-sm text-slate-400 font-medium">Planifiez, qualifiez et concluez vos opportunités commerciales en toute autonomie.</p>
           </div>
 
-          <!-- Barre de Navigation Pilule Capsule Style Finnova -->
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="flex items-center bg-slate-100 p-1 rounded-2xl">
-              <button onclick="filterDashboardView('all')" id="dash-filter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0062ff] text-white shadow-xs">Vue Globale</button>
-              <button onclick="filterDashboardView('paid')" id="dash-filter-paid" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">Encaissés</button>
-              <button onclick="filterDashboardView('pending')" id="dash-filter-pending" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">En Cours</button>
-              <button onclick="filterDashboardView('autopilot')" id="dash-filter-autopilot" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">Autopilot</button>
-            </div>
-
-            <!-- Actions Rapides En-tête -->
-            <button onclick="triggerAutopilotSprint()" class="px-3.5 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition">
-              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-              <span>Sprint IA</span>
-            </button>
-            <button onclick="openAddCalendarEventModal()" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <!-- Actions Rapides Donezo (+ Add Project / Import Data) -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="openAddCalendarEventModal()" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
+              <i data-lucide="plus" class="w-4 h-4"></i>
               <span>+ Nouveau RDV</span>
             </button>
+            <button onclick="triggerAutopilotSprint()" class="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer">
+              <i data-lucide="zap" class="w-4 h-4 text-[#0062ff]"></i>
+              <span>Sprint IA</span>
+            </button>
+            <button onclick="window.open('/api/export/leads-csv', '_blank')" class="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer">
+              <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
+              <span>Exporter Fichier</span>
+            </button>
           </div>
         </div>
 
-        <!-- 1. TOP 4 KPI CARDS (FINNOVA EXACT DESIGN AVEC MINI CHARTS & BLEU ROYAL INVO) -->
+        <!-- 1. TOP 4 CARTES MÉTRIQUES DONEZO -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
-          <!-- KPI 1 : Total Revenue / Encaissé -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Chiffre d'Affaires</span>
-              <div class="w-8 h-8 rounded-full bg-blue-50 text-[#0062ff] flex items-center justify-center">
-                <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+          <!-- Card 1 (Signature Invo Blue Feature Card) : Total Chiffre d'Affaires -->
+          <div class="bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#1d4ed8] text-white p-5 rounded-3xl shadow-lg shadow-blue-500/20 flex flex-col justify-between hover:shadow-xl transition relative overflow-hidden group">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-bold text-blue-100">Chiffre d'Affaires Encaissé</span>
+                <div class="text-2xl sm:text-3xl font-black text-white tracking-tight mt-2">
+                  <span id="dash-current-revenue">0</span> <span class="text-xs font-semibold text-blue-200">FCFA</span>
+                </div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center font-black transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
               </div>
             </div>
-            <div class="mt-3">
-              <div class="text-2xl font-black text-slate-900 tracking-tight">
-                <span id="dash-current-revenue">0</span> <span class="text-xs font-bold text-slate-400">FCFA</span>
+
+            <div class="mt-4 pt-3 border-t border-white/20">
+              <div class="flex items-center justify-between text-[11px] font-bold text-blue-100 mb-1">
+                <span>Objectif : <strong id="dash-target-revenue" class="text-white">0</strong> FCFA</span>
+                <span id="dash-progress-pct" class="font-black text-emerald-300">0%</span>
               </div>
-              <div class="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-emerald-600">
-                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
-                <span>+12.5% vs mois dernier</span>
+              <div class="w-full h-1.5 bg-black/20 rounded-full overflow-hidden">
+                <div id="dash-progress-bar" class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
               </div>
-            </div>
-            <!-- Progress Bar Objectif -->
-            <div class="mt-3 pt-3 border-t border-slate-100">
-              <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                <span>Objectif : <strong id="dash-target-revenue" class="text-slate-700">0</strong> FCFA</span>
-                <span id="dash-progress-pct" class="font-extrabold text-[#0062ff]">0%</span>
-              </div>
-              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div id="dash-progress-bar" class="h-full bg-[#0062ff] rounded-full transition-all duration-500" style="width: 0%"></div>
+              <div class="flex items-center gap-1.5 mt-2 text-[11px] font-bold text-emerald-300">
+                <span class="px-1.5 py-0.2 rounded-md bg-white/20 text-white text-[10px] font-black">↑ 12.5%</span>
+                <span>croissance vs mois dernier</span>
               </div>
             </div>
           </div>
 
-          <!-- KPI 2 : Échéances / Pipeline à Venir (Avec Mini Bar Chart Finnova) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Pipeline 30 Jours</span>
-              <div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <i data-lucide="calendar" class="w-4 h-4"></i>
+          <!-- Card 2 (Donezo White Card) : Ventes & Closings Conclus -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition group">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-400">Closings & Ventes Conclues</span>
+                <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2">
+                  <span id="kpi-conversions">0</span>
+                </div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-slate-50 text-slate-500 group-hover:text-[#0062ff] group-hover:bg-blue-50 flex items-center justify-center font-black transition">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
               </div>
             </div>
-            <div class="mt-3">
-              <div class="text-2xl font-black text-slate-900 tracking-tight">
-                <span id="kpi-pipeline-amount">1,420,000</span> <span class="text-xs font-bold text-slate-400">FCFA</span>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1 text-slate-500 font-bold">
+                <span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">Taux</span>
+                <span>Closing : <strong id="kpi-closing-rate" class="text-slate-900 font-black">0%</strong></span>
               </div>
-              <div class="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-[#0062ff]">
-                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-                <span>8.2% de conversion prévue</span>
-              </div>
-            </div>
-            <!-- Mini Barres Graphiques Style Finnova Card 2 -->
-            <div class="mt-3 pt-3 border-t border-slate-100 flex items-end justify-between h-8 gap-1.5 px-1">
-              <div class="w-full bg-blue-100 hover:bg-[#0062ff] rounded-xs transition-all h-[35%]" title="Semaine 1"></div>
-              <div class="w-full bg-blue-100 hover:bg-[#0062ff] rounded-xs transition-all h-[55%]" title="Semaine 2"></div>
-              <div class="w-full bg-blue-200 hover:bg-[#0062ff] rounded-xs transition-all h-[75%]" title="Semaine 3"></div>
-              <div class="w-full bg-[#0062ff] rounded-xs h-[100%]" title="Semaine Active"></div>
-              <div class="w-full bg-blue-200 hover:bg-[#0062ff] rounded-xs transition-all h-[60%]" title="Semaine Suivante"></div>
-              <div class="w-full bg-blue-100 hover:bg-[#0062ff] rounded-xs transition-all h-[40%]" title="Fin de mois"></div>
+              <span class="text-[#0062ff] font-bold text-[10px]">Validé 100%</span>
             </div>
           </div>
 
-          <!-- KPI 3 : Temps de Réponse & Vitesse de Vente (Avec Sparkline Finnova) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Vitesse de Réponse IA</span>
-              <div class="w-8 h-8 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center">
-                <i data-lucide="clock" class="w-4 h-4"></i>
+          <!-- Card 3 (Donezo White Card) : Prospects & Opportunités en Cours -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition group">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-400">Prospects Chauds en Négociation</span>
+                <div class="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight mt-2">
+                  <span id="kpi-hot-leads">0</span>
+                </div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-black transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
               </div>
             </div>
-            <div class="mt-3">
-              <div class="text-2xl font-black text-slate-900 tracking-tight">
-                <span id="kpi-response-time">38s</span>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1 text-slate-500 font-bold">
+                <span class="px-1.5 py-0.2 rounded-md bg-blue-50 text-[#0062ff] border border-blue-200 text-[10px] font-black">Total</span>
+                <span><strong id="kpi-total-leads" class="text-slate-900 font-black">0</strong> leads actifs</span>
               </div>
-              <div class="flex items-center gap-1.5 mt-1 text-[11px] font-bold text-emerald-600">
-                <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                <span>-12s d'accélération (Autonome)</span>
-              </div>
-            </div>
-            <!-- Mini Sparkline SVG Style Finnova Card 3 -->
-            <div class="mt-3 pt-3 border-t border-slate-100">
-              <svg viewBox="0 0 120 24" class="w-full h-7 overflow-visible">
-                <path d="M0,20 Q20,18 35,14 T70,8 T100,5 T120,2" fill="none" stroke="#0062ff" stroke-width="2.5" stroke-linecap="round"/>
-                <circle cx="35" cy="14" r="3" fill="#ffffff" stroke="#0062ff" stroke-width="2"/>
-                <circle cx="70" cy="8" r="3" fill="#ffffff" stroke="#0062ff" stroke-width="2"/>
-                <circle cx="100" cy="5" r="3" fill="#ffffff" stroke="#0062ff" stroke-width="2"/>
-                <circle cx="120" cy="2" r="3.5" fill="#0062ff"/>
-              </svg>
+              <span class="text-amber-600 font-bold text-[10px]">Priorité Haute</span>
             </div>
           </div>
 
-          <!-- KPI 4 : Canaux de Règlements Rapides (Style Finnova Card 4 Multi-Badges) -->
-          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Règlements & Closings</span>
-              <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <i data-lucide="shield-check" class="w-4 h-4"></i>
+          <!-- Card 4 (Donezo White Card) : Pipeline & Échéances 30 Jours -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition group">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-400">Pipeline en Discussion (30 Jours)</span>
+                <div class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-2">
+                  <span id="kpi-pipeline-amount">1,420,000</span> <span class="text-xs font-semibold text-slate-400">FCFA</span>
+                </div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-slate-50 text-slate-500 group-hover:text-[#0062ff] group-hover:bg-blue-50 flex items-center justify-center font-black transition">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
               </div>
             </div>
-            <div class="mt-3">
-              <div class="text-2xl font-black text-slate-900 tracking-tight">
-                <span id="kpi-conversions">0</span> <span class="text-xs font-bold text-slate-400">Closings</span>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1.5 text-slate-500 font-bold">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-[#0062ff]"></i>
+                <span>Réponse IA : <strong id="kpi-response-time" class="text-slate-900 font-black">38s</strong></span>
               </div>
-              <div class="text-[11px] font-bold text-slate-500 mt-1">
-                Taux de closing : <span id="kpi-closing-rate" class="text-slate-900 font-black">0%</span>
-              </div>
-            </div>
-            <!-- Mini Badges de Paiements Finnova (Wave, Orange Money, Carte) -->
-            <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px]">
-              <span class="px-2 py-1 rounded-lg bg-blue-50 text-[#0062ff] font-black border border-blue-100">Wave</span>
-              <span class="px-2 py-1 rounded-lg bg-amber-50 text-amber-700 font-bold border border-amber-100">Orange</span>
-              <span class="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold">Virement</span>
-              <button onclick="showTab('crm')" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-bold text-[9px] hover:bg-slate-800 transition">CRM</button>
+              <span class="text-emerald-600 font-bold text-[10px]">Autonome</span>
             </div>
           </div>
 
         </div>
 
-        <!-- 2. MILIEU : GRAPHIQUE DES REVENUS (GAUCHE) + COCKPIT AUTOPILOT 24/7 (DROITE) -->
+        <!-- 2. SECTION CENTRALE DONEZO : 3 BLOCS (ANALYTICS, RAPPELS RDV, PROJETS/LEADS) -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          <!-- Monthly Revenue Chart -->
-          <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-xs lg:col-span-8 flex flex-col justify-between">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
+
+          <!-- Bloc 1 (Donezo Project Analytics) : Barres d'Activité / Revenus (5 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-5 flex flex-col justify-between space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
-                <h3 class="text-base font-black text-slate-900 tracking-tight">Performance Mensuelle des Revenus</h3>
-                <p class="text-xs text-slate-400 font-medium">Chiffre d'Affaires généré vs Objectif Commercial (FCFA)</p>
+                <h3 class="text-base font-black text-slate-900 tracking-tight">Activité Commerciale</h3>
+                <p class="text-xs text-slate-400 font-medium">Chiffre d'Affaires mensuel généré par l'IA (FCFA)</p>
               </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold bg-blue-50 text-[#0062ff] px-3 py-1 rounded-full border border-blue-100">
-                  Exercice 2026
-                </span>
-              </div>
+              <span class="text-[11px] font-bold bg-blue-50 text-[#0062ff] px-2.5 py-0.5 rounded-full border border-blue-100">2026</span>
             </div>
-            <div class="relative w-full h-[260px]">
+
+            <div class="relative w-full h-[220px]">
               <canvas id="chart-revenue"></canvas>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+              <span>Exercice en cours</span>
+              <button onclick="showTab('director')" class="text-[#0062ff] font-bold hover:underline">Voir détails & quotas &rarr;</button>
             </div>
           </div>
 
-          <!-- Featured Royal Blue Card : Autopilot 24/7 -->
-          <div class="bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#1d4ed8] text-white rounded-2xl p-6 lg:col-span-4 relative overflow-hidden shadow-xl shadow-blue-500/20 flex flex-col justify-between">
-            <!-- Cercles décoratifs de profondeur -->
-            <div class="absolute -top-12 -right-12 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-
+          <!-- Bloc 2 (Donezo Reminders) : Prochain RDV & Action Éminente (3 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-3 flex flex-col justify-between space-y-4">
             <div>
-              <div class="flex items-center justify-between">
-                <span id="autopilot-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-white/20 text-white uppercase tracking-wider backdrop-blur-sm">
-                  AUTOPILOT 24/7 ACTIF
-                </span>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-4 ring-emerald-400/30 animate-pulse"></div>
-                  <span class="text-[10px] font-bold text-emerald-300">Live</span>
-                </div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-base font-black text-slate-900 tracking-tight">Rappels & RDV</h3>
+                <i data-lucide="calendar" class="w-4 h-4 text-[#0062ff]"></i>
               </div>
 
-              <h3 class="text-xl font-black mt-3 leading-tight">Unité IA Autonome en Patrouille</h3>
-              <p class="text-xs text-blue-100/90 mt-2 font-normal leading-relaxed">
-                Prospection automatique sur Facebook Ads, LinkedIn & WhatsApp. Qualification en temps réel et relances de closing.
-              </p>
+              <div class="mt-4 space-y-2">
+                <span class="text-[10px] uppercase font-bold text-[#0062ff] tracking-wider block">PROCHAINE SESSION CLÉ</span>
+                <h4 class="text-base font-black text-slate-900 leading-snug">Démo Solution Commerciale</h4>
+                <p class="text-xs text-slate-500 font-medium">Cabinet Kaba & Co &bull; Closing Offre Entreprise</p>
+                <div class="flex items-center gap-1.5 text-xs text-slate-400 font-semibold pt-1">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>Aujourd'hui : 14h00 - 15h30</span>
+                </div>
+              </div>
             </div>
 
-            <!-- Stats & Revenue Section -->
-            <div class="mt-5 space-y-2.5">
-              <div class="grid grid-cols-3 gap-2 bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/15 text-center">
-                <div>
-                  <span class="text-[10px] text-blue-200 block uppercase font-bold">Cycles</span>
-                  <span id="autopilot-cycles-val" class="font-extrabold text-base text-white">0</span>
-                </div>
-                <div class="border-l border-white/15">
-                  <span class="text-[10px] text-blue-200 block uppercase font-bold">Leads</span>
-                  <span id="autopilot-leads-val" class="font-extrabold text-base text-white">0</span>
-                </div>
-                <div class="border-l border-white/15">
-                  <span class="text-[10px] text-blue-200 block uppercase font-bold">Ventes</span>
-                  <span id="autopilot-sales-count-val" class="font-extrabold text-base text-emerald-300">0</span>
-                </div>
+            <div class="space-y-2">
+              <button onclick="showTab('agenda')" class="w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
+                <i data-lucide="video" class="w-4 h-4"></i>
+                <span>Rejoindre la Session</span>
+              </button>
+              <button onclick="showTab('agenda')" class="w-full py-2 text-center text-xs text-slate-500 hover:text-slate-800 font-bold transition">
+                Consulter le calendrier complet &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- Bloc 3 (Donezo Project List) : Dossiers & Projets Prioritaires (4 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-4 flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-base font-black text-slate-900 tracking-tight">Dossiers Prioritaires</h3>
+                <button onclick="showTab('crm')" class="text-xs font-bold text-[#0062ff] hover:underline flex items-center gap-1">
+                  <span>+ Nouveau</span>
+                </button>
               </div>
 
-              <!-- Revenue Highlight Banner -->
-              <div class="bg-white/15 backdrop-blur-sm px-3.5 py-2.5 rounded-xl border border-white/20 flex items-center justify-between text-xs">
-                <span class="text-blue-100 text-[11px] font-bold flex items-center gap-1.5">
-                  <i data-lucide="wallet" class="w-4 h-4 text-emerald-300"></i> Revenu Généré
-                </span>
-                <span id="autopilot-revenue-val" class="font-black text-white text-sm tracking-wide">0 FCFA</span>
-              </div>
+              <!-- Liste des Projets Donezo -->
+              <div class="mt-3 space-y-2.5">
+                
+                <div onclick="showTab('crm')" class="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition cursor-pointer flex items-center justify-between gap-3 group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-[#0062ff] flex items-center justify-center shrink-0 font-bold">
+                      <i data-lucide="message-circle" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] truncate block">Déploiement WhatsApp Bot</strong>
+                      <span class="text-[10px] text-slate-400 font-medium block">Échéance : Aujourd'hui, 17h00</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">Closing</span>
+                </div>
 
-              <button id="btn-toggle-autopilot" onclick="toggleAutopilot24h()" class="w-full mt-2 bg-white text-[#0062ff] hover:bg-slate-50 font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98">
-                <i data-lucide="pause-circle" class="w-4 h-4 text-[#0062ff]"></i> Mettre en Pause
+                <div onclick="showTab('crm')" class="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition cursor-pointer flex items-center justify-between gap-3 group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center shrink-0 font-bold">
+                      <i data-lucide="linkedin" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] truncate block">Campagne Prospection B2B</strong>
+                      <span class="text-[10px] text-slate-400 font-medium block">Échéance : Demain, 10h00</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200 shrink-0">En cours</span>
+                </div>
+
+                <div onclick="showTab('crm')" class="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition cursor-pointer flex items-center justify-between gap-3 group">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 font-bold">
+                      <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] truncate block">Génération Créatives Ads</strong>
+                      <span class="text-[10px] text-slate-400 font-medium block">Échéance : 15 Octobre 2026</span>
+                    </div>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">Studio IA</span>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="showTab('crm')" class="w-full text-center text-xs text-[#0062ff] font-bold hover:underline">
+                Accéder à l'ensemble du CRM &rarr;
               </button>
             </div>
           </div>
 
         </div>
 
-        <!-- 3. SECTION DU BAS : CONTENEUR MASTER DARK/NAVY STYLE FINNOVA AVEC LISTE & DÉTAILS DE FACTURATION -->
-        <div class="bg-[#0B0F19] rounded-3xl p-6 sm:p-7 text-white shadow-2xl space-y-6">
-          
-          <!-- En-tête de la section Finnova Dark Cockpit -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+        <!-- 3. SECTION INFÉRIEURE DONEZO : 3 BLOCS (COLLABORATION, PROGRESSION GAUGE, CHRONO AUTOPILOT) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Bloc 1 (Donezo Team Collaboration) : Unité IA & Collaborateurs (5 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-5 flex flex-col justify-between space-y-4">
             <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-base font-black text-slate-900 tracking-tight">Collaboration & Agents IA</h3>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  Équipe Active
+                </span>
+              </div>
+
+              <!-- Liste des Membres et Agents -->
+              <div class="mt-3 space-y-3">
+                
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#0052cc] to-[#0062ff] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs">
+                      DS
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 block truncate">Dave Sagbo</strong>
+                      <span class="text-[10px] text-slate-400 block truncate">Superviseur & Administrateur Projet</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#0062ff] border border-blue-100 shrink-0">Admin</span>
+                </div>
+
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-2xl bg-emerald-100 text-emerald-700 font-black text-xs flex items-center justify-center shrink-0">
+                      <i data-lucide="bot" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 block truncate">Agent IA Prospection</strong>
+                      <span class="text-[10px] text-slate-400 block truncate">Ronde d'inspection omnicanale continue</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">En Patrouille</span>
+                </div>
+
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-2xl bg-purple-100 text-purple-700 font-black text-xs flex items-center justify-center shrink-0">
+                      <i data-lucide="brain" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 block truncate">Expert Qualification DUR</strong>
+                      <span class="text-[10px] text-slate-400 block truncate">Analyse de Douleur, Urgence & Ressources</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shrink-0">Actif</span>
+                </div>
+
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 font-black text-xs flex items-center justify-center shrink-0">
+                      <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <strong class="text-xs font-black text-slate-900 block truncate">Audit Médico-Légal</strong>
+                      <span class="text-[10px] text-slate-400 block truncate">Contrôle de conformité & conversion</span>
+                    </div>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">Veille</span>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span>Synchronisation instantanée</span>
+              <button onclick="showTab('swarm')" class="text-[#0062ff] font-bold hover:underline">Gérer l'essaim &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Bloc 2 (Donezo Project Progress) : Jauge Arc / Progression de l'Objectif (3 cols) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-3 flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <h3 class="text-base font-black text-slate-900 tracking-tight">Réalisation Quota</h3>
+                <span class="text-[10px] font-bold text-slate-400">Mensuel</span>
+              </div>
+
+              <!-- Jauge Visuelle Donezo Semi-circulaire -->
+              <div class="relative w-full h-36 flex flex-col items-center justify-center mt-2">
+                <canvas id="chart-channels" class="max-h-32"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pt-2">
+                  <strong class="text-2xl font-black text-slate-900" id="dash-gauge-pct">68%</strong>
+                  <span class="text-[10px] font-bold text-slate-400">Objectif Mensuel</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+              <div class="grid grid-cols-3 gap-1 text-center text-[10px]">
+                <div>
+                  <span class="w-2 h-2 rounded-full bg-[#0062ff] inline-block mb-1"></span>
+                  <span class="block text-slate-400 font-medium">Encaissé</span>
+                </div>
+                <div>
+                  <span class="w-2 h-2 rounded-full bg-sky-500 inline-block mb-1"></span>
+                  <span class="block text-slate-400 font-medium">En cours</span>
+                </div>
+                <div>
+                  <span class="w-2 h-2 rounded-full bg-slate-200 inline-block mb-1"></span>
+                  <span class="block text-slate-400 font-medium">En attente</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloc 3 (Donezo Time Tracker) : Autopilot IA Chrono Tracker Card (4 cols) -->
+          <div class="bg-gradient-to-br from-[#071329] via-[#0B1A3A] to-[#0047BA] text-white rounded-3xl p-6 lg:col-span-4 relative overflow-hidden shadow-xl shadow-blue-900/20 flex flex-col justify-between space-y-4">
+            <!-- Rayonnement / Textures organiques Donezo -->
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-[#0062ff]/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div>
+              <div class="flex items-center justify-between">
+                <span id="autopilot-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black bg-white/15 text-white uppercase tracking-wider backdrop-blur-sm">
+                  AUTOPILOT 24/7 ACTIF
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span class="text-[10px] font-bold text-emerald-300">Live</span>
+                </div>
+              </div>
+
+              <!-- Heure / Chrono Grand Format Donezo -->
+              <div class="mt-4">
+                <span class="text-[10px] text-blue-200 uppercase font-bold tracking-wider block">Temps de patrouille continue</span>
+                <div class="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white mt-1" id="dash-autopilot-timer">
+                  24:00:00
+                </div>
+              </div>
+
+              <!-- Mini KPI Tracker -->
+              <div class="grid grid-cols-3 gap-2 mt-4 p-2.5 rounded-2xl bg-white/10 backdrop-blur-md text-center border border-white/10">
+                <div>
+                  <span class="text-[9px] uppercase font-bold text-blue-200 block">Cycles</span>
+                  <strong class="text-sm font-black text-white" id="autopilot-cycles-val">0</strong>
+                </div>
+                <div class="border-x border-white/15">
+                  <span class="text-[9px] uppercase font-bold text-blue-200 block">Leads</span>
+                  <strong class="text-sm font-black text-white" id="autopilot-leads-val">0</strong>
+                </div>
+                <div>
+                  <span class="text-[9px] uppercase font-bold text-blue-200 block">Ventes</span>
+                  <strong class="text-sm font-black text-emerald-300" id="autopilot-sales-count-val">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Boutons de Contrôle Tracker Donezo (Play / Pause / Stop) -->
+            <div class="space-y-2 pt-2">
+              <div class="flex items-center justify-between text-xs bg-white/10 px-3 py-1.5 rounded-xl border border-white/15">
+                <span class="text-blue-200 text-[11px] font-bold">Revenu Autonome :</span>
+                <strong class="text-white text-xs font-black" id="autopilot-revenue-val">0 FCFA</strong>
+              </div>
+
               <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-wider text-blue-400">FINNOVA TRANSACTIONS & LEADS ENGINE</span>
-              </div>
-              <h3 class="text-xl font-black text-white tracking-tight">Registre des Factures & Activités Récentes</h3>
-              <p class="text-xs text-slate-400">Supervisez les devis, règlements clients et dossiers de prospection en temps réel.</p>
-            </div>
-
-            <!-- Filtres Onglets Pills de la section Dark -->
-            <div class="flex items-center gap-2 bg-white/10 p-1 rounded-2xl backdrop-blur-md border border-white/10">
-              <button onclick="setInvoiceViewFilter('all')" id="finnova-tab-all" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-[#0B0F19]">Toutes</button>
-              <button onclick="setInvoiceViewFilter('paid')" id="finnova-tab-paid" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-white/70 hover:text-white">Payées</button>
-              <button onclick="setInvoiceViewFilter('pending')" id="finnova-tab-pending" class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-white/70 hover:text-white">En attente</button>
-            </div>
-          </div>
-
-          <!-- Grille Duale Finnova : Liste Gauche (5 cols) + Volet Détails Droit (7 cols) -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            <!-- Colonne Gauche : Liste des Factures / Dossiers -->
-            <div class="lg:col-span-5 space-y-2.5">
-              <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between px-1">
-                <span>Dossiers Clients</span>
-                <span class="text-[10px] text-blue-400 font-mono">Derniers flux</span>
-              </div>
-
-              <!-- Liste Défilante de Cartes Transactions Style Finnova -->
-              <div id="finnova-invoices-list" class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
-                <!-- Rempli dynamiquement en JS avec sélection active -->
-              </div>
-            </div>
-
-            <!-- Colonne Droite : Carte Fiche Détaillée Style Finnova (Bleu Royal Dégradé) -->
-            <div class="lg:col-span-7 bg-gradient-to-br from-[#121829] to-[#1E2640] rounded-2xl p-6 border border-white/15 space-y-5 flex flex-col justify-between shadow-lg">
-              
-              <div class="space-y-5">
-                <!-- Top Fiche Détails -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                  <div>
-                    <span class="text-[10px] uppercase font-black text-blue-400 block tracking-wider">Détails de la transaction</span>
-                    <h4 class="text-xl font-black text-white" id="finnova-detail-id">#INV-0021</h4>
-                    <span id="finnova-detail-status-pill" class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">PAYÉE &bull; WAVE</span>
-                  </div>
-                  <div class="text-left sm:text-right">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Client</span>
-                    <strong class="text-sm font-black text-white" id="finnova-detail-client">Amadou Diallo</strong>
-                    <span class="text-xs text-slate-400 block" id="finnova-detail-date">28 Octobre 2026</span>
-                  </div>
-                </div>
-
-                <!-- 3 Blocs Métriques de la commande Style Finnova -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Offre Souscrite</span>
-                    <strong class="text-xs font-black text-white mt-1 block truncate" id="finnova-detail-product">Pack Formation IA</strong>
-                  </div>
-                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Mode de Règlement</span>
-                    <strong class="text-xs font-black text-blue-300 mt-1 block" id="finnova-detail-method">Mobile Money (Wave)</strong>
-                  </div>
-                  <div class="p-3.5 rounded-xl bg-white/5 border border-white/10">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Statut Exécution</span>
-                    <strong class="text-xs font-black text-emerald-400 mt-1 block">Validé & Clôturé</strong>
-                  </div>
-                </div>
-
-                <!-- Synthèse Financière -->
-                <div class="p-4 rounded-xl bg-[#0062ff]/15 border border-[#0062ff]/30 flex items-center justify-between">
-                  <div>
-                    <span class="text-[10px] uppercase font-bold text-blue-200 block">Montant Total Encaissé</span>
-                    <strong class="text-2xl font-black text-white tracking-tight" id="finnova-detail-amount">150,000 FCFA</strong>
-                  </div>
-                  <div class="text-right">
-                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Commission IA</span>
-                    <span class="text-xs font-bold text-emerald-300">0% (100% Net Vendeur)</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Boutons d'Action Inférieurs -->
-              <div class="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-                <button onclick="window.open('/api/export/leads-csv', '_blank')" class="text-xs text-blue-300 hover:text-white font-bold flex items-center gap-1.5 transition">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                  <span>Télécharger Reçu / Export</span>
+                <button id="btn-toggle-autopilot" onclick="toggleAutopilot24h()" class="flex-1 py-2.5 rounded-2xl bg-white text-[#0062ff] hover:bg-slate-50 font-black text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-98">
+                  <i data-lucide="pause" class="w-4 h-4"></i>
+                  <span>Pause IA</span>
                 </button>
-                <div class="flex items-center gap-2">
-                  <button onclick="showTab('crm')" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition">
-                    Voir Fiche Prospect
-                  </button>
-                  <button onclick="openAddCalendarEventModal()" class="px-4 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs transition shadow-md flex items-center gap-1.5">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>Planifier un Suivi</span>
-                  </button>
-                </div>
+                <button onclick="triggerAutopilotSprint()" class="p-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-black text-xs transition cursor-pointer" title="Déclencher un Sprint Forcé">
+                  <i data-lucide="zap" class="w-4 h-4"></i>
+                </button>
               </div>
-
             </div>
 
           </div>
 
-        </div>
-
-        <!-- 4. CANAUX D'ACQUISITION (CLEAN CARD INVO) -->
-        <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-xs">
-          <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
-              <i data-lucide="pie-chart" class="w-4 h-4 text-[#0062ff]"></i>
-              Canaux d'Acquisition & Répartition des Conversions
-            </h3>
-            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">Performance Multi-Canale</span>
-          </div>
-          <div class="relative w-full h-56">
-            <canvas id="chart-channels"></canvas>
-          </div>
         </div>
 
       </section>

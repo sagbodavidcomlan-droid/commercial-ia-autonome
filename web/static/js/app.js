@@ -452,6 +452,8 @@ async function loadDashboardData() {
     if (prdLabel) prdLabel.textContent = goals.period_type || "Mensuel";
     const prgPct = document.getElementById("dash-progress-pct");
     if (prgPct) prgPct.textContent = `${goals.revenue_progress_pct || 0}%`;
+    const gaugePct = document.getElementById("dash-gauge-pct");
+    if (gaugePct) gaugePct.textContent = `${goals.revenue_progress_pct || 0}%`;
     const prgBar = document.getElementById("dash-progress-bar");
     if (prgBar) prgBar.style.width = `${goals.revenue_progress_pct || 0}%`;
 
@@ -684,10 +686,10 @@ function renderCharts(data) {
             data: baseAmounts,
             backgroundColor: backgroundColors,
             hoverBackgroundColor: hoverBackgroundColors,
-            borderRadius: 8,
+            borderRadius: 12,
             borderSkipped: false,
-            barThickness: 22,
-            maxBarThickness: 30
+            barThickness: 18,
+            maxBarThickness: 24
           }
         ]
       },
@@ -701,7 +703,7 @@ function renderCharts(data) {
             titleColor: "#ffffff",
             bodyColor: "#ffffff",
             padding: 10,
-            cornerRadius: 8,
+            cornerRadius: 10,
             callbacks: {
               label: function(context) {
                 return `${Number(context.raw).toLocaleString()} FCFA`;
@@ -712,13 +714,13 @@ function renderCharts(data) {
         scales: {
           x: {
             grid: { display: false },
-            ticks: { color: "#64748b", font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '600' } }
+            ticks: { color: "#64748b", font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '700' } }
           },
           y: {
-            grid: { color: "rgba(226, 232, 240, 0.7)" },
+            grid: { color: "rgba(226, 232, 240, 0.6)" },
             ticks: {
-              color: "#64748b",
-              font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '500' },
+              color: "#94a3b8",
+              font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' },
               callback: function(value) {
                 if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
                 if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
@@ -738,40 +740,45 @@ function renderCharts(data) {
     }, 120);
   }
 
-  // 2. Graphique Canaux
+  // 2. Graphique Donezo Semi-circulaire (Quota Progress)
   const canvasChan = document.getElementById("chart-channels");
   if (canvasChan) {
     const ctxChan = canvasChan.getContext("2d");
     if (channelsChart) {
       try { channelsChart.destroy(); } catch (e) {}
     }
+
+    const prgPct = data?.goals?.revenue_progress_pct || 68;
+    const gaugeEl = document.getElementById("dash-gauge-pct");
+    if (gaugeEl) gaugeEl.innerText = `${prgPct}%`;
+
+    const remaining = Math.max(0, 100 - prgPct);
+
     channelsChart = new Chart(ctxChan, {
       type: "doughnut",
       data: {
-        labels: ["Facebook Ads", "LinkedIn", "WhatsApp", "TikTok & Insta"],
+        labels: ["Réalisé", "En cours", "Restant"],
         datasets: [{
-          data: [45, 28, 17, 10],
-          backgroundColor: ["#0062ff", "#0284c7", "#10b981", "#ec4899"],
-          borderWidth: 3,
-          borderColor: "#ffffff"
+          data: [prgPct, 15, remaining],
+          backgroundColor: ["#0062ff", "#38bdf8", "#e2e8f0"],
+          borderWidth: 2,
+          borderColor: "#ffffff",
+          circumference: 240,
+          rotation: 240
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            position: "bottom",
-            labels: {
-              color: "#64748b",
-              font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '600' },
-              padding: 12,
-              usePointStyle: true,
-              pointStyle: 'circle'
-            }
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#0f172a",
+            padding: 8,
+            cornerRadius: 8
           }
         },
-        cutout: "70%"
+        cutout: "78%"
       }
     });
   }
