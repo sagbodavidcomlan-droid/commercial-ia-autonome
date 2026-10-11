@@ -913,90 +913,162 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 3 : CALENDRIER COMMERCIAL INTERACTIF ==================== -->
+      <!-- ==================== TAB 3 : CALENDRIER COMMERCIAL INTERACTIF (DESIGN TIMEFRAME) ==================== -->
       <section id="tab-agenda" class="tab-pane hidden space-y-6">
-        <!-- Calendar Header -->
-        <div class="glass-card rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              <i data-lucide="calendar" class="w-6 h-6"></i>
-            </div>
+        
+        <!-- Conteneur Maître TimeFrame Indigo Pastel -->
+        <div class="bg-[#999AE8] rounded-3xl p-6 sm:p-8 text-slate-800 shadow-xl space-y-6 select-none transition-all">
+          
+          <!-- Top Bar TimeFrame -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/20 pb-5">
             <div>
-              <div class="flex items-center gap-3">
-                <h2 id="calendar-month-title" class="text-2xl font-black text-white tracking-tight">Octobre 2026</h2>
-                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">Agenda Actif</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black uppercase tracking-wider text-white/80">TimeFrame &bull; Dave Sagbo</span>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5">Planification autonome des prospections, rendez-vous démo et relances de closing.</p>
+              <h2 class="text-2xl font-black text-white tracking-tight">Mon Calendrier</h2>
+              <p class="text-xs text-white/80 font-medium">Planification autonome des prospections, rendez-vous démo et relances de closing.</p>
+            </div>
+
+            <!-- Contrôles Vues & Métriques -->
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Switch Vue Jour / Semaine / Mois -->
+              <div class="flex items-center bg-white/20 p-1 rounded-2xl backdrop-blur-md">
+                <button onclick="setAgendaViewMode('daily')" id="agenda-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Jour</button>
+                <button onclick="setAgendaViewMode('weekly')" id="agenda-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0B0F19] text-white shadow-sm">Semaine</button>
+                <button onclick="setAgendaViewMode('monthly')" id="agenda-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Mois</button>
+              </div>
+
+              <!-- Métriques en-tête style maquette (Total workout / Heart rate -> RDVs & Taux) -->
+              <div class="hidden xl:flex items-center gap-4 px-4 py-2 bg-white/15 rounded-2xl backdrop-blur-md text-white border border-white/10">
+                <div>
+                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Missions Actives</span>
+                  <strong class="text-sm font-black" id="agenda-total-events-count">0 missions</strong>
+                </div>
+                <div class="w-px h-6 bg-white/20"></div>
+                <div>
+                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Taux Présence</span>
+                  <strong class="text-sm font-black text-emerald-300">92% Démo</strong>
+                </div>
+              </div>
+
+              <!-- Bouton Ajouter Événement -->
+              <button onclick="openAddCalendarEventModal()" class="px-4 py-2 rounded-2xl bg-[#0B0F19] hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>+ Planifier un RDV</span>
+              </button>
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <div class="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-xs">
-              <button onclick="prevCalendarMonth()" class="p-2 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition" title="Mois Précédent">
-                <i data-lucide="chevron-left" class="w-4 h-4"></i>
-              </button>
-              <button onclick="goToTodayCalendar()" class="px-3 py-1 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition">
-                Aujourd'hui
-              </button>
-              <button onclick="nextCalendarMonth()" class="p-2 hover:bg-slate-100 text-slate-600 hover:text-slate-900 rounded-lg transition" title="Mois Suivant">
-                <i data-lucide="chevron-right" class="w-4 h-4"></i>
-              </button>
+          <!-- Grille Principale TimeFrame : Sidebar Gauche + Timeline Droite -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Colonne Gauche : Mini-Calendrier + Catégories & Checklists -->
+            <div class="lg:col-span-4 space-y-4">
+              
+              <!-- Carte 1 : Mini Calendrier Mensuel avec dates actives -->
+              <div class="bg-[#8B8CD9] p-5 rounded-2xl text-white shadow-sm space-y-3 border border-white/10">
+                <div class="flex items-center justify-between">
+                  <span id="calendar-month-title" class="text-xs font-extrabold uppercase tracking-wide">Octobre 2026</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="prevCalendarMonth()" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition" title="Mois Précédent">&lt;</button>
+                    <button onclick="goToTodayCalendar()" class="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold transition">Auj.</button>
+                    <button onclick="nextCalendarMonth()" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition" title="Mois Suivant">&gt;</button>
+                  </div>
+                </div>
+
+                <!-- Grille des Jours du Mini-Calendrier -->
+                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-white/70 pt-1">
+                  <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+                </div>
+                <div id="calendar-month-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium pt-1">
+                  <!-- Rempli dynamiquement en JS -->
+                </div>
+              </div>
+
+              <!-- Carte 2 : Filtres Catégories & Missions -->
+              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2.5 border border-white/40">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                  <span>Catégories d'Agenda</span>
+                  <span class="text-[10px] text-emerald-600 font-bold uppercase">5 Pôles</span>
+                </div>
+                <div class="space-y-1.5 text-xs text-slate-700">
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="font-semibold text-[11px]">RDVs Clients & Démos Live</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                    <span class="font-semibold text-[11px]">Closings & Signatures</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span class="font-semibold text-[11px]">Relances H+24 & Suivi</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                    <span class="font-semibold text-[11px]">Prospection Autonome Outbound</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Carte 3 : Pôle Commercial Récap -->
+              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2 border border-white/40">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                  <span>Unité Commerciale IA</span>
+                  <span class="text-[10px] text-blue-600 font-bold">Patrouille 24/7</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-[#0062ff] text-[10px] font-bold border border-blue-100">WhatsApp</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100">Visio Google Meet</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">Closing Téléphonique</span>
+                </div>
+              </div>
+
             </div>
 
-            <button onclick="openAddCalendarEventModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-xs transition">
-              <i data-lucide="calendar-plus" class="w-4 h-4"></i>
-              Planifier un RDV / Mission
-            </button>
-          </div>
-        </div>
-
-        <!-- Legend Bar -->
-        <div class="flex items-center gap-2 overflow-x-auto text-[11px] font-semibold py-1">
-          <span class="text-slate-500 font-bold">Catégories :</span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> RDVs Clients & Démo</span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200"><span class="w-2 h-2 rounded-full bg-sky-500"></span> Prospection Outbound</span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Relances H+24/48</span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 border border-purple-200"><span class="w-2 h-2 rounded-full bg-purple-500"></span> Closings & Contrats</span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Audits & Rapports</span>
-        </div>
-
-        <!-- Main Calendar Grid & Day Details Split -->
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <!-- Calendar 7-Day Grid (2 Cols) -->
-          <div class="xl:col-span-2 glass-card rounded-2xl p-5">
-            <!-- Day of Week Headers -->
-            <div class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <div class="py-1">Lun</div>
-              <div class="py-1">Mar</div>
-              <div class="py-1">Mer</div>
-              <div class="py-1">Jeu</div>
-              <div class="py-1">Ven</div>
-              <div class="py-1 text-slate-400">Sam</div>
-              <div class="py-1 text-slate-400">Dim</div>
-            </div>
-
-            <!-- Month Days Grid (35 or 42 cells) -->
-            <div id="calendar-month-grid" class="grid grid-cols-7 gap-2">
-              <!-- Dynamically populated by renderCalendar() -->
-            </div>
-          </div>
-
-          <!-- Selected Day Details Panel (1 Col) -->
-          <div class="glass-card rounded-2xl p-5 flex flex-col">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
+            <!-- Colonne Droite : Grille Hebdomadaire Timeline Style TimeFrame -->
+            <div class="lg:col-span-8 bg-white/95 rounded-2xl p-5 shadow-sm border border-white/40 space-y-4 flex flex-col justify-between">
+              
               <div>
-                <h3 id="selected-day-heading" class="font-bold text-slate-900 text-base">Événements du Jour</h3>
-                <p id="selected-day-subheading" class="text-xs text-slate-500">Sélectionnez une date dans la grille</p>
+                <!-- En-tête Navigation Temporelle Droite -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div class="flex items-center gap-2">
+                    <h3 id="selected-day-heading" class="text-xs sm:text-sm font-extrabold text-slate-900">Missions de la Période</h3>
+                    <span id="selected-day-count-badge" class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">0 mission</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="navigateAgendaPeriod(-1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&lt;</button>
+                    <button onclick="goToTodayCalendar()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition">Aujourd'hui</button>
+                    <button onclick="navigateAgendaPeriod(1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&gt;</button>
+                  </div>
+                </div>
+
+                <!-- Jours de la Semaine Colonnes (Lundi à Dimanche) -->
+                <div id="agenda-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-3 pb-2 border-b border-slate-100">
+                  <!-- Rempli dynamiquement en JS avec le jour sélectionné -->
+                </div>
+
+                <!-- Grille Timeline avec les cartes d'événements du jour / de la période -->
+                <div id="selected-day-events-list" class="mt-4 min-h-[360px] space-y-3">
+                  <!-- Rempli dynamiquement par renderSelectedDayEvents() -->
+                </div>
               </div>
-              <span id="selected-day-count-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-[#0062ff] border border-blue-200">0 événement</span>
+
+              <!-- Footer Informations & Synchro -->
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                <span>Fuseau horaire : <strong>Afrique de l'Ouest (GMT+1)</strong> &bull; Synchro temps réel</span>
+                <button onclick="openAddCalendarEventModal()" class="text-xs text-blue-600 hover:underline font-bold flex items-center gap-1">
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  <span>Nouveau Créneau</span>
+                </button>
+              </div>
+
             </div>
 
-            <!-- Scrollable events list for selected date -->
-            <div id="selected-day-events-list" class="space-y-3 overflow-y-auto max-h-[520px] pr-1 flex-1">
-              <!-- Dynamically populated when day clicked -->
-            </div>
           </div>
+
         </div>
+
       </section>
 
       <!-- ==================== TAB 4 : CRM LEADS ==================== -->

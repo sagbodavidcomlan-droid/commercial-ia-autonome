@@ -868,6 +868,40 @@ async function loadCalendarEvents(month, year) {
   }
 }
 
+let calViewMode = 'weekly'; // 'daily', 'weekly', 'monthly'
+
+function setAgendaViewMode(mode) {
+  calViewMode = mode;
+  ['daily', 'weekly', 'monthly'].forEach(m => {
+    const btn = document.getElementById(`agenda-mode-${m}`);
+    if (btn) {
+      if (m === mode) {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0B0F19] text-white shadow-sm";
+      } else {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white";
+      }
+    }
+  });
+  renderSelectedDayEvents(calSelectedDate);
+}
+
+function navigateAgendaPeriod(delta) {
+  const parts = calSelectedDate.split("-");
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  if (calViewMode === 'daily') {
+    d.setDate(d.getDate() + delta);
+  } else if (calViewMode === 'weekly') {
+    d.setDate(d.getDate() + (delta * 7));
+  } else {
+    d.setMonth(d.getMonth() + delta);
+  }
+  const newDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  calSelectedDate = newDateStr;
+  calCurrentMonth = d.getMonth();
+  calCurrentYear = d.getFullYear();
+  renderCalendar(calCurrentMonth, calCurrentYear);
+}
+
 async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
   calCurrentMonth = month;
   calCurrentYear = year;
@@ -878,6 +912,13 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
   }
 
   const events = await loadCalendarEvents(month, year);
+  
+  // Mettre à jour le compteur global de missions
+  const totalCountEl = document.getElementById("agenda-total-events-count");
+  if (totalCountEl) {
+    totalCountEl.textContent = `${events.length} missions`;
+  }
+
   const gridEl = document.getElementById("calendar-month-grid");
   if (!gridEl) return;
 
@@ -885,18 +926,12 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
   const firstDay = new Date(year, month, 1);
   let startDayOfWeek = (firstDay.getDay() + 6) % 7; 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const prevMonthDays = new Date(year, month, 0).getDate();
 
   let html = "";
 
-  // 1. Cases du mois précédent (inactives)
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
-    const dNum = prevMonthDays - i;
-    html += `
-      <div class="min-h-[96px] p-2 rounded-xl bg-slate-50/60 border border-slate-200/60 opacity-40 select-none">
-        <span class="text-xs font-bold text-slate-400">${dNum}</span>
-      </div>
-    `;
+  // 1. Cases vides pour aligner sur le jour de départ (Lundi = col 0)
+  for (let i = 0; i < startDayOfWeek; i++) {
+    html += `<div class="py-1 text-white/20 select-none">-</div>`;
   }
 
   // 2. Cases du mois actif
@@ -907,46 +942,21 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
     const isToday = dStr === todayStr;
     const isSelected = dStr === calSelectedDate;
 
-    let cellBorder = isSelected 
-      ? "border-2 border-emerald-500 bg-emerald-50/40 shadow-xs" 
-      : isToday 
-        ? "border-2 border-[#0062ff] bg-blue-50/30 shadow-xs" 
-        : "border border-slate-200 bg-white hover:border-[#0062ff]/50 hover:shadow-xs";
+    let dayClass = "py-1 rounded-lg cursor-pointer transition hover:bg-white/20 text-white relative";
+    if (isSelected) {
+      dayClass = "py-1 rounded-lg font-black bg-[#CCFF00] text-[#0B0F19] shadow-sm relative"; // Vert lime TimeFrame
+    } else if (isToday) {
+      dayClass = "py-1 rounded-lg font-bold bg-[#0B0F19] text-white relative";
+    }
+
+    const dotHtml = (dayEvents.length > 0 && !isSelected) 
+      ? `<span class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-300"></span>` 
+      : '';
 
     html += `
-      <div onclick="selectCalendarDay('${dStr}')" class="min-h-[96px] p-2 rounded-xl ${cellBorder} flex flex-col justify-between cursor-pointer transition-all duration-200 group">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-black ${isToday ? 'w-5 h-5 rounded-full bg-[#0062ff] text-white flex items-center justify-center font-bold' : (isSelected ? 'w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold' : 'text-slate-800')}">${d}</span>
-          ${dayEvents.length > 0 ? `<span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700">${dayEvents.length}</span>` : ''}
-        </div>
-
-        <div class="space-y-1 mt-1 overflow-hidden">
-          ${dayEvents.slice(0, 2).map(ev => {
-            let pillClass = "bg-sky-50 text-sky-800 border-sky-200";
-            if (ev.event_type === "rdv_client") pillClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
-            else if (ev.event_type === "closing") pillClass = "bg-purple-50 text-purple-800 border-purple-200";
-            else if (ev.event_type === "relance") pillClass = "bg-amber-50 text-amber-800 border-amber-200";
-            else if (ev.event_type === "audit") pillClass = "bg-rose-50 text-rose-800 border-rose-200";
-
-            return `
-              <div class="truncate text-[10px] px-1.5 py-0.5 rounded-md font-semibold border ${pillClass}" title="${ev.time_slot} - ${ev.task_title}">
-                <span class="font-bold opacity-80">${ev.time_slot ? ev.time_slot.split(' - ')[0] : ''}</span> ${ev.task_title}
-              </div>
-            `;
-          }).join("")}
-          ${dayEvents.length > 2 ? `<div class="text-[9px] text-slate-500 font-bold pl-1">+${dayEvents.length - 2} autre(s)</div>` : ''}
-        </div>
-      </div>
-    `;
-  }
-
-  // 3. Cases du mois suivant pour compléter la grille
-  const totalCellsSoFar = startDayOfWeek + daysInMonth;
-  const remainingCells = (totalCellsSoFar % 7 === 0) ? 0 : 7 - (totalCellsSoFar % 7);
-  for (let n = 1; n <= remainingCells; n++) {
-    html += `
-      <div class="min-h-[96px] p-2 rounded-xl bg-slate-50/60 border border-slate-200/60 opacity-40 select-none">
-        <span class="text-xs font-bold text-slate-400">${n}</span>
+      <div onclick="selectCalendarDay('${dStr}')" class="${dayClass}">
+        ${d}
+        ${dotHtml}
       </div>
     `;
   }
@@ -957,98 +967,155 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
 
 function selectCalendarDay(dateStr) {
   calSelectedDate = dateStr;
+  const parts = dateStr.split("-");
+  calCurrentMonth = parseInt(parts[1], 10) - 1;
+  calCurrentYear = parseInt(parts[0], 10);
   renderCalendar(calCurrentMonth, calCurrentYear);
 }
 
 function renderSelectedDayEvents(dateStr) {
-  const events = calCachedEvents.filter(e => e.task_date === dateStr);
   const headingEl = document.getElementById("selected-day-heading");
-  const subHeadingEl = document.getElementById("selected-day-subheading");
   const countBadgeEl = document.getElementById("selected-day-count-badge");
+  const weekColsEl = document.getElementById("agenda-week-columns-header");
   const listEl = document.getElementById("selected-day-events-list");
 
   if (!listEl) return;
 
-  const dObj = new Date(dateStr + "T00:00:00");
-  const dayName = DAYS_NAMES_FR[dObj.getDay()];
-  const dateFormatted = `${dayName} ${dObj.getDate()} ${MONTH_NAMES_FR[dObj.getMonth()]} ${dObj.getFullYear()}`;
+  const parts = dateStr.split("-");
+  const selDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
 
-  if (headingEl) headingEl.textContent = dateFormatted;
-  if (subHeadingEl) subHeadingEl.textContent = `${events.length} mission(s) ou RDV(s) planifié(s)`;
-  if (countBadgeEl) countBadgeEl.textContent = `${events.length} événement(s)`;
+  // Calcul du début de semaine (Lundi)
+  const dayOfWeek = (selDate.getDay() + 6) % 7; // 0=Lundi
+  const monday = new Date(selDate);
+  monday.setDate(selDate.getDate() - dayOfWeek);
 
-  if (events.length === 0) {
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const wd = new Date(monday);
+    wd.setDate(monday.getDate() + i);
+    weekDays.push(wd);
+  }
+
+  const dayShortNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const monthShortNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+
+  // Rendu de la barre des colonnes de la semaine
+  if (weekColsEl) {
+    weekColsEl.innerHTML = weekDays.map((wd, idx) => {
+      const wDateStr = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
+      const isSel = wDateStr === dateStr;
+      const numStr = String(wd.getDate()).padStart(2, '0');
+      const badgeClass = isSel ? "bg-[#0B0F19] text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
+
+      return `
+        <div onclick="selectCalendarDay('${wDateStr}')" class="cursor-pointer transition-all">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">${dayShortNames[idx]}</span>
+          <div class="mt-1 w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-black ${badgeClass}">
+            ${numStr}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  // Filtrage des événements selon calViewMode
+  let filteredEvents = [];
+  if (calViewMode === 'daily') {
+    filteredEvents = calCachedEvents.filter(e => e.task_date === dateStr);
+    if (headingEl) {
+      const dName = DAYS_NAMES_FR[selDate.getDay()];
+      headingEl.textContent = `Journée du ${dName} ${selDate.getDate()} ${MONTH_NAMES_FR[selDate.getMonth()]} ${selDate.getFullYear()}`;
+    }
+  } else if (calViewMode === 'weekly') {
+    const mondayStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+    const sunday = weekDays[6];
+    const sundayStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
+    filteredEvents = calCachedEvents.filter(e => e.task_date >= mondayStr && e.task_date <= sundayStr);
+    if (headingEl) {
+      headingEl.textContent = `Semaine du ${monday.getDate()} ${monthShortNames[monday.getMonth()]} au ${sunday.getDate()} ${monthShortNames[sunday.getMonth()]} ${sunday.getFullYear()}`;
+    }
+  } else {
+    // monthly
+    const curMonthStr = `${selDate.getFullYear()}-${String(selDate.getMonth() + 1).padStart(2, '0')}`;
+    filteredEvents = calCachedEvents.filter(e => e.task_date && e.task_date.startsWith(curMonthStr));
+    if (headingEl) {
+      headingEl.textContent = `Mois de ${MONTH_NAMES_FR[selDate.getMonth()]} ${selDate.getFullYear()}`;
+    }
+  }
+
+  if (countBadgeEl) {
+    countBadgeEl.textContent = `${filteredEvents.length} mission(s)`;
+  }
+
+  if (filteredEvents.length === 0) {
     listEl.innerHTML = `
-      <div class="p-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 rounded-xl bg-slate-50">
-        <i data-lucide="calendar-x" class="w-8 h-8 mx-auto text-slate-400"></i>
-        <p class="text-xs font-medium">Aucun rendez-vous ou mission pour ce jour.</p>
-        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold underline">
-          + Planifier un RDV maintenant
+      <div class="p-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto font-black text-sm">DS</div>
+        <h4 class="text-xs font-bold text-slate-800">Aucune mission planifiée pour cette période</h4>
+        <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
+          Cliquez sur <strong>« + Planifier un RDV »</strong> pour ajouter un rendez-vous client, une démo ou une relance closing.
+        </p>
+        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline">
+          + Planifier un créneau maintenant
         </button>
       </div>
     `;
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
-  listEl.innerHTML = events.map(ev => {
-    let typeBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">Prospection</span>';
-    if (ev.event_type === "rdv_client") {
-      typeBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">RDV Client / Démo</span>';
-    } else if (ev.event_type === "closing") {
-      typeBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Closing & Signature</span>';
-    } else if (ev.event_type === "relance") {
-      typeBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Relance Stratégique</span>';
-    } else if (ev.event_type === "audit") {
-      typeBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Audit & Direction</span>';
-    }
+  // Cartes de style TimeFrame alternées (Lime green #CCFF00 et Soft lavender/indigo #8B8CD9)
+  listEl.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      ${filteredEvents.map((ev, idx) => {
+        const isLime = idx % 2 === 0;
+        const cardBg = isLime ? "bg-[#CCFF00] text-[#0B0F19] border-[#b8e600]" : "bg-[#8B8CD9] text-white border-transparent";
+        const subColor = isLime ? "text-slate-800" : "text-white/80";
+        const tagBg = isLime ? "bg-black/10 text-black font-extrabold" : "bg-white/20 text-white font-extrabold";
+        
+        let eventTypeLabel = "Mission Commerciale";
+        if (ev.event_type === "rdv_client") eventTypeLabel = "Démo Client Live";
+        else if (ev.event_type === "closing") eventTypeLabel = "Closing & Signature";
+        else if (ev.event_type === "relance") eventTypeLabel = "Relance H+24";
+        else if (ev.event_type === "audit") eventTypeLabel = "Audit Direction";
 
-    let statusPill = ev.status === "termine"
-      ? '<span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold border border-emerald-200">Terminé</span>'
-      : (ev.status === "en_cours" 
-        ? '<span class="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-bold border border-amber-200 animate-pulse">En cours</span>'
-        : '<span class="text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold border border-slate-200">Planifié</span>');
+        const statusLabel = ev.status === "termine" ? "Terminé" : (ev.status === "en_cours" ? "En cours" : "Planifié");
 
-    return `
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2.5 hover:border-slate-300 transition">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-mono font-black text-[#0062ff]">${ev.time_slot}</span>
-            ${typeBadge}
+        return `
+          <div class="p-4 rounded-2xl border ${cardBg} shadow-sm space-y-2.5 hover:scale-[1.01] transition-transform cursor-pointer">
+            <div class="flex items-center justify-between text-[10px]">
+              <span class="px-2.5 py-0.5 rounded-full ${tagBg} uppercase tracking-wider">${ev.channel || 'WhatsApp'} &bull; ${eventTypeLabel}</span>
+              <span class="font-mono font-bold">${ev.time_slot || 'Créneau libre'}</span>
+            </div>
+            <div>
+              <h4 class="text-xs sm:text-sm font-black leading-snug">${ev.task_title}</h4>
+              ${ev.task_description ? `<p class="text-[11px] ${subColor} mt-0.5 line-clamp-2">${ev.task_description}</p>` : ''}
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-1.5 border-t border-black/10">
+              <div class="flex items-center gap-2">
+                ${ev.contact_name ? `<span class="font-bold flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${ev.contact_name}</span>` : ''}
+                <span class="px-2 py-0.5 rounded-full bg-white/70 text-slate-800 font-extrabold text-[9px]">${statusLabel}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                ${ev.meeting_link ? `
+                  <a href="${ev.meeting_link}" target="_blank" class="px-2 py-0.5 rounded-lg bg-white text-slate-900 font-bold text-[9px] hover:bg-slate-100 flex items-center gap-1 shadow-2xs">
+                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Visio
+                  </a>
+                ` : ''}
+                ${ev.status !== 'termine' ? `
+                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2 py-0.5 rounded-lg bg-[#0B0F19] text-white font-bold text-[9px] hover:bg-slate-800 flex items-center gap-1">
+                    <i data-lucide="play" class="w-2.5 h-2.5"></i> Exécuter
+                  </button>
+                ` : ''}
+              </div>
+            </div>
           </div>
-          ${statusPill}
-        </div>
+        `;
+      }).join("")}
+    </div>
+  `;
 
-        <div>
-          <h4 class="text-sm font-bold text-slate-900">${ev.task_title}</h4>
-          ${ev.task_description ? `<p class="text-xs text-slate-600 mt-0.5 leading-relaxed">${ev.task_description}</p>` : ''}
-        </div>
-
-        <div class="flex flex-wrap items-center justify-between gap-2 text-xs pt-1 border-t border-slate-100">
-          <div class="flex items-center gap-3 text-slate-500 font-medium">
-            <span class="flex items-center gap-1"><i data-lucide="radio" class="w-3.5 h-3.5 text-slate-400"></i> ${ev.channel || 'WhatsApp'}</span>
-            ${ev.contact_name ? `<span class="flex items-center gap-1 font-semibold text-slate-700"><i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> ${ev.contact_name}</span>` : ''}
-          </div>
-
-          <div class="flex items-center gap-2">
-            ${ev.meeting_link ? `
-              <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold flex items-center gap-1 transition">
-                <i data-lucide="video" class="w-3 h-3 text-emerald-600"></i> Rejoindre la Visio
-              </a>
-            ` : ''}
-
-            ${ev.status !== 'termine' ? `
-              <button onclick="runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg bg-[#0062ff] hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-xs transition">
-                <i data-lucide="play" class="w-3 h-3"></i> Exécuter
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
-
-    lucide.createIcons();
+  if (window.lucide) lucide.createIcons();
 }
 
 function prevCalendarMonth() {
