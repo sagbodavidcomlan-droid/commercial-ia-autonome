@@ -154,18 +154,61 @@
     }
     /* Preserved White Text on Accent Buttons / Cards */
     .nav-btn.active, .nav-btn.active *,
-    .invo-preserve-white,
+    .invo-preserve-white, .invo-preserve-white *,
     .bg-\[\#0062ff\], .bg-\[\#0062ff\] *,
     .bg-blue-600, .bg-blue-600 *,
     .bg-emerald-600, .bg-emerald-600 *,
     .bg-purple-600, .bg-purple-600 *,
     .bg-indigo-600, .bg-indigo-600 *,
+    .bg-slate-900.text-white, .bg-slate-900.text-white *,
     .bg-gradient-to-br, .bg-gradient-to-br h3, .bg-gradient-to-br p, .bg-gradient-to-br span {
       color: #ffffff !important;
     }
     .bg-gradient-to-br button.bg-white,
     .bg-gradient-to-br button.bg-white * {
       color: #0062ff !important;
+    }
+
+    /* CALENDAR SPECIFIC CONTRAST ENHANCEMENTS */
+    #tab-agenda .mini-cal-container,
+    #tab-agenda .mini-cal-container * {
+      color: #ffffff !important;
+    }
+    #tab-agenda .mini-cal-day-active {
+      background-color: #ffffff !important;
+      color: #0062ff !important;
+      font-weight: 900 !important;
+    }
+    #tab-agenda .cal-event-tag-blue {
+      background-color: #0062ff !important;
+      color: #ffffff !important;
+    }
+    #tab-agenda .cal-event-tag-dark {
+      background-color: #0f172a !important;
+      color: #ffffff !important;
+    }
+    #tab-agenda .cal-time-badge {
+      background-color: #eff6ff !important;
+      color: #0052cc !important;
+      border: 1px solid #bfdbfe !important;
+      font-weight: 800 !important;
+    }
+    #tab-agenda .cal-event-title {
+      color: #0f172a !important;
+      font-weight: 900 !important;
+    }
+    #tab-agenda .cal-event-desc {
+      color: #334155 !important;
+      font-weight: 500 !important;
+    }
+    #tab-agenda .cal-event-card {
+      background-color: #ffffff !important;
+      border: 1.5px solid #e2e8f0 !important;
+      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05) !important;
+    }
+    #tab-agenda .cal-event-card:hover {
+      border-color: #93c5fd !important;
+      box-shadow: 0 8px 20px -4px rgba(0, 98, 255, 0.12) !important;
     }
   </style>
 </head>
@@ -1016,7 +1059,7 @@
             <div class="lg:col-span-4 space-y-4">
               
               <!-- Carte 1 : Mini Calendrier Mensuel Bleu Nuit Pro -->
-              <div class="bg-[#0041b3]/85 backdrop-blur-md p-5 rounded-2xl text-white shadow-lg space-y-3 border border-white/20">
+              <div class="mini-cal-container invo-preserve-white bg-[#0041b3] p-5 rounded-2xl text-white shadow-lg space-y-3 border border-white/20">
                 <div class="flex items-center justify-between">
                   <span id="calendar-month-title" class="text-xs font-black uppercase tracking-wider text-white">Octobre 2026</span>
                   <div class="flex items-center gap-1.5">

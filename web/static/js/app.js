@@ -1067,19 +1067,22 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
     const isToday = dStr === todayStr;
     const isSelected = dStr === calSelectedDate;
 
-    let dayClass = "py-1.5 rounded-xl cursor-pointer transition hover:bg-white/20 text-white font-medium relative";
+    let dayClass = "py-1.5 rounded-xl cursor-pointer transition hover:bg-white/20 font-bold relative text-white";
+    let inlineStyle = "color: #ffffff !important;";
     if (isSelected) {
-      dayClass = "py-1.5 rounded-xl font-black bg-white text-[#0062ff] shadow-md relative"; // Blanc net sur fond bleu
+      dayClass = "mini-cal-day-active py-1.5 rounded-xl font-black shadow-md relative";
+      inlineStyle = "background-color: #ffffff !important; color: #0062ff !important;";
     } else if (isToday) {
-      dayClass = "py-1.5 rounded-xl font-bold bg-[#002d80] text-white border border-blue-400/30 relative";
+      dayClass = "py-1.5 rounded-xl font-bold border border-white/30 relative text-white";
+      inlineStyle = "background-color: rgba(255, 255, 255, 0.15) !important; color: #ffffff !important;";
     }
 
     const dotHtml = (dayEvents.length > 0 && !isSelected) 
-      ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-300"></span>` 
+      ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-xs"></span>` 
       : '';
 
     html += `
-      <div onclick="selectCalendarDay('${dStr}')" class="${dayClass}">
+      <div onclick="selectCalendarDay('${dStr}')" class="${dayClass}" style="${inlineStyle}">
         ${d}
         ${dotHtml}
       </div>
@@ -1130,11 +1133,11 @@ function renderSelectedDayEvents(dateStr) {
       const wDateStr = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
       const isSel = wDateStr === dateStr;
       const numStr = String(wd.getDate()).padStart(2, '0');
-      const badgeClass = isSel ? "bg-[#0062ff] text-white shadow-md ring-2 ring-blue-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
+      const badgeClass = isSel ? "bg-[#0062ff] text-white shadow-md ring-2 ring-blue-300" : "bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200";
 
       return `
         <div onclick="selectCalendarDay('${wDateStr}')" class="cursor-pointer transition-all">
-          <span class="text-[10px] uppercase font-bold text-slate-400 block">${dayShortNames[idx]}</span>
+          <span class="text-[10px] uppercase font-extrabold text-slate-500 block">${dayShortNames[idx]}</span>
           <div class="mt-1 w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-black ${badgeClass}">
             ${numStr}
           </div>
@@ -1189,62 +1192,70 @@ function renderSelectedDayEvents(dateStr) {
     return;
   }
 
-  // Cartes 100% alignées sur la charte graphique Invo (Bleu Royal #0062ff & Nuances Élégantes)
+  // Cartes 100% lisibles et nettes (Fond blanc pur, textes sombres ultra-lisibles, badges contrastés)
   listEl.innerHTML = `
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       ${filteredEvents.map((ev, idx) => {
         const isAlternate = idx % 2 === 0;
         
-        // Cartes professionnelles Invo
-        // Carte A : Fond blanc avec bordure bleue fine et accent bleu Invo
-        // Carte B : Fond bleu doux #F0F5FF avec bordure #D0E0FD
-        const cardBg = isAlternate 
-          ? "bg-white border border-blue-100 text-slate-900" 
-          : "bg-[#F4F8FF] border border-[#D3E3FD] text-slate-900";
-        
-        const tagBg = isAlternate 
-          ? "bg-[#0062ff] text-white" 
-          : "bg-slate-900 text-white";
-
-        const titleColor = "text-slate-900";
-        const descColor = "text-slate-600";
-        const footerBorder = isAlternate ? "border-slate-100" : "border-blue-100";
-
         let eventTypeLabel = "Mission Commerciale";
         if (ev.event_type === "rdv_client") eventTypeLabel = "Démo Client Live";
         else if (ev.event_type === "closing") eventTypeLabel = "Closing & Signature";
         else if (ev.event_type === "relance") eventTypeLabel = "Relance H+24";
         else if (ev.event_type === "audit") eventTypeLabel = "Audit Direction";
 
+        const tagStyle = isAlternate 
+          ? "background-color: #0062ff !important; color: #ffffff !important;" 
+          : "background-color: #0f172a !important; color: #ffffff !important;";
+
         const statusLabel = ev.status === "termine" ? "Terminé" : (ev.status === "en_cours" ? "En cours" : "Planifié");
-        const statusBadgeClass = ev.status === "termine" 
-          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-          : (ev.status === "en_cours" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-white text-slate-700 border-slate-200");
+        const statusBadgeStyle = ev.status === "termine" 
+          ? "background-color: #ecfdf5 !important; color: #065f46 !important; border: 1px solid #a7f3d0 !important;"
+          : (ev.status === "en_cours" ? "background-color: #fffbeb !important; color: #92400e !important; border: 1px solid #fde68a !important;" : "background-color: #f8fafc !important; color: #334155 !important; border: 1px solid #e2e8f0 !important;");
 
         return `
-          <div class="p-4 rounded-2xl ${cardBg} shadow-xs hover:shadow-md transition-all cursor-pointer space-y-2.5">
-            <div class="flex items-center justify-between text-[10px]">
-              <span class="px-2.5 py-1 rounded-full ${tagBg} font-black uppercase tracking-wider text-[9px] shadow-2xs">${ev.channel || 'WhatsApp'} &bull; ${eventTypeLabel}</span>
-              <span class="font-mono font-bold text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">${ev.time_slot || 'Créneau libre'}</span>
+          <div class="cal-event-card p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md transition-all cursor-pointer space-y-3">
+            <div class="flex items-center justify-between gap-2 text-[10px]">
+              <span class="px-2.5 py-1 rounded-full font-black uppercase tracking-wider text-[9px] shadow-xs" style="${tagStyle}">
+                ${escapeHtml(ev.channel || 'WhatsApp')} &bull; ${eventTypeLabel}
+              </span>
+              <span class="cal-time-badge font-mono font-extrabold px-2.5 py-1 rounded-lg text-[10px] tracking-wide" style="background-color: #eff6ff !important; color: #0052cc !important; border: 1px solid #bfdbfe !important;">
+                ${escapeHtml(ev.time_slot || 'Créneau libre')}
+              </span>
             </div>
+
             <div>
-              <h4 class="text-xs sm:text-sm font-black leading-snug ${titleColor}">${ev.task_title}</h4>
-              ${ev.task_description ? `<p class="text-[11px] ${descColor} mt-1 leading-relaxed line-clamp-2">${ev.task_description}</p>` : ''}
+              <h4 class="cal-event-title text-sm font-black leading-snug" style="color: #0f172a !important;">
+                ${escapeHtml(ev.task_title)}
+              </h4>
+              ${ev.task_description ? `
+                <p class="cal-event-desc text-xs mt-1.5 leading-relaxed line-clamp-2" style="color: #334155 !important; font-weight: 500 !important;">
+                  ${escapeHtml(ev.task_description)}
+                </p>
+              ` : ''}
             </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-2 border-t ${footerBorder}">
+
+            <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-2.5 border-t border-slate-100">
               <div class="flex items-center gap-2">
-                ${ev.contact_name ? `<span class="font-bold text-slate-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-400"></i> ${ev.contact_name}</span>` : ''}
-                <span class="px-2 py-0.5 rounded-full ${statusBadgeClass} font-bold text-[9px] border">${statusLabel}</span>
+                ${ev.contact_name ? `
+                  <span class="font-extrabold flex items-center gap-1" style="color: #1e293b !important;">
+                    <i data-lucide="user" class="w-3 h-3 text-[#0062ff]"></i> ${escapeHtml(ev.contact_name)}
+                  </span>
+                ` : ''}
+                <span class="px-2 py-0.5 rounded-full font-extrabold text-[9px]" style="${statusBadgeStyle}">
+                  ${statusLabel}
+                </span>
               </div>
+
               <div class="flex items-center gap-1.5">
                 ${ev.meeting_link ? `
-                  <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[9px] flex items-center gap-1 border border-emerald-200 transition">
+                  <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg font-extrabold text-[9px] flex items-center gap-1 transition" style="background-color: #ecfdf5 !important; color: #065f46 !important; border: 1px solid #a7f3d0 !important;">
                     <i data-lucide="video" class="w-2.5 h-2.5 text-emerald-600"></i> Visio
                   </a>
                 ` : ''}
                 ${ev.status !== 'termine' ? `
-                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-[9px] flex items-center gap-1 transition shadow-xs">
-                    <i data-lucide="play" class="w-2.5 h-2.5"></i> Exécuter
+                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg font-black text-[9px] flex items-center gap-1 transition shadow-xs" style="background-color: #0062ff !important; color: #ffffff !important;">
+                    <i data-lucide="play" class="w-2.5 h-2.5 text-white"></i> Exécuter
                   </button>
                 ` : ''}
               </div>
