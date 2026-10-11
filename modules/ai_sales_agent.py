@@ -24,6 +24,7 @@ if ROOT_DIR not in sys.path:
 
 from core.catalog_engine import CatalogEngine
 from modules.config_loader import get_active_config
+from core.database_store import get_lead_messages, get_connection
 
 # ==============================================================================
 # SECTION 5 : MASTER SYSTEM PROMPT OFFICIEL UNIQUE (TOUTES PHASES)
@@ -106,15 +107,26 @@ RÈGLES ANTI-BOUCLE — OBLIGATOIRES :
     - une incompréhension ("Je comprends rien", "C'est incohérent")
     - une irritation ("C'est nul", "Vous répétez")
     Ces situations nécessitent une vraie réponse empathique et adaptée au contenu.
-16. Si le prospect demande si tu es un bot ou une IA : répondre naturellement que non, que c'est Dave Sagbo en direct, sans confirmer ni sur-expliquer. Reprendre la conversation avec une question simple et ouverte : "Non, vous échangez directement avec moi, Dave Sagbo. Je suis là pour comprendre votre situation et voir si on peut vous aider. Qu'est-ce qui vous a amené ici ?"""
+16. Si le prospect demande si tu es un bot ou une IA : répondre naturellement que non, que c'est Dave Sagbo en direct, sans confirmer ni sur-expliquer. Reprendre la conversation avec une question simple et ouverte : "Non, vous échangez directement avec moi, Dave Sagbo. Je suis là pour comprendre votre situation et voir si on peut vous aider. Qu'est-ce qui vous a amené ici ?"
+17. ENVOI DE LIEN — RÈGLE CRITIQUE : N'envoyer le lien vers une offre ou un paiement UNIQUEMENT après un accord explicite du prospect ("oui", "je prends", "intéressé", "envoie le lien", etc.). Ne JAMAIS envoyer de lien après une réflexion, un doute ou une objection non résolue.
+18. GESTION DU "JE VAIS RÉFLÉCHIR" — RÈGLE ABSOLUE : Si le prospect dit "je vais réfléchir", "laissez-moi y penser", ou exprime un besoin de réflexion :
+    - Accueillir la décision avec empathie et respect complet du tempo du prospect ("Prendre un temps de recul est une excellente démarche").
+    - Chercher avec douceur à identifier le vrai frein sans agressivité ("Pour vous aider dans votre réflexion, qu'est-ce qui vous fait le plus hésiter à ce stade ?").
+    - INTERDICTION ABSOLUE de continuer à pitcher l'offre ou d'envoyer un lien.
+19. TRAITEMENT DE L'OBJECTION PRIX — RÈGLE DE RESPECT : Lorsque le prospect indique que c'est trop cher ou hésite sur le budget :
+    - Répondre en 3 temps sans agression : valider la vigilance budgétaire, ancrer la valeur et la rentabilité concrète sans culpabilisation.
+    - INTERDICTION ABSOLUE de poser des questions agressives ou de forcer le prospect (ex: ne jamais demander combien il estime perdre chaque mois).
+    - INTERDICTION de forcer un moyen de paiement (CB, PayPal, etc.).
+20. COHÉRENCE CONTEXTUELLE ABSOLUE : Relire impérativement les 3 derniers tours de conversation avant de générer chaque réponse. Rester strictement sur le sujet en cours. Ne JAMAIS dériver vers un template sans rapport avec ce qui vient d'être échangé.
+21. CLÔTURE ET FIN DE CONVERSATION RESPECTUEUSE : Si le prospect clôt la discussion ou demande un temps de réflexion, le laisser respirer dignement. Programmer une relance douce à J+1 et marquer le contact Froid à J+2/48h sans réponse."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
     "PRIX": {
         "pattern": ["cher", "pas d'argent", "moyens", "prix", "coûteux", "budget", "trop cher", "réduction", "rabais"],
         "empathie": "Votre vigilance sur cet aspect budgétaire est tout à fait légitime.",
-        "pivot": "Considérez simplement le coût de l'inaction : chaque jour ou opportunité perdue faute de système représente un manque à gagner bien supérieur. Cette solution est pensée pour être rentabilisée dès vos toutes premières conversions.",
-        "question_relance": "Quel montant estimez-vous perdre chaque mois faute d'une méthode de suivi structurée ?"
+        "pivot": "Considérez l'accompagnement comme un levier pour structurer vos conversions et sécuriser vos rentrées futures sans perte d'énergie.",
+        "question_relance": "Pour vous aider à avancer sereinement, est-ce uniquement l'investissement qui vous retient ou d'autres aspects entrent en jeu ?"
     },
     "PAS_LE_TEMPS": {
         "pattern": ["temps", "occupé", "dispo", "boulot", "cours", "horaires", "pas le moment", "débordé"],
@@ -859,6 +871,7 @@ class AISalesAgent:
         prod_url = selected_product.get("url_externe") if selected_product else ""
 
         # 3. Détermination de la Phase et de la Réponse
+        distress = self.detect_distress_signal(msg, history)
         is_objection = any(any(p in msg_lower for p in data["pattern"]) for data in OBJECTIONS_KNOWLEDGE_BASE.values())
         phase = "closer" if ready_closer else "setter"
 
@@ -867,7 +880,18 @@ class AISalesAgent:
         strategy = "Diagnostic DUR et découverte active"
         detected_objection = None
 
-        if ready_closer:
+        if distress:
+            closing_status = "OBJECTION_HANDLED" if distress == "reflection" else "QUALIFICATION"
+            strategy = f"Traitement empathique du signal {distress}"
+            conv_lead_data = {
+                "id": lead_id,
+                "nom_complet": target_name,
+                "prenom": (target_name.split()[0] if " " in target_name else target_name).replace("Dr.", "").strip(),
+                "source_canal": target_channel,
+                "canal_source": target_channel
+            }
+            reply_message = self.handle_distress_signal(distress, lead_id, conv_lead_data, conversation_history=history)
+        elif ready_closer:
             closing_status = "DEAL_CLOSED"
             strategy = "Clôture décisive axée sur le retour sur investissement et l'activation immédiate"
             pitch_res = self.generate_closing_pitch(target_data, target_channel, brief_closer, product_id=parsed_prod_id)
@@ -1167,6 +1191,15 @@ class AISalesAgent:
             'arrêtez', 'arretez', 'stop', 'laissez-moi', 'pas intéressé', 'pas interesse'
         ]
 
+        # Signal : besoin de réflexion / temporisation
+        reflection_signals = [
+            'je vais réfléchir', 'je réfléchis', 'laissez-moi réfléchir', 'laissez moi réfléchir',
+            'je vais y penser', "j'y pense", 'je prends le temps', 'je verrai', 'on verra',
+            'peut-être', 'peut etre', 'pas maintenant', 'pas encore', "j'hésite encore",
+            "j'hesite encore", 'je ne suis pas sûr', 'je ne suis pas sur', 'je ne suis pas certain',
+            'à voir', 'a voir', 'je vous reviens', 'je vous recontacte', 'je reviendrai vers vous'
+        ]
+
         # Détection de boucle : même réponse agent 2x+
         loop_detected = False
         if len(conversation_history) >= 4:
@@ -1186,15 +1219,96 @@ class AISalesAgent:
         if any(s in message_lower for s in irritation_signals):
             return 'irritation'
 
+        if any(s in message_lower for s in reflection_signals):
+            return 'reflection'
+
         if loop_detected:
             return 'loop_detected'
 
         return None
 
-    def handle_distress_signal(self, signal_type: str, lead_id: int, lead: Dict[str, Any]) -> str:
+    def get_last_objection_type(self, conversation_history: list) -> Optional[str]:
+        """
+        Détermine si une objection précise (notamment PRIX) a été formulée dans les messages du prospect.
+        """
+        if not conversation_history:
+            return None
+        recent_msgs = conversation_history[-6:]
+        for m in reversed(recent_msgs):
+            # Analyser les messages émis par le prospect
+            sender = (m.get("sender") or "").upper()
+            if sender not in ("LEAD", "USER", "PROSPECT"):
+                continue
+            txt = (m.get("message") or "").lower()
+            if any(p in txt for p in OBJECTIONS_KNOWLEDGE_BASE["PRIX"]["pattern"]):
+                return "PRIX"
+            for obj_type, data in OBJECTIONS_KNOWLEDGE_BASE.items():
+                if any(p in txt for p in data["pattern"]):
+                    return obj_type
+        return None
+
+    def handle_reflection_signal(self, lead_id: int, lead: Dict[str, Any], conversation_history: list = None) -> str:
+        """
+        Gère les signaux de réflexion ('je vais réfléchir') selon la règle 18 :
+        - Empathie et respect du tempo
+        - Identification douce du vrai frein (orientée budget si prix abordé récemment)
+        - Zéro pitch, zéro lien
+        - Planification CRM de la relance douce à J+1
+        """
+        prenom = lead.get('prenom', '') if lead else ''
+        prenom_str = f" {prenom}" if prenom else ""
+
+        last_obj = self.get_last_objection_type(conversation_history or [])
+        if last_obj == "PRIX":
+            reply_text = (
+                f"Prendre un temps de recul est une excellente démarche{prenom_str}. "
+                "Pour vous aider dans votre réflexion, qu'est-ce qui vous fait le plus hésiter à ce stade — "
+                "le montant de l'investissement ou la certitude d'avoir un retour concret ?"
+            )
+        else:
+            reply_text = (
+                f"Prendre un temps de recul est tout à fait légitime{prenom_str}. "
+                "Pour que vous ayez tous les éléments en main, quel est le point précis qui vous fait le plus hésiter actuellement ?"
+            )
+
+        if lead_id:
+            try:
+                from core.database_store import get_connection
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET prochaine_action = 'Relance douce J+1',
+                        prochaine_action_at = datetime('now', '+1 day'),
+                        notes = COALESCE(notes, '') || ' | En réflexion à ' || datetime('now'),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                """, (lead_id,))
+                conn.commit()
+                conn.close()
+            except Exception as e_db:
+                logger.warning(f"Erreur enregistrement prochaine action J+1 : {e_db}")
+
+        return reply_text
+
+    def build_reflection_followup(self, lead_id: int, lead: Dict[str, Any]) -> str:
+        """
+        Génère le message de relance douce à J+1 selon la règle 21.
+        """
+        prenom = lead.get('prenom', '') if lead else ''
+        prenom_str = f" {prenom}" if prenom else ""
+        return (
+            f"Bonjour{prenom_str}, je reviens vers vous comme convenu en toute simplicité. "
+            "Avez-vous eu l'occasion de mûrir votre réflexion ou avez-vous une question en suspens ?"
+        )
+
+    def handle_distress_signal(self, signal_type: str, lead_id: int, lead: Dict[str, Any], conversation_history: list = None) -> str:
         """
         Gère les signaux de rupture avec une réponse humaine, empathique et directe.
         """
+        if signal_type == 'reflection':
+            return self.handle_reflection_signal(lead_id, lead, conversation_history)
+
         prenom = lead.get('prenom', '') if lead else ''
         prenom_str = f" {prenom}" if prenom else ""
 
@@ -1437,11 +1551,11 @@ class AISalesAgent:
 
         reply_text = None
 
-        # 1. ÉTAPE PRIORITAIRE : Détection des signaux de rupture (confusion, bot, irritation, boucle)
+        # 1. ÉTAPE PRIORITAIRE : Détection des signaux de rupture (confusion, bot, irritation, boucle, réflexion)
         distress = self.detect_distress_signal(user_message, history)
         if distress:
             lead_info = lead_data or {}
-            reply_text = self.handle_distress_signal(distress, lead_id, lead_info)
+            reply_text = self.handle_distress_signal(distress, lead_id, lead_info, conversation_history=history)
             return reply_text
 
         # 2. ÉTAPE OUVERTURE : Si c'est le tout premier message du prospect ou du dialogue
