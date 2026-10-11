@@ -386,11 +386,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             pass
         return {}
 
-    def send_json_response(self, data, status=200):
+    def send_json_response(self, data, status=200, extra_headers=None):
         response_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(response_bytes)))
+        if extra_headers:
+            for k, v in extra_headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(response_bytes)
 
@@ -1751,11 +1754,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         if auth_manager.verify_master_pass(master_pass):
             client_ip = self.client_address[0] if self.client_address else "127.0.0.1"
             token = auth_manager.create_session(client_ip)
+            cookie_val = f"session_token={token}; Path=/; Max-Age={30*86400}; SameSite=Lax"
             self.send_json_response({
                 "success": True,
                 "token": token,
                 "message": "Authentification réussie ! Bienvenue sur le cockpit."
-            })
+            }, extra_headers={"Set-Cookie": cookie_val})
         else:
             self.send_json_response({"success": False, "message": "Master Pass incorrect. Accès refusé."}, status=401)
 
@@ -1767,7 +1771,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         token = self.get_session_token()
         if token:
             auth_manager.revoke_session(token)
-        self.send_json_response({"success": True, "message": "Session verrouillée avec succès."})
+        cookie_val = "session_token=; Path=/; Max-Age=0; SameSite=Lax"
+        self.send_json_response({"success": True, "message": "Session verrouillée avec succès."}, extra_headers={"Set-Cookie": cookie_val})
 
     def handle_api_auth_change_pass(self, body):
         if not self.is_authenticated():

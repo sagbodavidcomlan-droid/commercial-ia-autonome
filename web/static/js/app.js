@@ -91,6 +91,9 @@ function setAuthToken(token) {
   }
 }
 
+// Protection anti-rebond pour le verrouillage
+let isAuthenticating = false;
+
 // Wrapper fetch pour injecter automatiquement le token Bearer et intercepter 401
 const originalFetch = window.fetch;
 window.fetch = async function(url, options = {}) {
@@ -116,8 +119,9 @@ window.fetch = async function(url, options = {}) {
 
   const response = await originalFetch(url, options);
 
-  // Détection d'accès non autorisé sur les API privées
-  if (response.status === 401 && typeof url === "string" && url.includes("/api/") && !url.includes("/api/auth/login") && !url.includes("/api/auth/check")) {
+  // Détection d'accès non autorisé sur les API privées (uniquement hors processus d'authentification)
+  if (response.status === 401 && !isAuthenticating && typeof url === "string" && url.includes("/api/") && !url.includes("/api/auth/login") && !url.includes("/api/auth/check")) {
+    setAuthToken("");
     showLockScreen();
   }
 
@@ -129,6 +133,7 @@ function showLockScreen() {
   const overlay = document.getElementById("auth-lock-overlay");
   if (overlay) {
     overlay.classList.remove("hidden");
+    overlay.style.setProperty("display", "flex", "important");
     const inp = document.getElementById("input-master-pass");
     if (inp) {
       inp.value = "";
@@ -147,29 +152,42 @@ function hideLockScreen() {
   const overlay = document.getElementById("auth-lock-overlay");
   if (overlay) {
     overlay.classList.add("hidden");
+    overlay.style.setProperty("display", "none", "important");
   }
 }
 
 async function checkAuthStatus() {
   try {
+    const token = getAuthToken();
+    const headers = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
     const res = await originalFetch("/api/auth/check", {
-      headers: { "Authorization": `Bearer ${getAuthToken()}` },
+      headers: headers,
       credentials: "include"
     });
-    const data = await res.json();
-    if (data.authenticated) {
-      hideLockScreen();
-      return true;
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.authenticated) {
+        hideLockScreen();
+        return true;
+      }
     }
   } catch (e) {
     console.warn("Vérification authentification :", e);
   }
+  // En cas d'échec ou d'absence de session valide
+  setAuthToken("");
   showLockScreen();
   return false;
 }
 
 async function handleMasterPassSubmit(e) {
-  e.preventDefault();
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   const input = document.getElementById("input-master-pass");
   const errorBanner = document.getElementById("auth-error-banner");
   const errorText = document.getElementById("auth-error-text");
@@ -185,6 +203,7 @@ async function handleMasterPassSubmit(e) {
     lucide.createIcons();
   }
 
+  isAuthenticating = true;
   try {
     const res = await originalFetch("/api/auth/login", {
       method: "POST",
@@ -197,7 +216,11 @@ async function handleMasterPassSubmit(e) {
       setAuthToken(data.token);
       hideLockScreen();
       showToast("Cockpit déverrouillé avec succès !", "success");
-      await initAuthenticatedApp();
+      try {
+        await initAuthenticatedApp();
+      } catch (appErr) {
+        console.error("Erreur lors de l'initialisation des composants du Cockpit :", appErr);
+      }
     } else {
       if (errorBanner) {
         errorBanner.classList.remove("hidden");
@@ -214,6 +237,7 @@ async function handleMasterPassSubmit(e) {
       if (errorText) errorText.textContent = "Erreur de connexion : " + err.message;
     }
   } finally {
+    isAuthenticating = false;
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = `<i data-lucide="unlock" class="w-4 h-4"></i><span>Déverrouiller le Système</span>`;
