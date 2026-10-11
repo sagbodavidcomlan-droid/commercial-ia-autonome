@@ -942,15 +942,15 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
     const isToday = dStr === todayStr;
     const isSelected = dStr === calSelectedDate;
 
-    let dayClass = "py-1 rounded-lg cursor-pointer transition hover:bg-white/20 text-white relative";
+    let dayClass = "py-1 rounded-lg cursor-pointer transition hover:bg-white/20 text-white font-medium relative";
     if (isSelected) {
-      dayClass = "py-1 rounded-lg font-black bg-[#CCFF00] text-[#0B0F19] shadow-sm relative"; // Vert lime TimeFrame
+      dayClass = "py-1 rounded-lg font-black bg-[#CCFF00] text-[#0B0F19] shadow-md relative"; // Vert lime vibrant
     } else if (isToday) {
-      dayClass = "py-1 rounded-lg font-bold bg-[#0B0F19] text-white relative";
+      dayClass = "py-1 rounded-lg font-bold bg-[#0B0F19] text-white border border-white/20 relative";
     }
 
     const dotHtml = (dayEvents.length > 0 && !isSelected) 
-      ? `<span class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-300"></span>` 
+      ? `<span class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#CCFF00]"></span>` 
       : '';
 
     html += `
@@ -1005,7 +1005,7 @@ function renderSelectedDayEvents(dateStr) {
       const wDateStr = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
       const isSel = wDateStr === dateStr;
       const numStr = String(wd.getDate()).padStart(2, '0');
-      const badgeClass = isSel ? "bg-[#0B0F19] text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
+      const badgeClass = isSel ? "bg-[#0B0F19] text-white shadow-md ring-2 ring-indigo-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
 
       return `
         <div onclick="selectCalendarDay('${wDateStr}')" class="cursor-pointer transition-all">
@@ -1050,12 +1050,12 @@ function renderSelectedDayEvents(dateStr) {
   if (filteredEvents.length === 0) {
     listEl.innerHTML = `
       <div class="p-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
-        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto font-black text-sm">DS</div>
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-black text-sm">DS</div>
         <h4 class="text-xs font-bold text-slate-800">Aucune mission planifiée pour cette période</h4>
         <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
           Cliquez sur <strong>« + Planifier un RDV »</strong> pour ajouter un rendez-vous client, une démo ou une relance closing.
         </p>
-        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-blue-600 hover:text-blue-700 font-bold underline">
+        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-indigo-600 hover:text-indigo-700 font-bold underline">
           + Planifier un créneau maintenant
         </button>
       </div>
@@ -1064,15 +1064,29 @@ function renderSelectedDayEvents(dateStr) {
     return;
   }
 
-  // Cartes de style TimeFrame alternées (Lime green #CCFF00 et Soft lavender/indigo #8B8CD9)
+  // Cartes harmonisées avec contraste et lisibilité optimisés
   listEl.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       ${filteredEvents.map((ev, idx) => {
         const isLime = idx % 2 === 0;
-        const cardBg = isLime ? "bg-[#CCFF00] text-[#0B0F19] border-[#b8e600]" : "bg-[#8B8CD9] text-white border-transparent";
-        const subColor = isLime ? "text-slate-800" : "text-white/80";
-        const tagBg = isLime ? "bg-black/10 text-black font-extrabold" : "bg-white/20 text-white font-extrabold";
         
+        // Configuration de couleurs à fort contraste
+        // Carte A (Lime Pastel doux #E9FDC9 & bordure verte #C0E875)
+        // Carte B (Slate / Lavande pro #F1F3F9 & bordure douce #D8DEE9)
+        const cardBg = isLime 
+          ? "bg-[#F3FDDB] border border-[#CDEAA2] text-slate-900" 
+          : "bg-[#F4F5FB] border border-[#D5D8E8] text-slate-900";
+        
+        const tagBg = isLime 
+          ? "bg-[#273E0F] text-[#CCFF00]" 
+          : "bg-[#25284D] text-white";
+
+        const tagBorder = isLime ? "border-transparent" : "border-transparent";
+
+        const titleColor = "text-slate-900";
+        const descColor = isLime ? "text-slate-700" : "text-slate-600";
+        const footerBorder = isLime ? "border-[#D6EDA6]" : "border-slate-200";
+
         let eventTypeLabel = "Mission Commerciale";
         if (ev.event_type === "rdv_client") eventTypeLabel = "Démo Client Live";
         else if (ev.event_type === "closing") eventTypeLabel = "Closing & Signature";
@@ -1080,31 +1094,34 @@ function renderSelectedDayEvents(dateStr) {
         else if (ev.event_type === "audit") eventTypeLabel = "Audit Direction";
 
         const statusLabel = ev.status === "termine" ? "Terminé" : (ev.status === "en_cours" ? "En cours" : "Planifié");
+        const statusBadgeClass = ev.status === "termine" 
+          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+          : (ev.status === "en_cours" ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-white text-slate-700 border-slate-300");
 
         return `
-          <div class="p-4 rounded-2xl border ${cardBg} shadow-sm space-y-2.5 hover:scale-[1.01] transition-transform cursor-pointer">
+          <div class="p-4 rounded-2xl ${cardBg} shadow-sm space-y-2.5 hover:shadow-md transition-all cursor-pointer">
             <div class="flex items-center justify-between text-[10px]">
-              <span class="px-2.5 py-0.5 rounded-full ${tagBg} uppercase tracking-wider">${ev.channel || 'WhatsApp'} &bull; ${eventTypeLabel}</span>
-              <span class="font-mono font-bold">${ev.time_slot || 'Créneau libre'}</span>
+              <span class="px-2.5 py-1 rounded-full ${tagBg} font-black uppercase tracking-wider text-[9px] shadow-2xs">${ev.channel || 'WhatsApp'} &bull; ${eventTypeLabel}</span>
+              <span class="font-mono font-black text-slate-700 bg-white/80 px-2 py-0.5 rounded-md border border-black/5">${ev.time_slot || 'Créneau libre'}</span>
             </div>
             <div>
-              <h4 class="text-xs sm:text-sm font-black leading-snug">${ev.task_title}</h4>
-              ${ev.task_description ? `<p class="text-[11px] ${subColor} mt-0.5 line-clamp-2">${ev.task_description}</p>` : ''}
+              <h4 class="text-xs sm:text-sm font-black leading-snug ${titleColor}">${ev.task_title}</h4>
+              ${ev.task_description ? `<p class="text-[11px] ${descColor} mt-1 leading-relaxed line-clamp-2">${ev.task_description}</p>` : ''}
             </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-1.5 border-t border-black/10">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-2 border-t ${footerBorder}">
               <div class="flex items-center gap-2">
-                ${ev.contact_name ? `<span class="font-bold flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${ev.contact_name}</span>` : ''}
-                <span class="px-2 py-0.5 rounded-full bg-white/70 text-slate-800 font-extrabold text-[9px]">${statusLabel}</span>
+                ${ev.contact_name ? `<span class="font-bold text-slate-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${ev.contact_name}</span>` : ''}
+                <span class="px-2 py-0.5 rounded-full ${statusBadgeClass} font-bold text-[9px] border">${statusLabel}</span>
               </div>
               <div class="flex items-center gap-1.5">
                 ${ev.meeting_link ? `
-                  <a href="${ev.meeting_link}" target="_blank" class="px-2 py-0.5 rounded-lg bg-white text-slate-900 font-bold text-[9px] hover:bg-slate-100 flex items-center gap-1 shadow-2xs">
+                  <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] flex items-center gap-1 shadow-2xs transition">
                     <i data-lucide="video" class="w-2.5 h-2.5"></i> Visio
                   </a>
                 ` : ''}
                 ${ev.status !== 'termine' ? `
-                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2 py-0.5 rounded-lg bg-[#0B0F19] text-white font-bold text-[9px] hover:bg-slate-800 flex items-center gap-1">
-                    <i data-lucide="play" class="w-2.5 h-2.5"></i> Exécuter
+                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg bg-[#0B0F19] text-white font-bold text-[9px] hover:bg-slate-800 flex items-center gap-1 transition shadow-2xs">
+                    <i data-lucide="play" class="w-2.5 h-2.5 text-[#CCFF00]"></i> Exécuter
                   </button>
                 ` : ''}
               </div>
