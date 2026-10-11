@@ -429,8 +429,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         c.execute("SELECT COUNT(*) FROM crm_customers")
         total_customers = c.fetchone()[0]
 
-        # Factures / Transactions récentes
-        c.execute("SELECT id, nom_complet, montant_paye, date_achat, mode_paiement, produit_achete FROM crm_customers ORDER BY id DESC LIMIT 5")
+        # Factures / Transactions récentes (Payées & En cours / Devis)
+        c.execute("SELECT id, nom_complet, montant_paye, date_achat, mode_paiement, produit_achete FROM crm_customers ORDER BY id DESC LIMIT 10")
         recent_txs = []
         for r in c.fetchall():
             recent_txs.append({
@@ -441,6 +441,19 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "method": r[4] or "WAVE",
                 "product": r[5] or "Offre Commerciale",
                 "status": "PAID"
+            })
+        
+        # Ajouter également des devis / transactions en attente depuis les leads chauds
+        c.execute("SELECT id, nom_complet, centre_interet, created_at, source_contact FROM crm_leads WHERE statut_lead IN ('Chaud', 'En négociation') ORDER BY id DESC LIMIT 5")
+        for r in c.fetchall():
+            recent_txs.append({
+                "id": f"DEV-{r[0]:04d}",
+                "client": r[1] or "Prospect Qualifié",
+                "amount": 75000,
+                "date": (r[3] or "")[:10] if r[3] else "Récent",
+                "method": "En attente",
+                "product": r[2] or "Proposition Sur-Mesure",
+                "status": "PENDING"
             })
 
         # Activités récentes de prospection

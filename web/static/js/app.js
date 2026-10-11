@@ -469,54 +469,20 @@ async function loadDashboardData() {
     const respTime = document.getElementById("kpi-response-time");
     if (respTime) respTime.textContent = stats.avg_response_time || "38s";
 
-    // Remplir Recent Invoices si présentes
+    // --- FINNOVA COCKPIT INTERACTIF (LISTE & DÉTAIL DES FACTURES/DEVIS) ---
     if (data.recent_transactions && data.recent_transactions.length > 0) {
-      const tbody = document.getElementById("dash-invoices-table-body");
-      if (tbody) {
-        tbody.innerHTML = data.recent_transactions.map(tx => `
-          <tr>
-            <td class="py-3 px-3 font-semibold text-slate-900">${tx.id}</td>
-            <td class="py-3 px-3 text-slate-500">${tx.date}</td>
-            <td class="py-3 px-3 font-medium text-slate-800">${escapeHtml(tx.client)}</td>
-            <td class="py-3 px-3 font-bold text-slate-900">${Number(tx.amount || 0).toLocaleString()} FCFA</td>
-            <td class="py-3 px-3 text-right">
-              <span class="invo-badge bg-emerald-50 text-emerald-600 border border-emerald-200/60">${tx.status || 'PAID'}</span>
-            </td>
-          </tr>
-        `).join("");
-      }
-    }
-
-    // Remplir Recent Activities si présentes
-    if (data.recent_activities && data.recent_activities.length > 0) {
-      const actList = document.getElementById("dash-activities-list");
-      if (actList) {
-        actList.innerHTML = data.recent_activities.map(act => {
-          let iconName = "users";
-          let bgCol = "bg-blue-50 text-[#0062ff]";
-          const ch = (act.channel || "").toLowerCase();
-          if (ch.includes("linkedin")) { iconName = "linkedin"; bgCol = "bg-blue-50 text-[#0062ff]"; }
-          else if (ch.includes("whatsapp")) { iconName = "message-circle"; bgCol = "bg-emerald-50 text-emerald-600"; }
-          else if (ch.includes("facebook")) { iconName = "facebook"; bgCol = "bg-indigo-50 text-indigo-600"; }
-          else if (ch.includes("tiktok")) { iconName = "video"; bgCol = "bg-rose-50 text-rose-500"; }
-
-          return `
-            <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-b-0">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full ${bgCol} flex items-center justify-center font-bold text-xs">
-                  <i data-lucide="${iconName}" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <div class="text-xs font-bold text-slate-800">${escapeHtml(act.lead)}</div>
-                  <div class="text-[11px] text-slate-400">Canal: ${escapeHtml(act.channel)} • Statut: <span class="font-semibold text-slate-600">${escapeHtml(act.status)}</span></div>
-                </div>
-              </div>
-              <span class="text-[11px] font-medium text-slate-400">${act.time || 'Récent'}</span>
-            </div>
-          `;
-        }).join("");
-        lucide.createIcons();
-      }
+      window.finnovaTransactions = data.recent_transactions;
+      renderFinnovaInvoices(data.recent_transactions);
+    } else {
+      // Données de secours de démonstration au look Finnova si vide
+      window.finnovaTransactions = [
+        { id: "INV-0021", client: "Amadou Diallo", amount: 150000, date: "2026-10-28", method: "WAVE", product: "Pack Formation IA", status: "PAID" },
+        { id: "INV-0020", client: "Cabinet Kaba & Co", amount: 350000, date: "2026-10-26", method: "ORANGE", product: "Audit Commercial & Setup", status: "PAID" },
+        { id: "DEV-0019", client: "Fatoumata Bamba", amount: 75000, date: "2026-10-25", method: "En attente", product: "Licence Agent IA Prospection", status: "PENDING" },
+        { id: "INV-0018", client: "Tech Afrique SAS", amount: 500000, date: "2026-10-22", method: "VIREMENT", product: "Pack Entreprise Sur-Mesure", status: "PAID" },
+        { id: "DEV-0017", client: "Seydou Traoré", amount: 120000, date: "2026-10-20", method: "En attente", product: "Accompagnement Closing 30j", status: "PENDING" }
+      ];
+      renderFinnovaInvoices(window.finnovaTransactions);
     }
 
     // Rendu des Graphiques
@@ -525,6 +491,165 @@ async function loadDashboardData() {
     console.error("Erreur de chargement du dashboard :", err);
   }
 }
+
+// Variables d'état Finnova Cockpit
+let currentFinnovaFilter = 'all';
+let selectedFinnovaTxId = null;
+
+function renderFinnovaInvoices(txList, activeId = null) {
+  const container = document.getElementById("finnova-invoices-list");
+  if (!container) return;
+
+  const filtered = (txList || []).filter(tx => {
+    if (currentFinnovaFilter === 'paid') return (tx.status || '').toUpperCase() === 'PAID';
+    if (currentFinnovaFilter === 'pending') return (tx.status || '').toUpperCase() === 'PENDING';
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="p-6 text-center text-slate-400 bg-white/5 rounded-2xl border border-white/5">
+        <i data-lucide="inbox" class="w-7 h-7 mx-auto mb-2 text-slate-500"></i>
+        <p class="text-xs">Aucune transaction trouvée dans ce filtre</p>
+      </div>
+    `;
+    if (typeof lucide !== "undefined") lucide.createIcons();
+    return;
+  }
+
+  // Sélectionner la première transaction si aucune n'est active
+  if (!activeId || !filtered.some(t => t.id === activeId)) {
+    activeId = filtered[0].id;
+  }
+  selectedFinnovaTxId = activeId;
+
+  // Générer les cartes de gauche
+  container.innerHTML = filtered.map(tx => {
+    const isSelected = tx.id === activeId;
+    const isPaid = (tx.status || '').toUpperCase() === 'PAID';
+    const statusBg = isPaid ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    const statusLabel = isPaid ? 'PAYÉE' : 'EN ATTENTE';
+    const activeBorder = isSelected ? 'border-[#0062ff] bg-[#172138] shadow-lg shadow-blue-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10';
+
+    // Initiales de l'avatar
+    const initials = (tx.client || 'CL').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+    return `
+      <div onclick="selectFinnovaInvoice('${tx.id}')" 
+           class="p-3.5 rounded-2xl border ${activeBorder} cursor-pointer transition-all flex items-center justify-between gap-3 group">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0062ff] to-[#1d4ed8] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+            ${initials}
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-white truncate group-hover:text-blue-300 transition">${escapeHtml(tx.client)}</span>
+              <span class="text-[9px] font-mono text-slate-400 font-bold">${tx.id}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 truncate mt-0.5">${escapeHtml(tx.product || 'Offre Commerciale')}</div>
+          </div>
+        </div>
+
+        <div class="text-right shrink-0">
+          <div class="text-xs font-black text-white">${Number(tx.amount || 0).toLocaleString()} <span class="text-[10px] font-normal text-slate-400">FCFA</span></div>
+          <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${statusBg}">
+            ${statusLabel}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  // Mettre à jour le volet droit avec les détails de la transaction sélectionnée
+  const activeTx = filtered.find(t => t.id === activeId) || filtered[0];
+  if (activeTx) {
+    updateFinnovaDetailCard(activeTx);
+  }
+
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function selectFinnovaInvoice(txId) {
+  selectedFinnovaTxId = txId;
+  if (window.finnovaTransactions) {
+    renderFinnovaInvoices(window.finnovaTransactions, txId);
+  }
+}
+
+function updateFinnovaDetailCard(tx) {
+  const isPaid = (tx.status || '').toUpperCase() === 'PAID';
+  const statusPill = document.getElementById("finnova-detail-status-pill");
+  const idEl = document.getElementById("finnova-detail-id");
+  const clientEl = document.getElementById("finnova-detail-client");
+  const dateEl = document.getElementById("finnova-detail-date");
+  const prodEl = document.getElementById("finnova-detail-product");
+  const methodEl = document.getElementById("finnova-detail-method");
+  const amountEl = document.getElementById("finnova-detail-amount");
+
+  if (idEl) idEl.textContent = tx.id;
+  if (clientEl) clientEl.textContent = tx.client || "Client Direct";
+  if (dateEl) dateEl.textContent = tx.date || "Date récente";
+  if (prodEl) prodEl.textContent = tx.product || "Offre Commerciale";
+  if (methodEl) methodEl.textContent = tx.method || (isPaid ? "Wave Mobile" : "En attente de paiement");
+  if (amountEl) amountEl.textContent = `${Number(tx.amount || 0).toLocaleString()} FCFA`;
+
+  if (statusPill) {
+    if (isPaid) {
+      statusPill.className = "inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      statusPill.innerHTML = `PAYÉE &bull; ${escapeHtml(tx.method || 'WAVE')}`;
+    } else {
+      statusPill.className = "inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30";
+      statusPill.innerHTML = `DEVIS EN ATTENTE &bull; RELANCE IA`;
+    }
+  }
+}
+
+function setInvoiceViewFilter(filter) {
+  currentFinnovaFilter = filter;
+  ['all', 'paid', 'pending'].forEach(f => {
+    const btn = document.getElementById(`finnova-tab-${f}`);
+    if (btn) {
+      if (f === filter) {
+        btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-[#0B0F19] shadow-xs";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-white/70 hover:text-white";
+      }
+    }
+  });
+
+  if (window.finnovaTransactions) {
+    renderFinnovaInvoices(window.finnovaTransactions);
+  }
+}
+
+function filterDashboardView(mode) {
+  ['all', 'paid', 'pending', 'autopilot'].forEach(m => {
+    const btn = document.getElementById(`dash-filter-${m}`);
+    if (btn) {
+      if (m === mode) {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0062ff] text-white shadow-xs";
+      } else {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900";
+      }
+    }
+  });
+
+  if (mode === 'paid') {
+    setInvoiceViewFilter('paid');
+  } else if (mode === 'pending') {
+    setInvoiceViewFilter('pending');
+  } else if (mode === 'all') {
+    setInvoiceViewFilter('all');
+  } else if (mode === 'autopilot') {
+    const cardAutopilot = document.getElementById("autopilot-badge");
+    if (cardAutopilot) {
+      cardAutopilot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      cardAutopilot.classList.add("ring-4", "ring-white");
+      setTimeout(() => cardAutopilot.classList.remove("ring-4", "ring-white"), 2000);
+    }
+  }
+}
+
 
 function renderCharts(data) {
   if (typeof Chart === "undefined") {
