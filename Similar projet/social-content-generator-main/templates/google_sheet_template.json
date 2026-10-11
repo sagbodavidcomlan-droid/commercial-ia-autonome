@@ -1,0 +1,31 @@
+{
+  "columns": [
+    {"name": "id", "type": "auto_number"},
+    {"name": "status", "type": "dropdown", "values": ["DRAFT","READY_RENDER","RENDERING","RENDERED","WAITING_APPROVAL","APPROVED","REJECTED","SENT_TO_NUELINK","ERROR"]},
+    {"name": "approval_status", "type": "dropdown", "values": ["WAITING_APPROVAL","APPROVED","REJECTED"]},
+    {"name": "template", "type": "dropdown", "values": ["zodiac_dark","motivational","educational","quote_simple","tips_daily"]},
+    {"name": "zodiac_sign", "type": "dropdown", "values": ["aries","taurus","gemini","cancer","leo","virgo","libra","scorpio","sagittarius","capricorn","aquarius","pisces"]},
+    {"name": "music_mood", "type": "dropdown", "values": ["dark","cinematic","upbeat","motivational","lofi","ambient","epic","happy","sad","beats"]},
+    {"name": "timezone", "type": "dropdown", "values": ["Asia/Jakarta","Asia/Singapore","UTC","America/New_York","Europe/London"]},
+    {"name": "title", "type": "text"},
+    {"name": "text_1", "type": "text"},
+    {"name": "text_2", "type": "text"},
+    {"name": "text_3", "type": "text"},
+    {"name": "text_4", "type": "text"},
+    {"name": "text_5", "type": "text"},
+    {"name": "caption", "type": "text"},
+    {"name": "hashtags", "type": "text"},
+    {"name": "asset_keyword", "type": "text"},
+    {"name": "schedule_datetime", "type": "datetime"},
+    {"name": "music_source_type", "type": "dropdown", "values": ["local","url","youtube_search","soundcloud_search"]},
+    {"name": "music_query", "type": "text"},
+    {"name": "music_mode", "type": "dropdown", "values": ["background","full","trim"]},
+    {"name": "music_fade_in", "type": "number", "default": 2},
+    {"name": "music_fade_out", "type": "number", "default": 2},
+    {"name": "music_volume", "type": "number", "default": 0.7},
+    {"name": "beat_sync", "type": "boolean", "default": false},
+    {"name": "animation", "type": "dropdown", "values": ["fade","zoom_fan","blur"]},
+    {"name": "text_effect", "type": "dropdown", "values": ["shadow","blink","box","rainbow","none"]},
+    {"name": "transition", "type": "dropdown", "values": ["center","left","right","bottom"]}
+  ]
+}

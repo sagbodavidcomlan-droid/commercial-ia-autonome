@@ -169,6 +169,38 @@ def init_db():
     )
     """)
 
+    # 9. Table Brand Assets & Direction Artistique (Studio Créatif IA)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS brand_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        asset_key TEXT UNIQUE,
+        category TEXT, -- palette, typography, voice_tone, signature_rules, templates
+        title TEXT NOT NULL,
+        content_json TEXT NOT NULL,
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    # 10. Table Calendrier & Publications Réseaux Sociaux (Social Selling)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS social_content_calendar (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        channel TEXT NOT NULL, -- LINKEDIN, INSTAGRAM, FACEBOOK, TIKTOK, WHATSAPP_STATUS
+        format_type TEXT NOT NULL, -- CAROUSEL, MOTION_VIDEO, AUTHORITY_POST, STORY
+        status TEXT DEFAULT 'DRAFT', -- DRAFT, READY, SCHEDULED, PUBLISHED
+        scheduled_for TEXT,
+        hook_headline TEXT,
+        caption_text TEXT,
+        creative_blueprint_json TEXT, -- Contient les slides du carrousel ou le storyboard motion
+        trigger_keyword TEXT, -- Mot clé social selling (ex: GUIDE, COMMENCER)
+        leads_generated_count INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+
     # Harmonisation & migration non-bloquante de la table crm_leads
     try:
         cursor.execute("PRAGMA table_info(crm_leads)")

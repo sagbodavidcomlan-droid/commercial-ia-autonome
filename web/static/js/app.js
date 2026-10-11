@@ -398,6 +398,8 @@ function showTab(tabId) {
     loadComplianceRegistry();
   } else if (tabId === "history") {
     loadHistoryFeed();
+  } else if (tabId === "creative") {
+    loadCreativeCalendar();
   }
 }
 
@@ -5030,7 +5032,251 @@ async function confirmClearCRM() {
       alert("Erreur lors du vidage CRM : " + (data.error || "Inconnue"));
     }
   } catch (e) {
+// ==============================================================================
+// MODULE STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DAVE SAGBO)
+// ==============================================================================
+let currentCreativeResult = null;
+
+async function loadCreativeCalendar() {
+  const tbody = document.getElementById("creative-calendar-tbody");
+  const countLabel = document.getElementById("calendar-count-label");
+  if (!tbody) return;
+
+  try {
+    const res = await fetch("/api/creative/calendar?limit=20");
+    const data = await res.json();
+    if (!data.success || !data.calendar_items || data.calendar_items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Aucune publication planifiée. Créez votre premier contenu ci-dessus !</td></tr>`;
+      if (countLabel) countLabel.textContent = "0 publication(s)";
+      return;
+    }
+
+    if (countLabel) countLabel.textContent = `${data.calendar_items.length} publication(s)`;
+
+    tbody.innerHTML = data.calendar_items.map(item => {
+      const channelColor = item.channel === "LINKEDIN" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                           item.channel === "TIKTOK" ? "bg-slate-900 text-white border-slate-700" :
+                           item.channel === "INSTAGRAM" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                           "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+      const formatBadge = item.format_type === "CAROUSEL" ? "Carrousel 8 slides" :
+                          item.format_type === "MOTION_VIDEO" ? "Motion Design 38s" : "Post d'Autorité";
+
+      return `
+        <tr class="hover:bg-slate-50/70 transition-colors">
+          <td class="p-3 font-semibold text-slate-900">${item.title}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${channelColor}">${item.channel}</span></td>
+          <td class="p-3 font-medium text-slate-700">${formatBadge}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Prêt</span></td>
+          <td class="p-3 font-mono text-xs font-bold text-blue-600">${item.trigger_keyword ? item.trigger_keyword : '-'}</td>
+          <td class="p-3 text-slate-500 text-[11px]">${item.scheduled_for || item.created_at || '-'}</td>
+        </tr>
+      `;
+    }).join("");
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("Erreur chargement calendrier créatif :", err);
+    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-rose-500">Erreur réseau lors du chargement du calendrier.</td></tr>`;
+  }
+}
+
+async function triggerGenerateCreative() {
+  const format = document.getElementById("creative-format-type").value;
+  const channel = document.getElementById("creative-channel").value;
+  const topic = document.getElementById("creative-topic").value.trim() || "Automatiser ses relances clients";
+  const btn = document.getElementById("btn-generate-creative");
+  const container = document.getElementById("creative-render-container");
+  const saveActions = document.getElementById("creative-save-actions");
+
+  if (!btn || !container) return;
+
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Génération en cours...`;
+  if (window.lucide) lucide.createIcons();
+
+  let endpoint = "/api/creative/generate-carousel";
+  if (format === "MOTION_VIDEO") endpoint = "/api/creative/generate-motion";
+  else if (format === "AUTHORITY_POST") endpoint = "/api/creative/generate-post";
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic: topic, channel: channel })
+    });
+    const data = await res.json();
+
+    if (data.success && data.result) {
+      currentCreativeResult = data.result;
+      document.getElementById("creative-preview-title").textContent = data.result.title;
+      document.getElementById("creative-format-badge").textContent = data.result.format;
+
+      if (format === "CAROUSEL") {
+        renderCarouselPreview(data.result);
+      } else if (format === "MOTION_VIDEO") {
+        renderMotionPreview(data.result);
+      } else {
+        renderAuthorityPostPreview(data.result);
+      }
+
+      if (saveActions) {
+        saveActions.classList.remove("hidden");
+        const kwEl = document.getElementById("creative-trigger-keyword-display");
+        if (kwEl) kwEl.textContent = data.result.trigger_keyword || "AUCUN";
+      }
+
+      showToast("Création générée avec succès selon la Brand Bible !", "success");
+    } else {
+      alert("Erreur lors de la génération créative : " + (data.error || "Inconnue"));
+    }
+  } catch (e) {
     alert("Erreur réseau : " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i data-lucide="wand-2" class="w-4 h-4"></i> <span>Générer avec la Brand Bible</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+function renderCarouselPreview(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const slidesHtml = (result.slides || []).map(slide => `
+    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[240px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
+      <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+        <span class="px-2 py-0.5 rounded-full bg-slate-800 text-blue-400 border border-slate-700">${slide.badge || 'SLIDE'}</span>
+        <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-mono">${slide.slide_number}</span>
+      </div>
+      <div class="my-auto space-y-1.5">
+        <h4 class="text-xs font-black text-white leading-snug">${slide.title}</h4>
+        <p class="text-[11px] text-slate-300 leading-relaxed font-normal">${slide.subtitle}</p>
+      </div>
+      <div class="text-[9px] text-slate-500 border-t border-slate-800/80 pt-1.5 flex items-center justify-between">
+        <span>${slide.visual_layout ? slide.visual_layout.slice(0, 38) + '...' : 'Direction Artistique Invo'}</span>
+        ${slide.cta_hint ? `<span class="text-amber-400 font-bold">${slide.cta_hint}</span>` : ''}
+      </div>
+    </div>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="w-full space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        ${slidesHtml}
+      </div>
+      <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-700">
+        <strong class="text-slate-900 block font-bold">Légende & Accroche Social Selling :</strong>
+        <p class="whitespace-pre-line text-slate-600 font-normal text-[11px] leading-relaxed">${result.caption || ''}</p>
+      </div>
+    </div>
+  `;
+}
+
+function renderMotionPreview(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const scenesHtml = (result.scenes || []).map((sc, idx) => `
+    <div class="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 hover:border-[#0062ff] transition-all">
+      <div class="flex items-center justify-between text-[11px] font-bold">
+        <span class="px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-100 font-mono">${sc.timecode}</span>
+        <span class="text-slate-500 uppercase text-[10px] tracking-wider">${sc.phase}</span>
+      </div>
+      <p class="text-xs text-slate-900 font-semibold bg-slate-50 p-2 rounded-lg border border-slate-100">
+        🗣️ « ${sc.audio_spoken} »
+      </p>
+      <div class="text-[11px] space-y-1 text-slate-600">
+        <div><strong>Action Caméra :</strong> ${sc.visual_action}</div>
+        <div><strong>Motion Typo :</strong> <span class="text-purple-700 font-medium">${sc.motion_graphic}</span></div>
+        <div class="text-[10px] text-emerald-700 font-mono">🔊 SFX : ${sc.sfx}</div>
+      </div>
+    </div>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="w-full space-y-4">
+      <div class="flex items-center justify-between bg-blue-50/70 p-3 rounded-xl border border-blue-100 text-xs text-blue-900 font-medium">
+        <span>Durée totale : <strong>${result.duration_seconds}s</strong> | Style Audio : ${result.audio_style || 'Voix posée'}</span>
+        <span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-bold">Storyboard Prêt</span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        ${scenesHtml}
+      </div>
+    </div>
+  `;
+}
+
+function renderAuthorityPostPreview(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="w-full space-y-4">
+      <div class="p-5 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">DS</div>
+          <div>
+            <h4 class="text-xs font-bold text-slate-900">Dave Sagbo</h4>
+            <span class="text-[10px] text-slate-500">Directeur Opérationnel • Système d'Acquisition B2B</span>
+          </div>
+        </div>
+        <div class="p-4 bg-slate-50/70 rounded-xl border border-slate-100 text-xs text-slate-800 whitespace-pre-line leading-relaxed font-normal">
+          ${result.body || ''}
+        </div>
+        <div class="text-[11px] text-slate-500 flex items-center gap-1.5 pt-2 border-t border-slate-100">
+          <i data-lucide="image" class="w-3.5 h-3.5 text-blue-600"></i>
+          <span>Recommandation visuelle : ${result.visual_recommendation || 'Visuel sobre avec logo Invo.'}</span>
+        </div>
+      </div>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+async function saveCurrentCreativeToCalendar() {
+  if (!currentCreativeResult) {
+    alert("Veuillez d'abord générer un contenu.");
+    return;
+  }
+
+  const payload = {
+    title: currentCreativeResult.title,
+    channel: currentCreativeResult.channel,
+    format_type: currentCreativeResult.format,
+    caption: currentCreativeResult.caption || currentCreativeResult.body || "",
+    blueprint: currentCreativeResult,
+    trigger_keyword: currentCreativeResult.trigger_keyword || ""
+  };
+
+  try {
+    const res = await fetch("/api/creative/save-post", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("Publication planifiée avec succès au Calendrier !", "success");
+      loadCreativeCalendar();
+    } else {
+      alert("Erreur lors de la sauvegarde : " + (data.error || "Inconnue"));
+    }
+  } catch (e) {
+    alert("Erreur réseau : " + e.message);
+  }
+}
+
+async function loadBrandBible() {
+  try {
+    const res = await fetch("/api/creative/brand-bible");
+    const data = await res.json();
+    if (data.success && data.brand_bible) {
+      const b = data.brand_bible;
+      alert(`BRAND BIBLE — DAVE SAGBO\n\nNom de Marque : ${b.identity.brand_name}\nPositionnement : ${b.identity.tagline}\nArchétype : ${b.identity.archetype}\n\nPalette : Onyx #0B0F19 | Bleu #0062FF | Or #E5A93C | Émeraude #10B981\nTypographie : ${b.typography.display_font}`);
+    }
+  } catch (e) {
+    alert("Erreur Brand Bible : " + e.message);
   }
 }
 

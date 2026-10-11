@@ -40,6 +40,7 @@ from core.auth_manager import auth_manager
 from poller import start_poller_thread, get_agent_poller_status, run_poller_cycle
 from modules.config_loader import get_active_config, set_active_domain, create_domain_profile
 from modules.ai_sales_agent import AISalesAgent
+from modules.creative_studio_engine import CreativeStudioEngine
 from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
 from core.database_store import get_lead_messages, get_lead_channels
 from core.meta_messenger_sync import (
@@ -73,6 +74,7 @@ autopilot_orchestrator = AutopilotOrchestrator()
 payment_hub = PaymentHub()
 export_service = ExportService()
 catalog_engine = CatalogEngine()
+creative_studio_engine = CreativeStudioEngine()
 
 # Démarrage de l'Autopilot 24h/24 en tâche de fond
 autopilot_daemon.start()
@@ -228,6 +230,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_whatsapp_qr()
         elif path == "/api/whatsapp/status":
             self.handle_api_whatsapp_bridge_status()
+        elif path == "/api/creative/brand-bible":
+            self.handle_api_get_brand_bible()
+        elif path == "/api/creative/calendar":
+            self.handle_api_get_creative_calendar(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -354,6 +360,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_ambassador_invite(body)
         elif path == "/api/crm/clear":
             self.handle_api_crm_clear(body)
+        elif path == "/api/creative/generate-carousel":
+            self.handle_api_generate_carousel(body)
+        elif path == "/api/creative/generate-motion":
+            self.handle_api_generate_motion(body)
+        elif path == "/api/creative/generate-post":
+            self.handle_api_generate_authority_post(body)
+        elif path == "/api/creative/save-post":
+            self.handle_api_save_creative_post(body)
         else:
             self.send_json_response({"error": "Route POST introuvable", "path": path}, status=404)
 
@@ -1828,6 +1842,57 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         res = clear_crm_data()
         log_activity("CRM", "Purge complète des données CRM et passage en mode production réelle", "Admin", "", "SUCCESS", "Base prête pour les vrais leads")
         self.send_json_response(res)
+
+    def handle_api_get_brand_bible(self):
+        bible = creative_studio_engine.get_brand_bible()
+        self.send_json_response({"success": True, "brand_bible": bible})
+
+    def handle_api_get_creative_calendar(self, query):
+        limit = int(query.get("limit", [20])[0]) if query.get("limit") else 20
+        items = creative_studio_engine.list_calendar_items(limit=limit)
+        self.send_json_response({"success": True, "calendar_items": items})
+
+    def handle_api_generate_carousel(self, body):
+        topic = (body or {}).get("topic", "Automatiser ses relances")
+        channel = (body or {}).get("channel", "LINKEDIN")
+        res = creative_studio_engine.generate_carousel_blueprint(topic, channel=channel)
+        log_activity("STUDIO_CREATIF", f"Génération carrousel graphique : {topic}", "Dave Sagbo", channel, "SUCCESS", f"{res['slides_count']} slides générées")
+        self.send_json_response({"success": True, "result": res})
+
+    def handle_api_generate_motion(self, body):
+        topic = (body or {}).get("topic", "Objection trop cher")
+        channel = (body or {}).get("channel", "TIKTOK")
+        res = creative_studio_engine.generate_motion_video_script(topic, channel=channel)
+        log_activity("STUDIO_CREATIF", f"Génération storyboard motion design : {topic}", "Dave Sagbo", channel, "SUCCESS", f"{len(res['scenes'])} scènes")
+        self.send_json_response({"success": True, "result": res})
+
+    def handle_api_generate_authority_post(self, body):
+        topic = (body or {}).get("topic", "Méthode DUR")
+        channel = (body or {}).get("channel", "FACEBOOK")
+        res = creative_studio_engine.generate_authority_post(topic, channel=channel)
+        log_activity("STUDIO_CREATIF", f"Génération post d'autorité : {topic}", "Dave Sagbo", channel, "SUCCESS", "Post rédigé")
+        self.send_json_response({"success": True, "result": res})
+
+    def handle_api_save_creative_post(self, body):
+        b = body or {}
+        title = b.get("title", "Publication sans titre")
+        channel = b.get("channel", "LINKEDIN")
+        format_type = b.get("format_type", "CAROUSEL")
+        caption = b.get("caption", "")
+        blueprint = b.get("blueprint", {})
+        trigger_keyword = b.get("trigger_keyword", "")
+        scheduled_for = b.get("scheduled_for")
+        cid = creative_studio_engine.save_content_to_calendar(
+            title=title,
+            channel=channel,
+            format_type=format_type,
+            caption_text=caption,
+            blueprint_data=blueprint,
+            trigger_keyword=trigger_keyword,
+            scheduled_for=scheduled_for
+        )
+        log_activity("STUDIO_CREATIF", f"Planification publication #{cid} : {title}", "Dave Sagbo", channel, "SUCCESS", "Enregistré au calendrier")
+        self.send_json_response({"success": True, "content_id": cid})
 
 
 def run_server(port=7860):

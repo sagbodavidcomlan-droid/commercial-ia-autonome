@@ -1,0 +1,189 @@
+{
+  "app": {
+    "name": "Social Media Auto Content",
+    "version": "beta 2",
+    "theme": "dark",
+    "auto_start": false,
+    "minimize_to_tray": false,
+    "language": "en"
+  },
+  "features": {
+    "video_generation": {
+      "enabled": true,
+      "auto_cleanup": true,
+      "max_video_duration": 60,
+      "output_format": "mp4",
+      "resolution": "1080x1920",
+      "fps": 30,
+      "bitrate": "3000k"
+    },
+    "music": {
+      "enabled": true,
+      "auto_search": true,
+      "default_volume": 0.7,
+      "fade_in": 2,
+      "fade_out": 2,
+      "sources": [
+        "local",
+        "url",
+        "youtube_search",
+        "soundcloud_search"
+      ],
+      "allow_loop": true,
+      "normalize_volume": true
+    },
+    "background": {
+      "enabled": true,
+      "auto_search": true,
+      "sources": [
+        "pexels",
+        "pixabay",
+        "local"
+      ],
+      "fallback_to_local": true,
+      "prefer_vertical": true
+    },
+    "text_effects": {
+      "enabled": true,
+      "animations": [
+        "fade",
+        "zoom_fan",
+        "blur"
+      ],
+      "effects": [
+        "shadow",
+        "blink",
+        "box",
+        "rainbow"
+      ],
+      "transitions": [
+        "center",
+        "left",
+        "right",
+        "bottom"
+      ],
+      "default_animation": "fade",
+      "default_effect": "shadow",
+      "default_transition": "center"
+    },
+    "zodiac_templates": {
+      "enabled": true,
+      "signs": [
+        "aries",
+        "taurus",
+        "gemini",
+        "cancer",
+        "leo",
+        "virgo",
+        "libra",
+        "scorpio",
+        "sagittarius",
+        "capricorn",
+        "aquarius",
+        "pisces"
+      ],
+      "use_custom_colors": true,
+      "show_symbol": true
+    },
+    "social_media": {
+      "enabled": false,
+      "platforms": {
+        "youtube_shorts": {
+          "enabled": false,
+          "method": "selenium",
+          "headless": false,
+          "upload_delay": 5
+        },
+        "instagram_reels": {
+          "enabled": false,
+          "method": "selenium",
+          "headless": false,
+          "upload_delay": 5
+        },
+        "facebook_reels": {
+          "enabled": false,
+          "method": "selenium",
+          "headless": false,
+          "upload_delay": 5
+        },
+        "tiktok": {
+          "enabled": false,
+          "method": "selenium",
+          "headless": false,
+          "upload_delay": 5
+        }
+      },
+      "posting": {
+        "schedule_enabled": false,
+        "default_timezone": "Asia/Jakarta",
+        "retry_on_failure": 3,
+        "retry_delay_seconds": 60
+      }
+    },
+    "auto_schedule": {
+      "enabled": false,
+      "daily_posts": 4,
+      "time_slots": [
+        "08:00",
+        "12:00",
+        "18:00",
+        "20:00"
+      ],
+      "content_rotation": "balanced",
+      "randomize_order": false,
+      "weekend_slots": [
+        "10:00",
+        "14:00",
+        "19:00"
+      ]
+    },
+    "cleanup": {
+      "enabled": true,
+      "temp_files_age_days": 7,
+      "auto_delete_old_videos": true,
+      "max_storage_gb": 10,
+      "compress_old_files": false,
+      "keep_days": 7
+    },
+    "notifications": {
+      "enabled": true,
+      "sound": true,
+      "desktop": true,
+      "email": false,
+      "email_address": "",
+      "telegram": false,
+      "telegram_bot_token": "",
+      "telegram_chat_id": ""
+    },
+    "performance": {
+      "parallel_rendering": false,
+      "max_parallel_jobs": 1,
+      "queue_size_limit": 100,
+      "memory_limit_mb": 2048,
+      "cpu_limit_percent": 80
+    }
+  },
+  "api_keys": {
+    "pexels": "",
+    "pixabay": "",
+    "youtube_api": "",
+    "soundcloud_client_id": "",
+    "google_custom_search": ""
+  },
+  "paths": {
+    "assets_dir": "assets",
+    "output_dir": "outputs",
+    "temp_dir": "temp",
+    "logs_dir": "logs",
+    "templates_dir": "templates",
+    "queue_file": "queue.json",
+    "history_file": "history.json"
+  },
+  "ui": {
+    "theme": "dark",
+    "compact_mode": false,
+    "show_preview": true,
+    "auto_refresh_seconds": 5,
+    "max_history_items": 100
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "default_settings": {
+    "duration_per_text": 5,
+    "font_size": 48,
+    "text_color": "#FFFFFF",
+    "stroke_color": "#000000",
+    "stroke_width": 2,
+    "bg_opacity": 0.5,
+    "bg_color": "#000000",
+    "fps": 30,
+    "max_duration": 60
+  },
+  
+  "animations": {
+    "available": ["fade", "zoom_fan", "blur", "rainbow"],
+    "default": "fade"
+  },
+  
+  "text_effects": {
+    "available": ["shadow", "blink", "box", "rainbow", "none"],
+    "default": "shadow"
+  },
+  
+  "transitions": {
+    "available": ["center", "left", "right", "bottom"],
+    "default": "center"
+  },
+  
+  "scrolling": {
+    "directions": ["left", "right", "up", "down"],
+    "default_speed": 50
+  },
+  
+  "watermark_positions": ["center", "top_left", "top_right", "bottom_left", "bottom_right", "top_center", "bottom_center"],
+  "logo_positions": ["top_left", "top_right", "bottom_left", "bottom_right"],
+  
+  "fonts": {
+    "available": ["Arial-Bold", "Georgia-Bold", "Times-Bold", "Courier-Bold", "Helvetica-Bold"],
+    "default": "Arial-Bold"
+  },
+  
+  "zodiac_templates": {
+    "enabled": true,
+    "signs": ["aries", "taurus", "gemini", "cancer", "leo", "virgo", "libra", "scorpio", "sagittarius", "capricorn", "aquarius", "pisces"]
+  }
+}
