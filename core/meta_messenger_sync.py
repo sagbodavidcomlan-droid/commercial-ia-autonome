@@ -606,8 +606,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
             # 4. Générer une réponse experte d'acquisition & closing
             from modules.omnichannel_messenger import omnichannel_messenger
             
+            lead_prenom = (first_name if not lead_row else lead_row["prenom"]) or (lead_name.split()[0] if " " in lead_name else "")
             lead_data = {
                 "id": lead_id,
+                "prenom": lead_prenom,
+                "nom": (last_name if not lead_row else lead_row["nom"]) or "",
                 "nom_complet": lead_name,
                 "nom_lead": lead_name,
                 "source_canal": "Facebook Messenger",
@@ -906,8 +909,11 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 )
 
                 # Générer la réponse experte d'acquisition & closing
+                lead_prenom = (first_name if not lead_row else lead_row["prenom"]) or (lead_name.split()[0] if " " in lead_name else "")
                 lead_data = {
                     "id": lead_id,
+                    "prenom": lead_prenom,
+                    "nom": (last_name if not lead_row else lead_row["nom"]) or "",
                     "nom_complet": lead_name,
                     "nom_lead": lead_name,
                     "whatsapp": formatted_phone,

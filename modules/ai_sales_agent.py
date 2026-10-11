@@ -95,7 +95,18 @@ N'EXISTE PAS pour toi. Tu ne la devines pas, tu ne la déduis pas, tu ne la gén
 Si on te demande le nom d'un prospect et que tu ne l'as pas reçu explicitement : tu réponds "Information non disponible".
 Tu ne génères JAMAIS de faux noms, faux numéros, fausses adresses email.
 NULL est la SEULE valeur acceptable pour une information personnelle inconnue.
-VIOLATION DE CETTE RÈGLE = ERREUR CRITIQUE SYSTÈME."""
+VIOLATION DE CETTE RÈGLE = ERREUR CRITIQUE SYSTÈME.
+
+RÈGLES ANTI-BOUCLE — OBLIGATOIRES :
+12. Ne jamais répéter mot pour mot une question ou une phrase que tu as déjà envoyée dans cette conversation. Vérifier l'historique avant de formuler chaque message.
+13. Si le prospect semble perdu ou dit ne pas comprendre → abandonner immédiatement la question en cours et repartir de zéro avec empathie : "Pardonnez-moi, je me suis mal exprimé. Reprenons simplement : qu'est-ce qui vous a amené à nous contacter ?"
+14. "C'est bien noté" est INTERDIT comme réponse automatique à une question, une incompréhension ou une accusation. Cette formule est réservée exclusivement aux confirmations d'information factuelle reçue.
+15. Ne jamais répondre "C'est bien noté" à :
+    - une question ("Comment ça ?", "Vous êtes un bot ?")
+    - une incompréhension ("Je comprends rien", "C'est incohérent")
+    - une irritation ("C'est nul", "Vous répétez")
+    Ces situations nécessitent une vraie réponse empathique et adaptée au contenu.
+16. Si le prospect demande si tu es un bot ou une IA : répondre naturellement que non, que c'est Dave Sagbo en direct, sans confirmer ni sur-expliquer. Reprendre la conversation avec une question simple et ouverte : "Non, vous échangez directement avec moi, Dave Sagbo. Je suis là pour comprendre votre situation et voir si on peut vous aider. Qu'est-ce qui vous a amené ici ?"""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -871,8 +882,9 @@ class AISalesAgent:
             closing_status = "QUALIFICATION"
             strategy = "Écoute active, qualification du besoin sans offre prématurée"
             prenom = target_name.split()[0] if " " in target_name else target_name
+            prenom_str = f" {prenom}" if prenom and prenom.lower() not in ("prospect", "partenaire", "directeur") else ""
             reply_message = (
-                f"C'est bien noté {prenom}. Dans votre organisation, notre priorité est de vous apporter une solution parfaitement adaptée à votre réalité opérationnelle.\n\n"
+                f"Je vous écoute attentivement{prenom_str}. Pour bien cibler ce qui vous sera le plus utile :\n\n"
                 f"{eval_res['prochaine_question']}"
             )
 
@@ -1047,9 +1059,315 @@ class AISalesAgent:
             "offer_url": offer_url
         }
 
+
     # ==========================================================================
-    # MOTEUR CONVERSATIONNEL TEMPS RÉEL (4 RÈGLES D'OR OFFICIELLES)
+    # CORRECTIONS CRITIQUES : REGISTRE D'OUVERTURE, SIGNAUX DE RUPTURE & GEMINI
     # ==========================================================================
+    def detect_opening_type(self, message: str) -> str:
+        """
+        Détecte le type de premier message du prospect pour adapter la réponse initiale.
+        """
+        message_lower = (message or "").lower().strip()
+
+        # Salutations informelles
+        informal_greetings = [
+            'cc', 'coucou', 'salut', 'slt', 'hey', 'yo',
+            'hello', 'hi', 'bjr', 'bsr', 'bonsoir', 'wesh',
+            'allô', 'allo', 'koi de neuf', 'ça va', 'cv'
+        ]
+
+        # Salutations formelles
+        formal_greetings = [
+            'bonjour', 'bonne journée', 'bonne soirée',
+            'bonne matinée', 'bon matin'
+        ]
+
+        # Questions directes sur les services
+        service_questions = [
+            'vos services', 'votre offre', 'vos offres',
+            'votre formation', 'vos formations', 'plus d\'info',
+            'renseignement', 'information', 'tarif', 'prix',
+            'combien', 'comment ça marche', 'c\'est quoi',
+            'qu\'est-ce que', 'que proposez', 'que faites'
+        ]
+
+        # Demande d'aide explicite
+        help_requests = [
+            'j\'ai besoin', 'je cherche', 'je veux',
+            'je voudrais', 'aidez-moi', 'pouvez-vous m\'aider',
+            'problème', 'difficulté', 'je n\'arrive pas'
+        ]
+
+        if any(g == message_lower or message_lower.startswith(g) for g in informal_greetings):
+            return 'informal_greeting'
+
+        if any(g in message_lower for g in formal_greetings):
+            if len(message_lower.split()) <= 3:
+                return 'formal_greeting_only'
+            else:
+                return 'formal_greeting_with_context'
+
+        if any(s in message_lower for s in service_questions):
+            return 'service_question'
+
+        if any(h in message_lower for h in help_requests):
+            return 'help_request'
+
+        return 'unclear'
+
+    def build_opening_response(self, opening_type: str, lead: Dict[str, Any]) -> Optional[str]:
+        """
+        Construit la réponse d'ouverture adaptée au type de premier message.
+        Jamais de script de qualification lourd sans avoir d'abord répondu à la salutation.
+        """
+        prenom = lead.get('prenom', '') if lead else ''
+        prenom_str = f" {prenom}" if prenom else ""
+
+        responses = {
+            'informal_greeting': (
+                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
+                f"Ravi de vous avoir. Qu'est-ce qui vous amène ?"
+            ),
+            'formal_greeting_only': (
+                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
+                f"Comment puis-je vous aider ?"
+            ),
+            'formal_greeting_with_context': None,
+            'service_question': None,
+            'help_request': None,
+            'unclear': (
+                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
+                f"Je vous lis — dites-moi comment je peux vous aider."
+            )
+        }
+        return responses.get(opening_type)
+
+    def detect_distress_signal(self, message: str, conversation_history: list) -> Optional[str]:
+        """
+        Détecte les signaux de rupture qui nécessitent une sortie immédiate
+        du script normal de qualification.
+        """
+        message_lower = (message or "").lower().strip()
+
+        # Signal : suspicion bot
+        bot_signals = [
+            'vous êtes un bot', 'vous etes un bot', 'tu es un bot',
+            'vous êtes une ia', 'vous etes une ia', 'tu es une ia',
+            'c\'est un robot', 'c\'est automatique', 'c\'est un chatbot',
+            'êtes-vous humain', 'etes-vous humain', 'es-tu humain',
+            'je parle à qui', 'qui êtes-vous vraiment', 'qui etes-vous vraiment',
+            'c\'est automatisé', 'réponse automatique', 'reponse automatique',
+            'un robot', 'un bot', 'une ia'
+        ]
+
+        # Signal : confusion / incompréhension
+        confusion_signals = [
+            'je ne comprends pas', 'je comprends rien', 'comprends rien',
+            'c\'est incohérent', 'cest incohérent', 'incohérent', 'incoherent',
+            'ça n\'a pas de sens', 'a pas de sens', 'aucun sens',
+            'comment ça', 'comment ca', 'de quoi vous parlez',
+            'vous parlez de quoi', 'je suis perdu', 'perdu',
+            'c\'est quoi ça', 'c\'est quoi ce', 'hein', 'quoi ?', '???'
+        ]
+
+        # Signal : irritation / agacement
+        irritation_signals = [
+            'c\'est nul', 'horrible', 'inutile', 'arrêtez vos conneries',
+            'vous répétez', 'vous repetez', 'même question', 'meme question',
+            'déjà dit', 'deja dit', 'j\'ai déjà répondu', 'jai deja repondu',
+            'arrêtez', 'arretez', 'stop', 'laissez-moi', 'pas intéressé', 'pas interesse'
+        ]
+
+        # Détection de boucle : même réponse agent 2x+
+        loop_detected = False
+        if len(conversation_history) >= 4:
+            agent_messages = [
+                m.get('message', '') for m in conversation_history
+                if m.get('sender') == 'AGENT'
+            ]
+            if len(agent_messages) >= 2 and agent_messages[-1] == agent_messages[-2]:
+                loop_detected = True
+
+        if any(s in message_lower for s in bot_signals):
+            return 'bot_suspicion'
+
+        if any(s in message_lower for s in confusion_signals):
+            return 'confusion'
+
+        if any(s in message_lower for s in irritation_signals):
+            return 'irritation'
+
+        if loop_detected:
+            return 'loop_detected'
+
+        return None
+
+    def handle_distress_signal(self, signal_type: str, lead_id: int, lead: Dict[str, Any]) -> str:
+        """
+        Gère les signaux de rupture avec une réponse humaine, empathique et directe.
+        """
+        prenom = lead.get('prenom', '') if lead else ''
+        prenom_str = f" {prenom}" if prenom else ""
+
+        responses = {
+            'confusion': (
+                f"Pardonnez-moi{prenom_str}, je me suis mal exprimé. Reprenons simplement : "
+                f"qu'est-ce qui vous a amené à nous contacter ?"
+            ),
+            'bot_suspicion': (
+                f"Non, vous échangez directement avec moi, Dave Sagbo. Je suis là pour comprendre "
+                f"votre situation et voir si on peut vous aider. Qu'est-ce qui vous a amené ici ?"
+            ),
+            'irritation': (
+                f"Je vous entends{prenom_str}. Repartons de zéro — dites-moi simplement ce que vous cherchez, en quelques mots."
+            ),
+            'loop_detected': (
+                f"Je crois qu'il y a eu un problème de ma part{prenom_str}. Ignorons ce qui précède. "
+                f"Qu'est-ce qui vous amène ?"
+            )
+        }
+
+        # Réinitialiser le compteur de diagnostic en base
+        if lead_id:
+            try:
+                from core.database_store import get_connection
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET diagnostic_questions_count = 0,
+                        notes = COALESCE(notes, '') || ' | Signal rupture: ' || ? || ' à ' || datetime('now'),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                """, (signal_type, lead_id))
+                conn.commit()
+                conn.close()
+            except Exception as e_db:
+                logger.warning(f"Erreur enregistrement signal rupture en base : {e_db}")
+
+        return responses.get(signal_type, responses['confusion'])
+
+    def sanitize_gemini_contents(self, contents: list) -> list:
+        """
+        Nettoie le tableau de messages pour respecter rigoureusement
+        les contraintes de l'API Gemini :
+        - Alternance stricte user/model
+        - Premier message = user
+        - Dernier message = user
+        - Pas deux messages consécutifs du même rôle
+        """
+        if not contents:
+            return []
+
+        # S'assurer que le premier message est un user
+        start_idx = 0
+        while start_idx < len(contents) and contents[start_idx].get('role') != 'user':
+            start_idx += 1
+        valid_items = contents[start_idx:]
+        if not valid_items:
+            return []
+
+        sanitized = []
+        last_role = None
+
+        for msg in valid_items:
+            role = msg.get('role')
+            parts = msg.get('parts', [{'text': ''}])
+            text = parts[0].get('text', '') if parts else ''
+
+            if role == last_role:
+                # Fusionner avec le message précédent
+                prev = sanitized[-1]
+                prev_text = prev['parts'][0]['text']
+                prev['parts'][0]['text'] = f"{prev_text}\n{text}".strip()
+            else:
+                sanitized.append({
+                    "role": role,
+                    "parts": [{"text": text}]
+                })
+                last_role = role
+
+        # S'assurer que le dernier message est 'user'
+        while sanitized and sanitized[-1]['role'] != 'user':
+            sanitized.pop()
+
+        return sanitized
+
+    def call_gemini_with_full_context(
+        self,
+        lead_id: int,
+        system_prompt: str,
+        new_user_message: str,
+        history: list = None
+    ) -> Optional[str]:
+        """
+        Appelle Gemini avec l'historique COMPLET de la conversation
+        dans le bon ordre chronologique (ORDER BY id ASC), avec system_instruction séparée.
+        """
+        gemini_key = self._get_gemini_key()
+        if not gemini_key:
+            return None
+
+        if history is None and lead_id:
+            from core.database_store import get_lead_messages
+            history = get_lead_messages(lead_id)
+        history = history or []
+
+        gemini_contents = []
+        for msg in history:
+            sender = (msg.get("sender") or "").upper()
+            text = (msg.get("message") or msg.get("content") or "").strip()
+            if not text:
+                continue
+            role = "user" if sender in ("USER", "LEAD") else "model"
+            gemini_contents.append({
+                "role": role,
+                "parts": [{"text": text}]
+            })
+
+        # Ajouter le nouveau message prospect en dernier s'il n'est pas déjà dans l'historique
+        if not gemini_contents or gemini_contents[-1]["parts"][0]["text"] != new_user_message.strip():
+            gemini_contents.append({
+                "role": "user",
+                "parts": [{"text": new_user_message.strip()}]
+            })
+
+        gemini_contents = self.sanitize_gemini_contents(gemini_contents)
+        if not gemini_contents:
+            gemini_contents = [{"role": "user", "parts": [{"text": new_user_message.strip()}]}]
+
+        # Modèles ordonnés par efficacité et disponibilité
+        models = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"]
+        for mod in models:
+            try:
+                import urllib.request
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                payload = {
+                    "system_instruction": {
+                        "parts": [{"text": system_prompt}]
+                    },
+                    "contents": gemini_contents,
+                    "generationConfig": {
+                        "temperature": 0.7,
+                        "maxOutputTokens": 300
+                    }
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    cand = data.get("candidates", [{}])[0]
+                    parts = cand.get("content", {}).get("parts", [{}])
+                    t = parts[0].get("text") if parts else None
+                    if t and len(t.strip()) > 5:
+                        return t.strip()
+            except Exception as e:
+                logger.warning(f"Appel Gemini plein contexte ({mod}) : {e}")
+
+        return None
     def generate_conversational_reply(
         self,
         lead_id: int,
@@ -1111,10 +1429,23 @@ class AISalesAgent:
 
         reply_text = None
 
+        # 1. ÉTAPE PRIORITAIRE : Détection des signaux de rupture (confusion, bot, irritation, boucle)
+        distress = self.detect_distress_signal(user_message, history)
+        if distress:
+            lead_info = lead_data or {}
+            reply_text = self.handle_distress_signal(distress, lead_id, lead_info)
+            return reply_text
+
+        # 2. ÉTAPE OUVERTURE : Si c'est le tout premier message du prospect ou du dialogue
+        if is_first_turn:
+            opening_type = self.detect_opening_type(user_message)
+            lead_info = lead_data or {}
+            custom_opening = self.build_opening_response(opening_type, lead_info)
+            if custom_opening:
+                return custom_opening
+
+        # 3. ÉTAPE DIAGNOSTIC COMPLET / CLOSING
         if is_diagnostic_confirmed:
-            # Circuit déterministe d'élite immédiat conforme à la Règle 10 :
-            # Sortie +1 (Validation du diagnostic + Coût de l'inaction)
-            # Sortie +2 (Offre matchée avec lien direct officiel)
             if diag_res["diagnostic_type"] == "OUTREACH_LINKEDIN":
                 reply_text = (
                     "Votre problème est clair : vous avez la régularité, le bon message, le bon CTA — mais votre accroche parle de vous avant de parler d'eux. Chaque semaine sans changer ça, c'est du temps de prospection qui ne convertit pas.\n\n"
@@ -1135,89 +1466,31 @@ class AISalesAgent:
                     f"C'est ce qu'on déploie ici : {diag_res['offer_url']}"
                 )
         else:
-            # 1. Inférence Gemini avec Règle 10 et max 8 questions
-            gemini_key = self._get_gemini_key()
-            if gemini_key:
-                history_formatted = []
-                for h in history[-6:]:
-                    speaker = "Dave" if h.get("sender") == "AGENT" else "Prospect"
-                    history_formatted.append(f"{speaker}: {h.get('message')}")
-                history_str = "\n".join(history_formatted) if history_formatted else "(Début de l'échange)"
-
-                gemini_prompt = (
-                    f"{SYSTEM_PROMPT}\n\n"
-                    f"=== CONTEXTE CONVERSATIONNEL EN DIRECT ===\n"
-                    f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
-                    f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
-                    f"Historique récent des échanges :\n{history_str}\n\n"
-                    f"Dernier message reçu du prospect : « {msg_clean} »\n\n"
-                    f"CONSIGNES CRITIQUES POUR CETTE RÉPONSE :\n"
+            # 4. Inférence Gemini avec Règle 10 et Historique COMPLET multi-tours
+            system_prompt = (
+                f"{SYSTEM_PROMPT}\n\n"
+                f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
+                f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
+                f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+            )
+            if is_first_turn:
+                system_prompt += "- Il s'agit du premier échange. Identifie-toi sobrement ('Bonjour, c'est Dave Sagbo.').\n"
+            else:
+                system_prompt += (
+                    "- INTERDICTION STRICTE de dire Bonjour ou Bonsoir.\n"
+                    "- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
+                    "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum.\n"
+                    "- INTERDICTION STRICTE de répéter la même question ou phrase déjà envoyée plus haut dans la conversation.\n"
                 )
 
-                if is_first_turn:
-                    gemini_prompt += (
-                        f"- Il s'agit du TOUT PREMIER message de Dave. Commence sobrement par « Bonjour, c'est Dave Sagbo. »\n"
-                        f"- Pose UNE SEULE question simple avec choix concret (2-3 options concrètes).\n"
-                        f"- LONGUEUR : 2 à 3 lignes maximum.\n"
-                    )
-                else:
-                    gemini_prompt += (
-                        f"- ATTENTION : C'est le message #{agent_count + 1} de la conversation (2e message ou plus).\n"
-                        f"- INTERDICTION STRICTE de dire « Bonjour » ou « Bonsoir ».\n"
-                        f"- INTERDICTION STRICTE de te présenter (« C'est Dave Sagbo ») ou de rappeler ton nom.\n"
-                        f"- INTERDICTION STRICTE de mettre une formule de politesse finale ou signature (« Bien cordialement », « Bien à vous », « Dave Sagbo »).\n"
-                        f"- INTERDICTION STRICTE de donner des scripts gratuits ou de faire du conseil/coaching gratuit.\n"
-                        f"- Réponds DIRECTEMENT en 2 à 3 lignes maximum.\n"
-                    )
+            reply_text = self.call_gemini_with_full_context(
+                lead_id=lead_id,
+                system_prompt=system_prompt,
+                new_user_message=user_message,
+                history=history
+            )
 
-                if is_confusion:
-                    gemini_prompt += (
-                        f"- Le prospect dit qu'il ne sait pas ou demande comment identifier son blocage.\n"
-                        f"- INTERDICTION ABSOLUE de lui renvoyer la question (« comment procédez-vous habituellement ? »).\n"
-                        f"- LANCE UN DIAGNOSTIC GUIDÉ : pose une question binaire (oui/non) ou propose un choix entre les 3 niveaux types :\n"
-                        f"  « En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance. Lequel de ces trois vous parle le plus ? »\n"
-                    )
-                elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième"]):
-                    gemini_prompt += (
-                        f"- Le prospect a choisi le niveau 2 (les gens regardent mais ne passent pas à l'acte).\n"
-                        f"- Pose la question clinique de qualification : est-ce qu'il pose des questions pour comprendre leur besoin avant d'annoncer son tarif, ou s'il donne le prix directement ?\n"
-                    )
-                else:
-                    gemini_prompt += (
-                        f"- Une seule question finale, à choix entre 2-3 options concrètes ou fermée. Jamais de question ouverte abstraite.\n"
-                    )
-
-                gemini_prompt += "\nRédige la réponse exacte de Dave Sagbo :"
-
-                for mod in ["gemini-3.5-flash", "gemini-flash-latest"]:
-                    try:
-                        import urllib.request
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
-                        payload = {
-                            "contents": [{"parts": [{"text": gemini_prompt}]}],
-                            "generationConfig": {
-                                "temperature": 0.65,
-                                "maxOutputTokens": 300,
-                                "thinkingConfig": {"thinkingBudget": 0}
-                            }
-                        }
-                        req = urllib.request.Request(
-                            url,
-                            data=json.dumps(payload).encode("utf-8"),
-                            headers={"Content-Type": "application/json"}
-                        )
-                        with urllib.request.urlopen(req, timeout=5) as resp:
-                            data = json.loads(resp.read().decode("utf-8"))
-                            cand = data.get("candidates", [{}])[0]
-                            parts = cand.get("content", {}).get("parts", [{}])
-                            t = parts[0].get("text") if parts else None
-                            if t and len(t.strip()) > 10:
-                                reply_text = t.strip()
-                                break
-                    except Exception as e:
-                        logger.warning(f"Appel Gemini conversationnel ({mod}) : {e}")
-
-            # 2. Fallback d'élite calibré sur le cours d'apprentissage officiel
+            # 5. Fallback déterministe enrichi si Gemini est indisponible
             if not reply_text:
                 if is_confusion:
                     reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
@@ -1232,7 +1505,12 @@ class AISalesAgent:
                     if any(w in msg_lower for w in ["client", "réseau", "visibilité", "audience", "bloque", "coince"]):
                         reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
                     else:
-                        reply_text = "C'est bien noté. Est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
+                        # Règle anti-répétition absolue : si la question des messages directs a déjà été envoyée, poser une question d'ouverture
+                        already_asked = any("contacts actuels" in (m.get("message") or "").lower() for m in history)
+                        if already_asked:
+                            reply_text = "Dites-moi simplement : quel est votre canal principal d'acquisition aujourd'hui ?"
+                        else:
+                            reply_text = "Dites-moi : est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
 
         # 3. Post-traitement et durcissement des 4 règles
         cleaned = reply_text.strip()
