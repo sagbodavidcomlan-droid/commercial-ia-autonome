@@ -234,6 +234,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_brand_bible()
         elif path == "/api/creative/calendar":
             self.handle_api_get_creative_calendar(query)
+        elif path == "/api/creative/slide-svg":
+            self.handle_api_get_slide_svg(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -366,6 +368,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_generate_motion(body)
         elif path == "/api/creative/generate-post":
             self.handle_api_generate_authority_post(body)
+        elif path == "/api/creative/generate-omnichannel":
+            self.handle_api_generate_omnichannel(body)
         elif path == "/api/creative/save-post":
             self.handle_api_save_creative_post(body)
         else:
@@ -1893,6 +1897,38 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         )
         log_activity("STUDIO_CREATIF", f"Planification publication #{cid} : {title}", "Dave Sagbo", channel, "SUCCESS", "Enregistré au calendrier")
         self.send_json_response({"success": True, "content_id": cid})
+
+    def handle_api_generate_omnichannel(self, body):
+        topic = (body or {}).get("topic", "Automatiser ses relances WhatsApp")
+        audience = (body or {}).get("audience", "Entrepreneurs, Prestataires & PME")
+        pack = creative_studio_engine.generate_omnichannel_pack(topic, audience=audience)
+        log_activity("STUDIO_CREATIF", f"Génération Pack Omnicanal 360° : {topic}", "Dave Sagbo", "OMNICHANNEL", "SUCCESS", "Carrousel + Vidéo + Post + Ads + Prompt IA générés")
+        self.send_json_response({"success": True, "pack": pack})
+
+    def handle_api_get_slide_svg(self, query):
+        title = query.get("title", ["Slide Dave Sagbo"])[0]
+        subtitle = query.get("subtitle", [""])[0]
+        badge = query.get("badge", ["MÉTHODE"])[0]
+        cta_hint = query.get("cta_hint", [""])[0]
+        trigger_keyword = query.get("trigger_keyword", [""])[0]
+        slide_index = int(query.get("index", [1])[0])
+        total_slides = int(query.get("total", [8])[0])
+
+        slide_data = {
+            "title": title,
+            "subtitle": subtitle,
+            "badge": badge,
+            "cta_hint": cta_hint,
+            "trigger_keyword": trigger_keyword
+        }
+        svg_code = creative_studio_engine.render_slide_svg(slide_data, slide_index=slide_index, total_slides=total_slides)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+        self.send_header("Content-Disposition", f'attachment; filename="slide_{slide_index}.svg"')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(svg_code.encode("utf-8"))
 
 
 def run_server(port=7860):

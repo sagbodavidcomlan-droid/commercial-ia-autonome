@@ -5096,34 +5096,55 @@ async function triggerGenerateCreative() {
   if (window.lucide) lucide.createIcons();
 
   let endpoint = "/api/creative/generate-carousel";
-  if (format === "MOTION_VIDEO") endpoint = "/api/creative/generate-motion";
-  else if (format === "AUTHORITY_POST") endpoint = "/api/creative/generate-post";
+  let reqBody = { topic: topic, channel: channel };
+
+  if (format === "PACK_OMNICHANNEL") {
+    endpoint = "/api/creative/generate-omnichannel";
+    reqBody = { topic: topic, audience: "Entrepreneurs, Prestataires & PME" };
+  } else if (format === "MOTION_VIDEO") {
+    endpoint = "/api/creative/generate-motion";
+  } else if (format === "AUTHORITY_POST") {
+    endpoint = "/api/creative/generate-post";
+  }
 
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ topic: topic, channel: channel })
+      body: JSON.stringify(reqBody)
     });
     const data = await res.json();
 
-    if (data.success && data.result) {
-      currentCreativeResult = data.result;
-      document.getElementById("creative-preview-title").textContent = data.result.title;
-      document.getElementById("creative-format-badge").textContent = data.result.format;
-
-      if (format === "CAROUSEL") {
-        renderCarouselPreview(data.result);
-      } else if (format === "MOTION_VIDEO") {
-        renderMotionPreview(data.result);
+    if (data.success && (data.result || data.pack)) {
+      if (format === "PACK_OMNICHANNEL") {
+        currentCreativeResult = {
+          title: `Pack 360° : ${data.pack.topic}`,
+          channel: "OMNICHANNEL",
+          format: "PACK_OMNICHANNEL",
+          trigger_keyword: data.pack.carousel.trigger_keyword || "SYSTÈME",
+          pack: data.pack
+        };
+        document.getElementById("creative-preview-title").textContent = currentCreativeResult.title;
+        document.getElementById("creative-format-badge").textContent = "PACK OMNICANAL 360°";
+        renderOmnichannelPreview(data.pack);
       } else {
-        renderAuthorityPostPreview(data.result);
+        currentCreativeResult = data.result;
+        document.getElementById("creative-preview-title").textContent = data.result.title;
+        document.getElementById("creative-format-badge").textContent = data.result.format;
+
+        if (format === "CAROUSEL") {
+          renderCarouselPreview(data.result);
+        } else if (format === "MOTION_VIDEO") {
+          renderMotionPreview(data.result);
+        } else {
+          renderAuthorityPostPreview(data.result);
+        }
       }
 
       if (saveActions) {
         saveActions.classList.remove("hidden");
         const kwEl = document.getElementById("creative-trigger-keyword-display");
-        if (kwEl) kwEl.textContent = data.result.trigger_keyword || "AUCUN";
+        if (kwEl) kwEl.textContent = currentCreativeResult.trigger_keyword || "AUCUN";
       }
 
       showToast("Création générée avec succès selon la Brand Bible !", "success");
@@ -5143,8 +5164,8 @@ function renderCarouselPreview(result) {
   const container = document.getElementById("creative-render-container");
   if (!container) return;
 
-  const slidesHtml = (result.slides || []).map(slide => `
-    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[240px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
+  const slidesHtml = (result.slides || []).map((slide, sIdx) => `
+    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[270px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
       <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
         <span class="px-2 py-0.5 rounded-full bg-slate-800 text-blue-400 border border-slate-700">${slide.badge || 'SLIDE'}</span>
         <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-mono">${slide.slide_number}</span>
@@ -5154,14 +5175,22 @@ function renderCarouselPreview(result) {
         <p class="text-[11px] text-slate-300 leading-relaxed font-normal">${slide.subtitle}</p>
       </div>
       <div class="text-[9px] text-slate-500 border-t border-slate-800/80 pt-1.5 flex items-center justify-between">
-        <span>${slide.visual_layout ? slide.visual_layout.slice(0, 38) + '...' : 'Direction Artistique Invo'}</span>
-        ${slide.cta_hint ? `<span class="text-amber-400 font-bold">${slide.cta_hint}</span>` : ''}
+        <span>${slide.visual_layout ? slide.visual_layout.slice(0, 24) + '...' : 'Direction Invo'}</span>
+        <button onclick="downloadSingleSlideSvg(${sIdx})" class="px-2 py-0.5 rounded bg-blue-600/80 hover:bg-blue-600 text-white font-bold flex items-center gap-1 transition-all">
+          <i data-lucide="download" class="w-3 h-3"></i> SVG
+        </button>
       </div>
     </div>
   `).join("");
 
   container.innerHTML = `
     <div class="w-full space-y-4">
+      <div class="flex items-center justify-between bg-slate-100 p-2.5 rounded-xl border border-slate-200">
+        <span class="text-xs font-bold text-slate-700">Carrousel 8 Slides Haute Fidélité (Norme 4:5 1080x1350)</span>
+        <button onclick="downloadAllSlidesSvg()" class="btn btn-xs btn-primary flex items-center gap-1 font-bold">
+          <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Télécharger Toutes les Slides (SVG)
+        </button>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         ${slidesHtml}
       </div>
@@ -5171,6 +5200,153 @@ function renderCarouselPreview(result) {
       </div>
     </div>
   `;
+  if (window.lucide) lucide.createIcons();
+}
+
+function renderOmnichannelPreview(pack) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const adsHtml = (pack.ads_copy.variations || []).map(ad => `
+    <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1.5 shadow-2xs">
+      <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100 uppercase">${ad.angle}</span>
+      <div class="text-xs font-bold text-slate-900">${ad.headline_1} | ${ad.headline_2} | ${ad.headline_3}</div>
+      <p class="text-[11px] text-slate-600">${ad.desc_1}</p>
+      <p class="text-[11px] text-slate-500 italic">${ad.desc_2}</p>
+    </div>
+  `).join("");
+
+  container.innerHTML = `
+    <div class="w-full space-y-5">
+      <!-- Section 1 : Carrousel & Export -->
+      <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <h4 class="text-xs font-extrabold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="layout-grid" class="w-4 h-4 text-blue-600"></i> 1. Carrousel 8 Slides (LinkedIn / Instagram)
+          </h4>
+          <button onclick="downloadAllSlidesSvg()" class="btn btn-xs btn-primary flex items-center gap-1">
+            <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Télécharger 8 SVG
+          </button>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${pack.carousel.slides.map((s, idx) => `
+            <div class="p-2.5 rounded-lg bg-[#0B0F19] text-white text-[10px] space-y-1 border border-slate-800">
+              <div class="flex justify-between text-[9px] text-slate-400 font-bold">
+                <span>#${s.slide_number}</span>
+                <button onclick="downloadSingleSlideSvg(${idx})" class="text-blue-400 hover:underline">SVG</button>
+              </div>
+              <p class="font-bold truncate text-white">${s.title}</p>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <!-- Section 2 : Post d'Autorité & Copywriting -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+          <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="file-text" class="w-4 h-4 text-emerald-600"></i> 2. Post Narratif Dave Sagbo
+          </h4>
+          <div class="p-3 bg-slate-50 rounded-lg text-[11px] text-slate-700 max-h-48 overflow-y-auto whitespace-pre-line">
+            ${pack.authority_post.body}
+          </div>
+        </div>
+
+        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+          <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="video" class="w-4 h-4 text-purple-600"></i> 3. Script Vidéo Motion (${pack.motion_video.duration_seconds}s)
+          </h4>
+          <div class="p-3 bg-slate-50 rounded-lg text-[11px] text-slate-700 max-h-48 overflow-y-auto space-y-2">
+            ${pack.motion_video.scenes.map(sc => `
+              <div class="border-b border-slate-200 pb-1.5">
+                <span class="font-mono text-[9px] text-blue-600 font-bold">${sc.timecode}</span> : « ${sc.audio_spoken} »
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3 : Meta / Google Ads & Midjourney Prompt -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+          <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="target" class="w-4 h-4 text-amber-600"></i> 4. Variations Publicitaires Google & Meta
+          </h4>
+          <div class="space-y-2">
+            ${adsHtml}
+          </div>
+        </div>
+
+        <div class="p-4 bg-white border border-slate-200 rounded-xl space-y-2 shadow-2xs">
+          <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-4 h-4 text-pink-600"></i> 5. Prompt Visuel IA (Midjourney / Flux)
+          </h4>
+          <div class="p-3 bg-slate-900 text-slate-200 rounded-lg font-mono text-[10px] leading-relaxed select-all">
+            ${pack.visual_prompt.prompt_en}
+          </div>
+          <div class="text-[10px] text-slate-500">
+            Ratio : <strong>${pack.visual_prompt.aspect_ratio}</strong> | Style : ${pack.visual_prompt.style}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+function downloadSingleSlideSvg(slideIndex) {
+  let slides = [];
+  if (currentCreativeResult && currentCreativeResult.slides) {
+    slides = currentCreativeResult.slides;
+  } else if (currentCreativeResult && currentCreativeResult.pack && currentCreativeResult.pack.carousel) {
+    slides = currentCreativeResult.pack.carousel.slides;
+  }
+
+  const slide = slides[slideIndex];
+  if (!slide) {
+    alert("Slide introuvable.");
+    return;
+  }
+
+  const query = new URLSearchParams({
+    title: slide.title || "",
+    subtitle: slide.subtitle || "",
+    badge: slide.badge || "MÉTHODE",
+    cta_hint: slide.cta_hint || "",
+    trigger_keyword: slide.trigger_keyword || "",
+    index: slideIndex + 1,
+    total: slides.length
+  });
+
+  const downloadUrl = `/api/creative/slide-svg?${query.toString()}`;
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = `slide_${slideIndex + 1}.svg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast(`Slide #${slideIndex + 1} téléchargée en SVG !`, "success");
+}
+
+function downloadAllSlidesSvg() {
+  let slides = [];
+  if (currentCreativeResult && currentCreativeResult.slides) {
+    slides = currentCreativeResult.slides;
+  } else if (currentCreativeResult && currentCreativeResult.pack && currentCreativeResult.pack.carousel) {
+    slides = currentCreativeResult.pack.carousel.slides;
+  }
+
+  if (!slides.length) {
+    alert("Aucune diapositive disponible.");
+    return;
+  }
+
+  slides.forEach((_, idx) => {
+    setTimeout(() => {
+      downloadSingleSlideSvg(idx);
+    }, idx * 250);
+  });
+  showToast(`Téléchargement des ${slides.length} slides lancé !`, "info");
 }
 
 function renderMotionPreview(result) {

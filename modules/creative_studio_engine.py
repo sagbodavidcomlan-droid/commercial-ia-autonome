@@ -338,3 +338,210 @@ class CreativeStudioEngine:
                 "created_at": r[10]
             })
         return items
+
+    def render_slide_svg(self, slide_data: Dict[str, Any], slide_index: int = 1, total_slides: int = 8) -> str:
+        """
+        Génère un visuel vectoriel SVG 1080x1350 (ratio 4:5 vertical LinkedIn / Instagram)
+        aux normes strictes de la Brand Bible de Dave Sagbo.
+        """
+        palette = self.brand_bible["visual_palette"]
+        title = (slide_data.get("title") or "Titre de la slide").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        subtitle = (slide_data.get("subtitle") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        badge = (slide_data.get("badge") or "MÉTHODE").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        cta_hint = (slide_data.get("cta_hint") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        trigger_keyword = (slide_data.get("trigger_keyword") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        # Découpe du titre en lignes pour éviter les débordements
+        words = title.split()
+        lines = []
+        cur = []
+        for w in words:
+            cur.append(w)
+            if len(" ".join(cur)) > 26:
+                lines.append(" ".join(cur))
+                cur = []
+        if cur:
+            lines.append(" ".join(cur))
+        if not lines:
+            lines = [title]
+
+        title_tspans = "".join([f'<tspan x="100" dy="{70 if i > 0 else 0}">{line}</tspan>' for i, line in enumerate(lines[:4])])
+
+        # Découpe du sous-titre
+        sub_words = subtitle.split()
+        sub_lines = []
+        cur_sub = []
+        for w in sub_words:
+            cur_sub.append(w)
+            if len(" ".join(cur_sub)) > 42:
+                sub_lines.append(" ".join(cur_sub))
+                cur_sub = []
+        if cur_sub:
+            sub_lines.append(" ".join(cur_sub))
+
+        sub_tspans = "".join([f'<tspan x="100" dy="{44 if i > 0 else 0}">{sline}</tspan>' for i, sline in enumerate(sub_lines[:5])])
+
+        accent_color = palette["accent_gold"] if slide_index in [1, total_slides] else palette["accent_royal_blue"]
+
+        svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350" style="background:{palette['primary_dark']}; font-family:'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;">
+  <defs>
+    <linearGradient id="bgGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="{palette['primary_dark']}" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="{accent_color}"/>
+      <stop offset="100%" stop-color="{palette['accent_royal_blue']}"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Fond Principal & Lueur -->
+  <rect width="1080" height="1350" fill="url(#bgGlow)"/>
+  <circle cx="950" cy="150" r="350" fill="{accent_color}" opacity="0.08" filter="blur(60px)"/>
+  <circle cx="100" cy="1200" r="300" fill="{palette['accent_royal_blue']}" opacity="0.06" filter="blur(60px)"/>
+
+  <!-- Bordure fine de prestige -->
+  <rect x="40" y="40" width="1000" height="1270" rx="32" fill="none" stroke="{palette['border_subtle']}" stroke-width="2"/>
+
+  <!-- Header : Logo / Brand Name & Pagination -->
+  <g transform="translate(100, 120)">
+    <rect x="0" y="0" width="44" height="44" rx="12" fill="url(#accentGrad)"/>
+    <text x="22" y="28" font-size="20" font-weight="900" fill="#FFFFFF" text-anchor="middle">DS</text>
+    <text x="64" y="26" font-size="22" font-weight="800" fill="#FFFFFF" letter-spacing="1">DAVE SAGBO</text>
+    <text x="64" y="44" font-size="14" font-weight="500" fill="#94A3B8">Directeur Opérationnel &bull; Systèmes B2B</text>
+  </g>
+
+  <!-- Pagination Badge -->
+  <g transform="translate(880, 120)">
+    <rect x="0" y="0" width="100" height="40" rx="20" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
+    <text x="50" y="25" font-size="16" font-weight="700" fill="#E2E8F0" text-anchor="middle">{slide_index} / {total_slides}</text>
+  </g>
+
+  <!-- Badge Catégorie / Thématique -->
+  <g transform="translate(100, 260)">
+    <rect x="0" y="0" width="{len(badge) * 14 + 40}" height="44" rx="22" fill="#1E293B" stroke="{accent_color}" stroke-width="1.5"/>
+    <text x="20" y="28" font-size="14" font-weight="800" fill="{accent_color}" letter-spacing="1.5">{badge}</text>
+  </g>
+
+  <!-- Carte Centrale Conteneur -->
+  <rect x="80" y="340" width="920" height="740" rx="28" fill="{palette['surface_dark']}" stroke="#1F2937" stroke-width="2" filter="url(#shadow)"/>
+  
+  <!-- Ligne d'accent graphique sous le conteneur -->
+  <rect x="80" y="340" width="8" height="740" rx="4" fill="url(#accentGrad)"/>
+
+  <!-- Titre Principal Impactant -->
+  <text x="120" y="460" font-size="52" font-weight="900" fill="#FFFFFF" letter-spacing="-1">
+    {title_tspans}
+  </text>
+
+  <!-- Séparateur discret -->
+  <line x1="120" y1="720" x2="300" y2="720" stroke="{accent_color}" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Sous-titre & Explication clinique -->
+  <text x="120" y="790" font-size="30" font-weight="400" fill="#CBD5E1" line-height="1.6">
+    {sub_tspans}
+  </text>
+
+  <!-- Footer : Indication de Swipe ou Call-to-Action -->
+  <g transform="translate(100, 1160)">
+    {"<text x='0' y='40' font-size='22' font-weight='800' fill='" + palette['accent_gold'] + "'>👉 " + cta_hint + "</text>" if cta_hint else ""}
+    {"<rect x='0' y='0' width='340' height='56' rx='28' fill='" + palette['accent_royal_blue'] + "'/><text x='170' y='36' font-size='20' font-weight='900' fill='#FFFFFF' text-anchor='middle'>COMMENTEZ &apos;" + trigger_keyword + "&apos;</text>" if trigger_keyword else ""}
+    <text x="880" y="40" font-size="16" font-weight="600" fill="#64748B" text-anchor="end">Invo Platform &bull; Haute Conversion</text>
+  </g>
+</svg>"""
+        return svg_content
+
+    def generate_google_meta_ads(self, topic: str, audience: str = "Dirigeants de PME") -> Dict[str, Any]:
+        """
+        Génère 3 variations publicitaires ultra-optimisées (Google Search & Meta Ads)
+        avec contraintes strictes de caractères (Titres < 30 car., Descriptions < 90 car.).
+        """
+        topic_clean = (topic or "Automatiser les relances clients").strip()
+        variations = [
+            {
+                "angle": "Bénéfice & ROI Rapide",
+                "headline_1": "Doublez Vos Ventes B2B",
+                "headline_2": "Relances Clients 100% IA",
+                "headline_3": "Rentable Dès Le 1er Mois",
+                "desc_1": "Ne perdez plus aucun prospect. Notre agent IA qualifie et relance sans relâche.",
+                "desc_2": "Installation en 48h. Découvrez la méthode clinique validée par 350+ entreprises."
+            },
+            {
+                "angle": "Coût de l'Inaction & Douleur",
+                "headline_1": "Vos Leads Disparaissent ?",
+                "headline_2": "Fini Les Relances Manuelles",
+                "headline_3": "Système Commercial Prêt",
+                "desc_1": "Chaque jour sans relance automatique représente des milliers d'euros perdus.",
+                "desc_2": "Structurez votre qualification WhatsApp et clôturez vos opportunités en attente."
+            },
+            {
+                "angle": "Offre Exclusive & Diagnostic Offert",
+                "headline_1": "Audit Commercial Offert",
+                "headline_2": "Détectez Vos Fuites De CA",
+                "headline_3": "Accompagnement Dave Sagbo",
+                "desc_1": "Analysez vos 3 blocages majeurs de conversion en 10 minutes avec nos experts.",
+                "desc_2": "Zéro engagement requis. Réservez votre créneau stratégique avant fermeture."
+            }
+        ]
+        return {
+            "topic": topic_clean,
+            "target_audience": audience,
+            "variations": variations
+        }
+
+    def generate_midjourney_prompt(self, topic: str, audience: str = "Dirigeants") -> Dict[str, Any]:
+        """
+        Génère un prompt Midjourney / Flux d'image haute fidélité pour visuels de couverture.
+        """
+        prompt = (
+            f"High-end corporate executive portrait of a focused tech entrepreneur in an ultra-modern minimalist glass office, "
+            f"deep onyx and royal blue neon atmospheric lighting (#0B0F19 and #0062FF accents), matte gold reflections, "
+            f"cinematic composition, shot on Hasselblad H6D-100c, 85mm f/1.4 lens, volumetric lighting, photorealistic 8k, "
+            f"subtle depth of field, authentic boardroom atmosphere, symbolizing power, precision, and commercial growth --ar 4:5 --v 6.0 --style raw"
+        )
+        return {
+            "prompt_en": prompt,
+            "aspect_ratio": "4:5 (Idéal Carrousel / Post Instagram & LinkedIn)",
+            "style": "Executive Cinematic Photorealism",
+            "primary_tones": "Deep Onyx (#0B0F19), Invo Royal Blue (#0062FF), Matte Gold (#E5A93C)"
+        }
+
+    def generate_omnichannel_pack(
+        self,
+        topic: str,
+        audience: str = "Entrepreneurs, Prestataires & PME"
+    ) -> Dict[str, Any]:
+        """
+        Génère le PACK COMPLET OMNICANAL 360° :
+        1. Carrousel 8 slides (avec code SVG prêt à télécharger)
+        2. Post d'autorité LinkedIn
+        3. Script vidéo Motion Design (Reel/TikTok)
+        4. Copywriting Publicitaire Meta/Google Ads (Titres & Descriptions normés)
+        5. Prompt Visuel IA Midjourney/Flux
+        """
+        carousel = self.generate_carousel_blueprint(topic, channel="LINKEDIN", target_audience=audience)
+        
+        # Injection du SVG dans chaque slide
+        total_slides = len(carousel["slides"])
+        for idx, slide in enumerate(carousel["slides"]):
+            slide["svg_code"] = self.render_slide_svg(slide, slide_index=idx + 1, total_slides=total_slides)
+
+        post = self.generate_authority_post(topic, channel="FACEBOOK")
+        motion = self.generate_motion_video_script(topic, channel="TIKTOK")
+        ads = self.generate_google_meta_ads(topic, audience=audience)
+        mj_prompt = self.generate_midjourney_prompt(topic, audience=audience)
+
+        return {
+            "topic": topic,
+            "audience": audience,
+            "created_at": datetime.now().isoformat(),
+            "carousel": carousel,
+            "authority_post": post,
+            "motion_video": motion,
+            "ads_copy": ads,
+            "visual_prompt": mj_prompt
+        }
+
