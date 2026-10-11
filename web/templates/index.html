@@ -2728,35 +2728,182 @@
 
         </div>
 
-        <!-- Section Calendrier Éditorial & Historique Créatif -->
-        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-              <i data-lucide="calendar-days" class="w-4 h-4 text-[#0062ff]"></i>
-              <span>Publications Planifiées & Déploiements Réseaux</span>
-            </h3>
-            <span class="text-xs text-slate-500" id="calendar-count-label">0 publication(s)</span>
+        <!-- Section Calendrier Éditorial & Planning TimeFrame -->
+        <div class="bg-[#999AE8] rounded-3xl p-6 sm:p-8 text-slate-800 shadow-xl space-y-6 select-none transition-all">
+          
+          <!-- Top Bar TimeFrame -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/20 pb-5">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black uppercase tracking-wider text-white/80">TimeFrame &bull; Dave Sagbo</span>
+              </div>
+              <h3 class="text-2xl font-black text-white tracking-tight">Mon Calendrier Éditorial</h3>
+              <p class="text-xs text-white/80 font-medium">Planification stratégique multicanale & cadence de diffusion IA.</p>
+            </div>
+
+            <!-- Contrôles Vues & Métriques -->
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Switch Vue Jour / Semaine / Mois -->
+              <div class="flex items-center bg-white/20 p-1 rounded-2xl backdrop-blur-md">
+                <button onclick="setCalendarViewMode('daily')" id="cal-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Jour</button>
+                <button onclick="setCalendarViewMode('weekly')" id="cal-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0B0F19] text-white shadow-sm">Semaine</button>
+                <button onclick="setCalendarViewMode('monthly')" id="cal-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Mois</button>
+              </div>
+
+              <!-- Métriques en-tête style maquette -->
+              <div class="hidden xl:flex items-center gap-4 px-4 py-2 bg-white/15 rounded-2xl backdrop-blur-md text-white border border-white/10">
+                <div>
+                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Posts Prêts</span>
+                  <strong class="text-sm font-black" id="timeframe-ready-count">0 posts</strong>
+                </div>
+                <div class="w-px h-6 bg-white/20"></div>
+                <div>
+                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Cadence IA</span>
+                  <strong class="text-sm font-black text-amber-300">100% Auto</strong>
+                </div>
+              </div>
+
+              <!-- Bouton Ajouter Publication -->
+              <button onclick="quickScheduleFromTimeframe()" class="px-4 py-2 rounded-2xl bg-[#0B0F19] hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Planifier un Post</span>
+              </button>
+            </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs text-slate-600">
-              <thead class="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
-                <tr>
-                  <th class="p-3">Titre & Sujet</th>
-                  <th class="p-3">Canal</th>
-                  <th class="p-3">Format</th>
-                  <th class="p-3">Statut</th>
-                  <th class="p-3">Trigger Mot-Clé</th>
-                  <th class="p-3">Date Prévue</th>
-                </tr>
-              </thead>
-              <tbody id="creative-calendar-tbody" class="divide-y divide-slate-100">
-                <tr>
-                  <td colspan="6" class="p-4 text-center text-slate-400">Chargement des publications du calendrier...</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Grille Principale TimeFrame : Sidebar Gauche + Timeline Droite -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Colonne Gauche : Mini-Calendrier + Checklists -->
+            <div class="lg:col-span-4 space-y-4">
+              
+              <!-- Carte 1 : Mini Calendrier Mensuel avec dates actives -->
+              <div class="bg-[#8B8CD9] p-5 rounded-2xl text-white shadow-sm space-y-3 border border-white/10">
+                <div class="flex items-center justify-between">
+                  <span id="timeframe-mini-month-label" class="text-xs font-extrabold uppercase tracking-wide">Octobre 2026</span>
+                  <div class="flex items-center gap-1">
+                    <button onclick="navigateTimeframeMonth(-1)" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition">&lt;</button>
+                    <button onclick="navigateTimeframeMonth(1)" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition">&gt;</button>
+                  </div>
+                </div>
+
+                <!-- Grille des Jours -->
+                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-white/70 pt-1">
+                  <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+                </div>
+                <div id="timeframe-mini-calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium pt-1">
+                  <!-- Rempli dynamiquement en JS -->
+                </div>
+              </div>
+
+              <!-- Carte 2 : Piliers Éditoriaux Actifs -->
+              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2.5 border border-white/40">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                  <span>Piliers de Contenu</span>
+                  <span class="text-[10px] text-slate-500 font-bold uppercase">Brand Bible</span>
+                </div>
+                <div class="space-y-1.5 text-xs text-slate-700">
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
+                    <span class="font-semibold text-[11px]">Systèmes & Automatisation WhatsApp</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
+                    <span class="font-semibold text-[11px]">Méthode de Closing DUR & Objections</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                    <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
+                    <span class="font-semibold text-[11px]">Études de cas réelles & ROI PME</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Carte 3 : Canaux Actifs -->
+              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2 border border-white/40">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                  <span>Canaux de Distribution</span>
+                  <span class="text-[10px] text-blue-600 font-bold">4 Actifs</span>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-[#0062ff] text-[10px] font-bold border border-blue-100">LinkedIn</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-100">Instagram</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-900 text-white text-[10px] font-bold">TikTok 9:16</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-100">WhatsApp</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Colonne Droite : Grille Hebdomadaire & Cartes Planifiées (Timeline Style TimeFrame) -->
+            <div class="lg:col-span-8 bg-white/95 rounded-2xl p-5 shadow-sm border border-white/40 space-y-4 flex flex-col justify-between">
+              
+              <div>
+                <!-- En-tête Navigation Temporelle Droite -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div class="flex items-center gap-2">
+                    <span id="timeframe-current-range-label" class="text-xs sm:text-sm font-extrabold text-slate-900">Semaine en cours</span>
+                    <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">Fuseau GMT+1</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <button onclick="navigateTimeframePeriod(-1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&lt;</button>
+                    <button onclick="resetTimeframeToday()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition">Aujourd'hui</button>
+                    <button onclick="navigateTimeframePeriod(1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&gt;</button>
+                  </div>
+                </div>
+
+                <!-- Jours de la Semaine Colonnes (Lundi à Dimanche) -->
+                <div id="timeframe-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-3 pb-2 border-b border-slate-100">
+                  <!-- Injecté en JS avec le jour actuel en surbrillance -->
+                </div>
+
+                <!-- Grille Timeline avec les cartes d'événements prévus -->
+                <div id="timeframe-timeline-container" class="mt-4 min-h-[340px] space-y-3">
+                  <!-- Cartes de publications injectées ici -->
+                </div>
+              </div>
+
+              <!-- Bascule vers la vue Tableau compact pour audit rapide -->
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] text-slate-500 font-medium">
+                  Synchronisé avec votre base SQLite <strong class="text-slate-800">social_content_calendar</strong>
+                </span>
+                <button onclick="toggleCalendarTableView()" id="btn-toggle-cal-table" class="text-xs text-blue-600 hover:underline font-bold flex items-center gap-1">
+                  <i data-lucide="table" class="w-3.5 h-3.5"></i>
+                  <span>Afficher la vue tableur</span>
+                </button>
+              </div>
+
+            </div>
+
           </div>
+
+          <!-- Vue Tableur Repliable (Optionnelle) -->
+          <div id="timeframe-raw-table-wrapper" class="hidden bg-white/95 rounded-2xl p-5 shadow-sm border border-white/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-extrabold text-slate-900 uppercase">Registre brut des publications planifiées</h4>
+              <button onclick="toggleCalendarTableView()" class="text-xs text-slate-400 hover:text-slate-600 font-bold">Fermer &times;</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th class="p-3">Titre & Sujet</th>
+                    <th class="p-3">Canal</th>
+                    <th class="p-3">Format</th>
+                    <th class="p-3">Statut</th>
+                    <th class="p-3">Trigger Mot-Clé</th>
+                    <th class="p-3">Date Prévue</th>
+                  </tr>
+                </thead>
+                <tbody id="creative-calendar-tbody" class="divide-y divide-slate-100">
+                  <tr>
+                    <td colspan="6" class="p-4 text-center text-slate-400">Chargement des publications du calendrier...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
 
       </section>

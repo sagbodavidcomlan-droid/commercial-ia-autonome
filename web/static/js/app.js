@@ -5103,48 +5103,288 @@ function onCreativeCatalogItemChange() {
   }
 }
 
+// ------------------------------------------------------------------------------
+// ÉTAT & MOTEUR DU CALENDRIER ÉDITORIAL TIMEFRAME
+// ------------------------------------------------------------------------------
+let timeframeState = {
+  viewMode: 'weekly', // 'daily', 'weekly', 'monthly'
+  currentDate: new Date(),
+  selectedDate: new Date(),
+  items: [],
+  tableVisible: false
+};
+
+function setCalendarViewMode(mode) {
+  timeframeState.viewMode = mode;
+  ['daily', 'weekly', 'monthly'].forEach(m => {
+    const btn = document.getElementById(`cal-mode-${m}`);
+    if (btn) {
+      if (m === mode) {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0B0F19] text-white shadow-sm";
+      } else {
+        btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white";
+      }
+    }
+  });
+  renderTimeframeTimeline();
+}
+
+function toggleCalendarTableView() {
+  const wrapper = document.getElementById("timeframe-raw-table-wrapper");
+  const btn = document.getElementById("btn-toggle-cal-table");
+  if (!wrapper) return;
+  timeframeState.tableVisible = !timeframeState.tableVisible;
+  if (timeframeState.tableVisible) {
+    wrapper.classList.remove("hidden");
+    if (btn) btn.innerHTML = `<i data-lucide="eye-off" class="w-3.5 h-3.5"></i> <span>Masquer le tableur</span>`;
+  } else {
+    wrapper.classList.add("hidden");
+    if (btn) btn.innerHTML = `<i data-lucide="table" class="w-3.5 h-3.5"></i> <span>Afficher la vue tableur</span>`;
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function navigateTimeframeMonth(delta) {
+  const d = new Date(timeframeState.currentDate);
+  d.setMonth(d.getMonth() + delta);
+  timeframeState.currentDate = d;
+  renderTimeframeMiniCalendar();
+}
+
+function navigateTimeframePeriod(delta) {
+  const d = new Date(timeframeState.selectedDate);
+  if (timeframeState.viewMode === 'daily') {
+    d.setDate(d.getDate() + delta);
+  } else if (timeframeState.viewMode === 'weekly') {
+    d.setDate(d.getDate() + (delta * 7));
+  } else {
+    d.setMonth(d.getMonth() + delta);
+  }
+  timeframeState.selectedDate = d;
+  timeframeState.currentDate = new Date(d);
+  renderTimeframeMiniCalendar();
+  renderTimeframeTimeline();
+}
+
+function resetTimeframeToday() {
+  const today = new Date();
+  timeframeState.selectedDate = today;
+  timeframeState.currentDate = new Date(today);
+  renderTimeframeMiniCalendar();
+  renderTimeframeTimeline();
+}
+
+function renderTimeframeMiniCalendar() {
+  const label = document.getElementById("timeframe-mini-month-label");
+  const grid = document.getElementById("timeframe-mini-calendar-grid");
+  if (!grid) return;
+
+  const cur = timeframeState.currentDate;
+  const year = cur.getFullYear();
+  const month = cur.getMonth();
+
+  const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  if (label) label.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+  const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const today = new Date();
+  const sel = timeframeState.selectedDate;
+
+  let html = "";
+  for (let i = 0; i < adjustedFirstDay; i++) {
+    html += `<div class="py-1 text-white/20 select-none">-</div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
+    const isSelected = sel.getDate() === d && sel.getMonth() === month && sel.getFullYear() === year;
+
+    let dayClass = "py-1 rounded-lg cursor-pointer transition hover:bg-white/20 text-white";
+    if (isSelected) {
+      dayClass = "py-1 rounded-lg font-black bg-[#CCFF00] text-[#0B0F19] shadow-sm"; // Vert lime vibrant comme dans la maquette
+    } else if (isToday) {
+      dayClass = "py-1 rounded-lg font-bold bg-[#0B0F19] text-white";
+    }
+
+    html += `<div onclick="selectTimeframeDay(${year}, ${month}, ${d})" class="${dayClass}">${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+}
+
+function selectTimeframeDay(year, month, day) {
+  timeframeState.selectedDate = new Date(year, month, day);
+  timeframeState.currentDate = new Date(year, month, day);
+  renderTimeframeMiniCalendar();
+  renderTimeframeTimeline();
+}
+
+function renderTimeframeTimeline() {
+  const rangeLabel = document.getElementById("timeframe-current-range-label");
+  const headerCols = document.getElementById("timeframe-week-columns-header");
+  const container = document.getElementById("timeframe-timeline-container");
+  if (!container) return;
+
+  const sel = timeframeState.selectedDate;
+  const items = timeframeState.items || [];
+
+  // Obtenir le début de semaine (Lundi)
+  const dayOfWeek = sel.getDay() === 0 ? 6 : sel.getDay() - 1;
+  const monday = new Date(sel);
+  monday.setDate(sel.getDate() - dayOfWeek);
+
+  const weekDays = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    weekDays.push(d);
+  }
+
+  const dayShortNames = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"];
+
+  if (rangeLabel) {
+    if (timeframeState.viewMode === 'weekly') {
+      const startStr = `${monday.getDate()} ${monthNames[monday.getMonth()]}`;
+      const endD = weekDays[6];
+      const endStr = `${endD.getDate()} ${monthNames[endD.getMonth()]} ${endD.getFullYear()}`;
+      rangeLabel.textContent = `Semaine du ${startStr} au ${endStr}`;
+    } else if (timeframeState.viewMode === 'daily') {
+      rangeLabel.textContent = `Journée du ${sel.getDate()} ${monthNames[sel.getMonth()]} ${sel.getFullYear()}`;
+    } else {
+      rangeLabel.textContent = `Mois de ${monthNames[sel.getMonth()]} ${sel.getFullYear()}`;
+    }
+  }
+
+  // Rendu de l'en-tête hebdomadaire
+  if (headerCols) {
+    headerCols.innerHTML = weekDays.map((wd, idx) => {
+      const isSel = wd.getDate() === sel.getDate() && wd.getMonth() === sel.getMonth() && wd.getFullYear() === sel.getFullYear();
+      const numStr = String(wd.getDate()).padStart(2, '0');
+      const badgeClass = isSel ? "bg-[#0B0F19] text-white shadow-sm" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
+
+      return `
+        <div onclick="selectTimeframeDay(${wd.getFullYear()}, ${wd.getMonth()}, ${wd.getDate()})" class="cursor-pointer transition-all">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">${dayShortNames[idx]}</span>
+          <div class="mt-1 w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-black ${badgeClass}">
+            ${numStr}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  if (items.length === 0) {
+    container.innerHTML = `
+      <div class="p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-2xl space-y-2">
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto font-black text-sm">DS</div>
+        <h4 class="text-xs font-bold text-slate-800">Aucune publication planifiée pour cette période</h4>
+        <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
+          Générez un carrousel ou un script vidéo ci-dessus et cliquez sur <strong>« Planifier au Calendrier Éditorial »</strong> pour le voir s'afficher ici.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  // Création des cartes de contenu style maquette (Lime green #CCFF00 et Slate soft #8B8CD9)
+  const cardsHtml = items.map((item, idx) => {
+    const isLime = idx % 2 === 0;
+    const cardBg = isLime ? "bg-[#CCFF00] text-[#0B0F19] border-[#b8e600]" : "bg-[#8B8CD9] text-white border-transparent";
+    const subColor = isLime ? "text-slate-800" : "text-white/80";
+    const tagBg = isLime ? "bg-black/10 text-black font-extrabold" : "bg-white/20 text-white font-extrabold";
+
+    const formatBadge = item.format_type === "CAROUSEL" ? "Carrousel 8 slides" :
+                        item.format_type === "MOTION_VIDEO" ? "Reel / TikTok 9:16" : "Post Narratif";
+
+    const dateDisplay = item.scheduled_for ? item.scheduled_for.slice(11, 16) || "10:00" : "10:00";
+
+    return `
+      <div class="p-4 rounded-2xl border ${cardBg} shadow-sm space-y-2 hover:scale-[1.01] transition-transform cursor-pointer">
+        <div class="flex items-center justify-between text-[10px]">
+          <span class="px-2 py-0.5 rounded-full ${tagBg} uppercase tracking-wider">${item.channel} &bull; ${formatBadge}</span>
+          <span class="font-mono font-bold">${dateDisplay}</span>
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-black leading-snug">${item.title}</h4>
+          <p class="text-[11px] ${subColor} mt-0.5 line-clamp-2">${item.caption_text || item.hook_headline || 'Stratégie Dave Sagbo'}</p>
+        </div>
+        <div class="flex items-center justify-between text-[10px] pt-1 border-t border-black/10">
+          <span class="font-bold">Mot-clé : <strong class="font-mono underline">${item.trigger_keyword || 'SYSTÈME'}</strong></span>
+          <span class="px-2 py-0.5 rounded-full bg-white/70 text-slate-800 font-extrabold text-[9px] shadow-2xs">Prêt pour diffusion</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      ${cardsHtml}
+    </div>
+  `;
+}
+
+function quickScheduleFromTimeframe() {
+  const formatSel = document.getElementById("creative-format-type");
+  const topicIn = document.getElementById("creative-topic");
+  if (topicIn) topicIn.focus();
+  showToast("Choisissez votre format et sujet dans le Concepteur ci-dessus pour planifier.", "info");
+}
+
 async function loadCreativeCalendar() {
   loadCreativeCatalogItems();
   const tbody = document.getElementById("creative-calendar-tbody");
   const countLabel = document.getElementById("calendar-count-label");
-  if (!tbody) return;
+  const readyCount = document.getElementById("timeframe-ready-count");
 
   try {
-    const res = await fetch("/api/creative/calendar?limit=20");
+    const res = await fetch("/api/creative/calendar?limit=30");
     const data = await res.json();
-    if (!data.success || !data.calendar_items || data.calendar_items.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Aucune publication planifiée. Créez votre premier contenu ci-dessus !</td></tr>`;
-      if (countLabel) countLabel.textContent = "0 publication(s)";
-      return;
+    const items = (data.success && data.calendar_items) ? data.calendar_items : [];
+
+    timeframeState.items = items;
+    if (readyCount) readyCount.textContent = `${items.length} post${items.length > 1 ? 's' : ''}`;
+    if (countLabel) countLabel.textContent = `${items.length} publication(s)`;
+
+    // Rendu TimeFrame Moderne
+    renderTimeframeMiniCalendar();
+    renderTimeframeTimeline();
+
+    // Rendu Vue Tableur brute
+    if (tbody) {
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Aucune publication planifiée. Créez votre premier contenu ci-dessus !</td></tr>`;
+      } else {
+        tbody.innerHTML = items.map(item => {
+          const channelColor = item.channel === "LINKEDIN" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                               item.channel === "TIKTOK" ? "bg-slate-900 text-white border-slate-700" :
+                               item.channel === "INSTAGRAM" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                               "bg-emerald-50 text-emerald-700 border-emerald-200";
+
+          const formatBadge = item.format_type === "CAROUSEL" ? "Carrousel 8 slides" :
+                              item.format_type === "MOTION_VIDEO" ? "Motion Design 38s" : "Post d'Autorité";
+
+          return `
+            <tr class="hover:bg-slate-50/70 transition-colors">
+              <td class="p-3 font-semibold text-slate-900">${item.title}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${channelColor}">${item.channel}</span></td>
+              <td class="p-3 font-medium text-slate-700">${formatBadge}</td>
+              <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Prêt</span></td>
+              <td class="p-3 font-mono text-xs font-bold text-blue-600">${item.trigger_keyword ? item.trigger_keyword : '-'}</td>
+              <td class="p-3 text-slate-500 text-[11px]">${item.scheduled_for || item.created_at || '-'}</td>
+            </tr>
+          `;
+        }).join("");
+      }
     }
-
-    if (countLabel) countLabel.textContent = `${data.calendar_items.length} publication(s)`;
-
-    tbody.innerHTML = data.calendar_items.map(item => {
-      const channelColor = item.channel === "LINKEDIN" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                           item.channel === "TIKTOK" ? "bg-slate-900 text-white border-slate-700" :
-                           item.channel === "INSTAGRAM" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                           "bg-emerald-50 text-emerald-700 border-emerald-200";
-
-      const formatBadge = item.format_type === "CAROUSEL" ? "Carrousel 8 slides" :
-                          item.format_type === "MOTION_VIDEO" ? "Motion Design 38s" : "Post d'Autorité";
-
-      return `
-        <tr class="hover:bg-slate-50/70 transition-colors">
-          <td class="p-3 font-semibold text-slate-900">${item.title}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${channelColor}">${item.channel}</span></td>
-          <td class="p-3 font-medium text-slate-700">${formatBadge}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Prêt</span></td>
-          <td class="p-3 font-mono text-xs font-bold text-blue-600">${item.trigger_keyword ? item.trigger_keyword : '-'}</td>
-          <td class="p-3 text-slate-500 text-[11px]">${item.scheduled_for || item.created_at || '-'}</td>
-        </tr>
-      `;
-    }).join("");
 
     if (window.lucide) lucide.createIcons();
   } catch (err) {
     console.error("Erreur chargement calendrier créatif :", err);
-    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-rose-500">Erreur réseau lors du chargement du calendrier.</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-rose-500">Erreur réseau lors du chargement du calendrier.</td></tr>`;
   }
 }
 
