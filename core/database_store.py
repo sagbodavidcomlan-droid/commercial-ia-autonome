@@ -1574,6 +1574,115 @@ def clear_crm_data() -> Dict[str, Any]:
         conn.close()
 
 
+def extract_lead_data_from_message(
+    message_text: str,
+    api_profile_data: Optional[dict] = None,
+    canal_source: str = ""
+) -> dict:
+    """
+    CORRECTION 1B — Extraction sécurisée des données personnelles d'un lead.
+    
+    Sources autorisées (et UNIQUEMENT celles-ci) :
+    1. Données API du canal (profil Messenger, WhatsApp, LinkedIn) → api_profile_data
+    2. Extraction regex déterministe depuis le texte du message → message_text
+    3. Saisie manuelle admin dans le CRM (non gérée ici)
+    
+    INTERDIT : Aucune inférence LLM, aucune supposition, aucune donnée inventée.
+    Si une information n'est pas trouvée → elle reste None (NULL en base).
+    """
+    import re
+    
+    extracted = {
+        "prenom": None,
+        "nom": None,
+        "nom_complet": None,
+        "telephone": None,
+        "email": None,
+        "whatsapp": None,
+        "entreprise": None,
+        "poste": None,
+    }
+    
+    # --- SOURCE 1 : Données API du canal (priorité absolue) ---
+    if api_profile_data and isinstance(api_profile_data, dict):
+        # Messenger / Facebook Graph API
+        api_prenom = api_profile_data.get("first_name") or api_profile_data.get("prenom")
+        api_nom = api_profile_data.get("last_name") or api_profile_data.get("nom")
+        api_name = api_profile_data.get("name") or api_profile_data.get("nom_complet")
+        api_phone = api_profile_data.get("phone") or api_profile_data.get("telephone") or api_profile_data.get("wa_id")
+        api_email = api_profile_data.get("email")
+        
+        if api_prenom:
+            extracted["prenom"] = str(api_prenom).strip()
+        if api_nom:
+            extracted["nom"] = str(api_nom).strip()
+        if api_name and not (extracted["prenom"] and extracted["nom"]):
+            parts = str(api_name).strip().split()
+            if parts:
+                if not extracted["prenom"]:
+                    extracted["prenom"] = parts[0]
+                if not extracted["nom"] and len(parts) > 1:
+                    extracted["nom"] = " ".join(parts[1:])
+        if api_phone:
+            extracted["telephone"] = str(api_phone).strip()
+            if "whatsapp" in str(canal_source).lower():
+                extracted["whatsapp"] = extracted["telephone"]
+        if api_email:
+            extracted["email"] = str(api_email).strip()
+    
+    # --- SOURCE 2 : Regex déterministe depuis le texte du message ---
+    if message_text and isinstance(message_text, str):
+        msg = message_text.strip()
+        
+        # Extraction email par regex
+        if not extracted["email"]:
+            email_match = re.search(
+                r'\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b',
+                msg
+            )
+            if email_match:
+                extracted["email"] = email_match.group(0).lower()
+        
+        # Extraction téléphone par regex (formats internationaux courants)
+        if not extracted["telephone"]:
+            phone_match = re.search(
+                r'(?:\+|00)\d[\d\s\-\.]{7,15}\d',
+                msg
+            )
+            if phone_match:
+                phone_clean = re.sub(r'[\s\-\.]', '', phone_match.group(0))
+                extracted["telephone"] = phone_clean
+                if "whatsapp" in str(canal_source).lower():
+                    extracted["whatsapp"] = phone_clean
+        
+        # Extraction du nom si le prospect se présente explicitement
+        # Patterns reconnus : "Je suis X Y", "Je m'appelle X Y", "Mon nom est X Y", "C'est X Y"
+        name_patterns = [
+            r"(?:je\s+suis|je\s+m['\u2019]appelle|mon\s+nom\s+(?:est|c['\u2019]est))\s+([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿA-ZÀ-Ÿ]+){0,2})",
+            r"(?:moi\s+c['\u2019]est|c['\u2019]est)\s+([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿA-ZÀ-Ÿ]+){0,2})",
+        ]
+        if not extracted["prenom"]:
+            for pattern in name_patterns:
+                name_match = re.search(pattern, msg, re.IGNORECASE)
+                if name_match:
+                    name_found = name_match.group(1).strip()
+                    # Validation : au moins 2 caractères, pas un mot-clé courant
+                    mots_exclus = {"bonjour", "bonsoir", "salut", "merci", "oui", "non",
+                                   "intéressé", "interessé", "client", "prospect", "entreprise"}
+                    if len(name_found) >= 2 and name_found.lower() not in mots_exclus:
+                        parts = name_found.split()
+                        extracted["prenom"] = parts[0]
+                        if len(parts) > 1:
+                            extracted["nom"] = " ".join(parts[1:])
+                        break
+    
+    # Construire nom_complet si on a au moins un composant
+    if extracted["prenom"] or extracted["nom"]:
+        extracted["nom_complet"] = f"{extracted['prenom'] or ''} {extracted['nom'] or ''}".strip()
+    
+    return extracted
+
+
 def get_or_create_lead(
     canal_source: str,
     canal_id: str,

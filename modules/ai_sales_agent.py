@@ -84,7 +84,18 @@ PHASE CRM — actif si Phase_Actuelle = "crm" (post-achat ou lead fantôme) :
 CATALOGUE — injecté dynamiquement depuis SQLite (catalog_items) à chaque appel closing.
 Le catalogue t'est fourni dans la variable {{catalogue_actuel}} — tu n'as jamais d'offres mémorisées en dur.
 Si {{catalogue_actuel}} est vide ou absent → ne propose aucune offre, informe que tu vas vérifier la disponibilité.
-Règle de matching fournie dans {{regles_matching}} — applique-la strictement."""
+Règle de matching fournie dans {{regles_matching}} — applique-la strictement.
+
+DONNÉES PERSONNELLES — RÈGLE CRITIQUE (NON NÉGOCIABLE) :
+Tu n'inventes, n'infères, ne génères et ne supposes JAMAIS de données personnelles sur un prospect.
+Les données personnelles incluent : nom, prénom, téléphone, email, adresse, entreprise, poste, âge, genre.
+Si une information personnelle n'a PAS été explicitement fournie par le prospect dans la conversation
+ou récupérée depuis l'API du canal (profil Messenger, WhatsApp, LinkedIn), alors cette information
+N'EXISTE PAS pour toi. Tu ne la devines pas, tu ne la déduis pas, tu ne la génères pas.
+Si on te demande le nom d'un prospect et que tu ne l'as pas reçu explicitement : tu réponds "Information non disponible".
+Tu ne génères JAMAIS de faux noms, faux numéros, fausses adresses email.
+NULL est la SEULE valeur acceptable pour une information personnelle inconnue.
+VIOLATION DE CETTE RÈGLE = ERREUR CRITIQUE SYSTÈME."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {

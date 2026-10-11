@@ -1466,14 +1466,14 @@ function formatRelativeTime(dateStr) {
 }
 
 function getLeadFullName(l) {
-  if (!l) return "Prospect";
+  if (!l) return "Nom inconnu";
   const p = (l.prenom || "").trim();
   const n = (l.nom || "").trim();
   if (p && n) return `${p} ${n}`;
   if (p || n) return (p || n);
-  if (l.nom_complet && !l.nom_complet.toLowerCase().includes("prospect")) return l.nom_complet.trim();
-  if (l.nom_lead && !l.nom_lead.toLowerCase().includes("prospect")) return l.nom_lead.trim();
-  return l.nom_complet || l.nom_lead || `Prospect #${l.id || 'Nouveau'}`;
+  if (l.nom_complet && l.nom_complet.trim()) return l.nom_complet.trim();
+  if (l.nom_lead && l.nom_lead.trim()) return l.nom_lead.trim();
+  return "Nom inconnu";
 }
 
 function getLeadInitials(l) {
@@ -2157,8 +2157,9 @@ async function openLeadConversation(leadId, channel = null) {
     if (statusEl) statusEl.textContent = lead.statut || lead.temperature || "Tiède";
     if (durEl) durEl.textContent = `DUR: ${lead.score_dur}/100`;
     if (contactEl) {
-      const coordStr = lead.telephone || lead.email || (lead.facebook_psid ? `Messenger PSID: ${lead.facebook_psid}` : 'Contact en ligne');
-      contactEl.textContent = `${lead.poste || 'Prospect'} • ${coordStr} • Source : ${lead.source || 'Facebook Messenger'}`;
+      const coordStr = lead.telephone || lead.email || (lead.facebook_psid ? `Messenger PSID: ${lead.facebook_psid}` : 'Aucune coordonnée collectée');
+      const sourceStr = lead.canal_source || lead.source_canal || lead.source || 'Source inconnue';
+      contactEl.textContent = `${lead.poste || 'Prospect'} • ${coordStr} • Source : ${sourceStr}`;
     }
 
     // Mise à jour des onglets de canaux
@@ -2181,7 +2182,7 @@ async function openLeadConversation(leadId, channel = null) {
       activeLabel.textContent = `Canal : ${chInfo.label || data.active_channel}`;
     }
     if (inputMsg) {
-      inputMsg.placeholder = `Écrire à ${lead.nom_complet} en tant que Dave Sagbo sur ${chInfo.label || data.active_channel}...`;
+      inputMsg.placeholder = `Écrire à ${getLeadFullName(lead)} en tant que Dave Sagbo sur ${chInfo.label || data.active_channel}...`;
     }
 
     // Affichage du produit du catalogue lié
@@ -2196,7 +2197,7 @@ async function openLeadConversation(leadId, channel = null) {
     }
 
     // Affichage des messages
-    renderConversationMessages(data.messages, lead.nom_complet);
+    renderConversationMessages(data.messages, getLeadFullName(lead));
 
   } catch (err) {
     console.error("Erreur ouverture conversation :", err);
@@ -2252,13 +2253,69 @@ function renderConversationMessages(messages, leadName) {
     return;
   }
 
-  const parts = (leadName || "Prospect").split(" ");
+  const parts = (leadName || "Nom inconnu").split(" ");
   const initials = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
 
-  feed.innerHTML = messages.map(m => {
+  // Helper pour formater la date de groupe
+  function getDateLabel(timestamp) {
+    if (!timestamp) return "";
+    const dateStr = timestamp.split(" ")[0]; // "2025-10-09"
+    const today = new Date();
+    const msgDate = new Date(dateStr);
+    const todayStr = today.toISOString().split("T")[0];
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    if (dateStr === todayStr) return "Aujourd'hui";
+    if (dateStr === yesterdayStr) return "Hier";
+    const months = ["jan.", "fév.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+    return `${msgDate.getDate()} ${months[msgDate.getMonth()]} ${msgDate.getFullYear()}`;
+  }
+
+  // Helper pour l'icône canal
+  function getCanalIcon(channel) {
+    const ch = (channel || "").toUpperCase();
+    if (ch.includes("WHATSAPP")) return "message-circle";
+    if (ch.includes("MESSENGER") || ch.includes("FACEBOOK")) return "facebook";
+    if (ch.includes("LINKEDIN")) return "linkedin";
+    if (ch.includes("EMAIL")) return "mail";
+    return "message-square";
+  }
+
+  function getCanalLabel(channel) {
+    const ch = (channel || "").toUpperCase();
+    if (ch.includes("WHATSAPP")) return "WhatsApp";
+    if (ch.includes("MESSENGER") || ch.includes("FACEBOOK")) return "Messenger";
+    if (ch.includes("LINKEDIN")) return "LinkedIn";
+    if (ch.includes("EMAIL")) return "Email";
+    return channel;
+  }
+
+  let lastDateGroup = "";
+  const html = messages.map(m => {
     const isLead = m.sender === "LEAD";
+    const msgDate = (m.timestamp || "").split(" ")[0];
+    let dateDivider = "";
+
+    // Insérer un séparateur de date si le jour change
+    if (msgDate && msgDate !== lastDateGroup) {
+      lastDateGroup = msgDate;
+      const label = getDateLabel(m.timestamp);
+      dateDivider = `
+        <div class="flex items-center gap-3 my-4">
+          <div class="flex-1 h-px bg-slate-200"></div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${label}</span>
+          <div class="flex-1 h-px bg-slate-200"></div>
+        </div>
+      `;
+    }
+
+    const canalIcon = getCanalIcon(m.channel);
+    const canalLabel = getCanalLabel(m.channel);
+    const timeOnly = (m.timestamp || "").split(" ").slice(1).join(" ") || m.timestamp;
+
     if (isLead) {
-      return `
+      return dateDivider + `
         <div class="flex items-start gap-2.5 max-w-[85%]">
           <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
             ${initials}
@@ -2268,13 +2325,17 @@ function renderConversationMessages(messages, leadName) {
               ${escapeHtml(m.message)}
             </div>
             <div class="text-[10px] text-slate-400 pl-1 font-medium flex items-center gap-1">
-              <span>${escapeHtml(m.timestamp)}</span> • <span class="capitalize font-semibold text-slate-500">${escapeHtml(m.channel.toLowerCase().replace('_', ' '))}</span>
+              <span>${escapeHtml(timeOnly)}</span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
+                <i data-lucide="${canalIcon}" class="w-2.5 h-2.5"></i>
+                <span class="text-[9px]">${canalLabel}</span>
+              </span>
             </div>
           </div>
         </div>
       `;
     } else {
-      return `
+      return dateDivider + `
         <div class="flex items-start gap-2.5 max-w-[85%] ml-auto flex-row-reverse">
           <div class="w-7 h-7 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs ring-2 ring-blue-100">
             DS
@@ -2284,7 +2345,13 @@ function renderConversationMessages(messages, leadName) {
               ${escapeHtml(m.message)}
             </div>
             <div class="text-[10px] text-slate-400 pr-1 font-medium flex items-center justify-end gap-1">
-              <span>${escapeHtml(m.timestamp)}</span> • <span class="text-blue-600 font-bold">Dave Sagbo • Responsable du Projet</span> • <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
+              <span>${escapeHtml(timeOnly)}</span>
+              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-semibold">
+                <i data-lucide="${canalIcon}" class="w-2.5 h-2.5"></i>
+                <span class="text-[9px]">${canalLabel}</span>
+              </span>
+              <span class="text-blue-600 font-bold">Dave Sagbo</span>
+              <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
             </div>
           </div>
         </div>
@@ -2292,6 +2359,7 @@ function renderConversationMessages(messages, leadName) {
     }
   }).join("");
 
+  feed.innerHTML = html;
   lucide.createIcons();
 
   // Défilement automatique vers le dernier message
@@ -2534,7 +2602,7 @@ async function openDrawer(leadId) {
       renderDrawerLeadHeader(lead);
     }
 
-    renderDrawerMessages(data.messages || [], lead ? lead.nom_complet : "Prospect");
+    renderDrawerMessages(data.messages || [], getLeadFullName(lead));
   } catch (err) {
     console.error("Erreur openDrawer:", err);
     showToast("Impossible d'ouvrir le dossier du prospect", "error");
@@ -2588,13 +2656,39 @@ function renderDrawerLeadHeader(lead) {
     discEl.textContent = dInfo.label;
   }
 
-  // Contacts
+  // Contacts — Affichage honnête des données manquantes (CORRECTION 3)
   const phone = lead.whatsapp || lead.telephone || "";
+  const email = lead.email || "";
   if (phoneEl) {
-    phoneEl.textContent = phone || "Non renseigné";
+    if (phone) {
+      phoneEl.textContent = phone;
+      phoneEl.classList.remove("text-slate-400", "italic");
+      phoneEl.classList.add("text-slate-800");
+    } else {
+      phoneEl.textContent = "Non renseigné";
+      phoneEl.classList.remove("text-slate-800");
+      phoneEl.classList.add("text-slate-400", "italic");
+    }
   }
   if (emailEl) {
-    emailEl.textContent = lead.email || "Non renseigné";
+    if (email) {
+      emailEl.textContent = email;
+      emailEl.classList.remove("text-slate-400", "italic");
+      emailEl.classList.add("text-slate-800");
+    } else {
+      emailEl.textContent = "Non renseigné";
+      emailEl.classList.remove("text-slate-800");
+      emailEl.classList.add("text-slate-400", "italic");
+    }
+  }
+  // Bannière "Aucune coordonnée" si tout est vide
+  const coordBanner = document.getElementById("drawer-no-coord-banner");
+  if (coordBanner) {
+    if (!phone && !email) {
+      coordBanner.classList.remove("hidden");
+    } else {
+      coordBanner.classList.add("hidden");
+    }
   }
 
   // Offre
@@ -2640,29 +2734,53 @@ function renderDrawerMessages(messages, leadName) {
     return;
   }
 
-  const parts = (leadName || "Prospect").trim().split(" ");
+  const parts = (leadName || "Nom inconnu").trim().split(" ");
   const initials = (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
 
+  // Helper date label (same logic as modal)
+  function getDrawerDateLabel(ts) {
+    if (!ts) return "";
+    const dateStr = ts.split(" ")[0];
+    const today = new Date().toISOString().split("T")[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (dateStr === today) return "Aujourd'hui";
+    if (dateStr === yesterday.toISOString().split("T")[0]) return "Hier";
+    const d = new Date(dateStr);
+    const months = ["jan.", "fév.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  let lastDate = "";
   feed.innerHTML = messages.map(m => {
     const isLead = m.sender === "LEAD";
+    const ts = m.time || m.timestamp || "";
+    const msgDate = ts.split(" ")[0];
+    let divider = "";
+    if (msgDate && msgDate !== lastDate) {
+      lastDate = msgDate;
+      divider = `<div class="flex items-center gap-2 my-3"><div class="flex-1 h-px bg-slate-200"></div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">${getDrawerDateLabel(ts)}</span><div class="flex-1 h-px bg-slate-200"></div></div>`;
+    }
+    const timeOnly = ts.split(" ").slice(1).join(" ") || ts;
+
     if (isLead) {
-      return `
+      return divider + `
         <div class="flex items-start gap-2 max-w-[90%]">
           <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold shrink-0">
             ${initials}
           </div>
           <div class="p-2.5 rounded-2xl rounded-tl-xs bg-white text-slate-800 text-xs border border-slate-200 shadow-2xs leading-relaxed whitespace-pre-wrap">
             ${escapeHtml(m.text || m.message || "")}
-            <div class="text-[9px] text-slate-400 mt-1 text-right">${escapeHtml(m.time || "")}</div>
+            <div class="text-[9px] text-slate-400 mt-1 text-right">${escapeHtml(timeOnly)}</div>
           </div>
         </div>
       `;
     } else {
-      return `
+      return divider + `
         <div class="flex items-start justify-end gap-2 max-w-[90%] ml-auto">
           <div class="p-2.5 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-2xs leading-relaxed whitespace-pre-wrap">
             ${escapeHtml(m.text || m.message || "")}
-            <div class="text-[9px] text-blue-200 mt-1 text-right">Dave Sagbo • ${escapeHtml(m.time || "")}</div>
+            <div class="text-[9px] text-blue-200 mt-1 text-right">Dave Sagbo • ${escapeHtml(timeOnly)}</div>
           </div>
           <div class="w-6 h-6 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
             DS
@@ -2712,7 +2830,7 @@ async function sendDrawerMessage() {
     const data = await res.json();
     if (data.success) {
       input.value = "";
-      renderDrawerMessages(data.messages, activeDrawerData?.lead?.nom_complet);
+      renderDrawerMessages(data.messages, getLeadFullName(activeDrawerData?.lead));
       showToast("Message envoyé avec succès !", "success");
       loadHistoryFeed();
     } else {
