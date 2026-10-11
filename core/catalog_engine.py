@@ -19,7 +19,7 @@ class CatalogEngine:
     def __init__(self):
         pass
 
-    def get_items(self, domain_id: Optional[str] = None, item_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_items(self, domain_id: Optional[str] = None, item_type: Optional[str] = None, statut: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Récupère la liste des produits et services avec leurs fiches techniques
         """
@@ -36,6 +36,10 @@ class CatalogEngine:
         if item_type and item_type != "tous":
             query += " AND type = ?"
             params.append(item_type)
+
+        if statut and statut != "tous":
+            query += " AND statut = ?"
+            params.append(statut)
 
         query += " ORDER BY id DESC"
         cursor.execute(query, params)
