@@ -881,36 +881,25 @@ class AISalesAgent:
         else:
             closing_status = "QUALIFICATION"
             strategy = "Écoute active, qualification du besoin sans offre prématurée"
-            prenom = target_name.split()[0] if " " in target_name else target_name
-            prenom_str = f" {prenom}" if prenom and prenom.lower() not in ("prospect", "partenaire", "directeur") else ""
-            reply_message = (
-                f"Je vous écoute attentivement{prenom_str}. Pour bien cibler ce qui vous sera le plus utile :\n\n"
-                f"{eval_res['prochaine_question']}"
+            # Utilisation du moteur conversationnel unifié avec historique multi-tours
+            conv_lead_data = {
+                "id": lead_id,
+                "nom_complet": target_name,
+                "prenom": (target_name.split()[0] if " " in target_name else target_name).replace("Dr.", "").strip(),
+                "source_canal": target_channel,
+                "canal_source": target_channel,
+                "centre_interet": msg,
+                "diagnostic_complet": 0
+            }
+            reply_message = self.generate_conversational_reply(
+                lead_id=lead_id,
+                user_message=msg,
+                channel=target_channel,
+                lead_data=conv_lead_data,
+                history=history
             )
 
-        # 4. Enrichissement Inférence Gemini API si clé disponible
-        gemini_reply = self._call_gemini_api(
-            user_msg=msg,
-            target_name=target_name,
-            phase=phase,
-            disc_profile=disc_profile,
-            product_name=prod_name,
-            product_price=prod_price,
-            product_devise=prod_devise,
-            strategy=strategy,
-            detected_objection=detected_objection or "Dialogue commercial",
-            checkout_url=prod_url if ready_closer else "",
-            catalogue_str=closer_ctx.get("catalogue_actuel", ""),
-            regles_str=json.dumps(closer_ctx.get("regles_matching", []), ensure_ascii=False),
-            brief_closer=brief_closer,
-            channel=target_channel
-        )
-
-        ai_engine_label = "Moteur Cognitif Hybride Haute-Précision"
-        if gemini_reply:
-            reply_message = gemini_reply
-            ai_engine_label = "Google Gemini (Inférence Active — Vouvoiement Strict)"
-
+        ai_engine_label = "Moteur Conversationnel Expert Multi-Tours (Dave Sagbo)"
         dur_score = 80 if ready_closer else (65 if eval_res["DUR"]["D"] else 45)
 
         return {
@@ -1349,7 +1338,7 @@ class AISalesAgent:
                     "contents": gemini_contents,
                     "generationConfig": {
                         "temperature": 0.7,
-                        "maxOutputTokens": 300
+                        "maxOutputTokens": 450
                     }
                 }
                 req = urllib.request.Request(
@@ -1360,10 +1349,15 @@ class AISalesAgent:
                 with urllib.request.urlopen(req, timeout=5) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     cand = data.get("candidates", [{}])[0]
-                    parts = cand.get("content", {}).get("parts", [{}])
-                    t = parts[0].get("text") if parts else None
-                    if t and len(t.strip()) > 5:
-                        return t.strip()
+                    parts = cand.get("content", {}).get("parts", [])
+                    texts = [p.get("text", "") for p in parts if isinstance(p, dict) and "text" in p]
+                    t = "".join(texts).strip()
+                    # Retirer d'éventuels artefacts de formatage Markdown ou balises parasites
+                    import re
+                    t = re.sub(r'^(Question|Réponse|Dave)\s*:\s*', '', t, flags=re.IGNORECASE).strip()
+                    t = t.strip('"').strip('«').strip('»').strip()
+                    if t and len(t) > 5 and not t.endswith(("...", ":", "Question")):
+                        return t
             except Exception as e:
                 logger.warning(f"Appel Gemini plein contexte ({mod}) : {e}")
 
@@ -1373,16 +1367,30 @@ class AISalesAgent:
         lead_id: int,
         user_message: str,
         channel: str = "FACEBOOK_MESSENGER",
-        lead_data: Optional[Dict[str, Any]] = None
+        lead_data: Optional[Dict[str, Any]] = None,
+        history: Optional[list] = None
     ) -> str:
         """
         Génère une réponse conversationnelle experte en respectant rigoureusement
         les règles d'or du cours d'apprentissage et la règle 10 de sortie de diagnostic.
         """
         import re
-        from core.database_store import get_lead_messages, get_connection
+        if history is None:
+            history = get_lead_messages(lead_id) if lead_id else []
+        else:
+            # Normaliser l'historique fourni (format simulateur ou web)
+            norm_history = []
+            for h in history:
+                raw_snd = str(h.get("sender") or "").upper()
+                raw_role = str(h.get("role") or "").lower()
+                if raw_snd in ("AGENT", "AI", "DAVE") or raw_role in ("model", "assistant", "agent"):
+                    snd = "AGENT"
+                else:
+                    snd = "LEAD"
+                msg_txt = h.get("message") or h.get("content") or h.get("text") or ""
+                norm_history.append({"sender": snd, "message": msg_txt, "channel": channel})
+            history = norm_history
 
-        history = get_lead_messages(lead_id)
         agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
         agent_count = len(agent_msgs)
         is_first_turn = (agent_count == 0)
@@ -1502,13 +1510,17 @@ class AISalesAgent:
                     else:
                         reply_text = "Bonjour, c'est Dave Sagbo. Quel est le principal défi commercial que vous souhaitez surmonter en ce moment ?"
                 else:
-                    if any(w in msg_lower for w in ["client", "réseau", "visibilité", "audience", "bloque", "coince"]):
+                    # Cas réponse brève à la question du budget ou des ressources
+                    last_was_budget = any("budget ou des ressources" in (m.get("message") or "").lower() for m in history[-2:])
+                    if last_was_budget and any(w == msg_lower or w in msg_lower for w in ["non", "pas de budget", "pas encore", "aucun"]):
+                        reply_text = "Je comprends parfaitement. Justement, est-ce que vos contacts actuels s'arrêtent aux simples interactions (likes, vues) ou vous envoient des messages privés pour s'informer ?"
+                    elif any(w in msg_lower for w in ["client", "réseau", "rs", "visibilité", "audience", "bloque", "coince", "abonnés"]):
                         reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
                     else:
-                        # Règle anti-répétition absolue : si la question des messages directs a déjà été envoyée, poser une question d'ouverture
-                        already_asked = any("contacts actuels" in (m.get("message") or "").lower() for m in history)
-                        if already_asked:
-                            reply_text = "Dites-moi simplement : quel est votre canal principal d'acquisition aujourd'hui ?"
+                        # Règle anti-répétition absolue : si la question des contacts a déjà été posée
+                        already_asked_contacts = any("contacts actuels" in (m.get("message") or "").lower() for m in history)
+                        if already_asked_contacts:
+                            reply_text = "Dites-moi simplement : quel est votre canal principal d'acquisition aujourd'hui (WhatsApp, Facebook, LinkedIn ou recommandation) ?"
                         else:
                             reply_text = "Dites-moi : est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
 
