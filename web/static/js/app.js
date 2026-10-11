@@ -5056,6 +5056,10 @@ async function confirmClearCRM() {
       alert("Erreur lors du vidage CRM : " + (data.error || "Inconnue"));
     }
   } catch (e) {
+    alert("Erreur réseau : " + e.message);
+  }
+}
+
 // ==============================================================================
 // MODULE STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DAVE SAGBO)
 // ==============================================================================
