@@ -942,15 +942,15 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
     const isToday = dStr === todayStr;
     const isSelected = dStr === calSelectedDate;
 
-    let dayClass = "py-1 rounded-lg cursor-pointer transition hover:bg-white/20 text-white font-medium relative";
+    let dayClass = "py-1.5 rounded-xl cursor-pointer transition hover:bg-white/20 text-white font-medium relative";
     if (isSelected) {
-      dayClass = "py-1 rounded-lg font-black bg-[#CCFF00] text-[#0B0F19] shadow-md relative"; // Vert lime vibrant
+      dayClass = "py-1.5 rounded-xl font-black bg-white text-[#0062ff] shadow-md relative"; // Blanc net sur fond bleu
     } else if (isToday) {
-      dayClass = "py-1 rounded-lg font-bold bg-[#0B0F19] text-white border border-white/20 relative";
+      dayClass = "py-1.5 rounded-xl font-bold bg-[#002d80] text-white border border-blue-400/30 relative";
     }
 
     const dotHtml = (dayEvents.length > 0 && !isSelected) 
-      ? `<span class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#CCFF00]"></span>` 
+      ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-300"></span>` 
       : '';
 
     html += `
@@ -1005,7 +1005,7 @@ function renderSelectedDayEvents(dateStr) {
       const wDateStr = `${wd.getFullYear()}-${String(wd.getMonth() + 1).padStart(2, '0')}-${String(wd.getDate()).padStart(2, '0')}`;
       const isSel = wDateStr === dateStr;
       const numStr = String(wd.getDate()).padStart(2, '0');
-      const badgeClass = isSel ? "bg-[#0B0F19] text-white shadow-md ring-2 ring-indigo-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
+      const badgeClass = isSel ? "bg-[#0062ff] text-white shadow-md ring-2 ring-blue-300" : "bg-slate-100 text-slate-700 hover:bg-slate-200";
 
       return `
         <div onclick="selectCalendarDay('${wDateStr}')" class="cursor-pointer transition-all">
@@ -1050,12 +1050,12 @@ function renderSelectedDayEvents(dateStr) {
   if (filteredEvents.length === 0) {
     listEl.innerHTML = `
       <div class="p-8 text-center text-slate-500 space-y-2 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto font-black text-sm">DS</div>
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center mx-auto font-black text-sm">DS</div>
         <h4 class="text-xs font-bold text-slate-800">Aucune mission planifiée pour cette période</h4>
         <p class="text-[11px] text-slate-500 max-w-sm mx-auto">
           Cliquez sur <strong>« + Planifier un RDV »</strong> pour ajouter un rendez-vous client, une démo ou une relance closing.
         </p>
-        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-indigo-600 hover:text-indigo-700 font-bold underline">
+        <button onclick="openAddCalendarEventModal('${dateStr}')" class="text-xs text-[#0062ff] hover:underline font-bold">
           + Planifier un créneau maintenant
         </button>
       </div>
@@ -1064,28 +1064,26 @@ function renderSelectedDayEvents(dateStr) {
     return;
   }
 
-  // Cartes harmonisées avec contraste et lisibilité optimisés
+  // Cartes 100% alignées sur la charte graphique Invo (Bleu Royal #0062ff & Nuances Élégantes)
   listEl.innerHTML = `
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       ${filteredEvents.map((ev, idx) => {
-        const isLime = idx % 2 === 0;
+        const isAlternate = idx % 2 === 0;
         
-        // Configuration de couleurs à fort contraste
-        // Carte A (Lime Pastel doux #E9FDC9 & bordure verte #C0E875)
-        // Carte B (Slate / Lavande pro #F1F3F9 & bordure douce #D8DEE9)
-        const cardBg = isLime 
-          ? "bg-[#F3FDDB] border border-[#CDEAA2] text-slate-900" 
-          : "bg-[#F4F5FB] border border-[#D5D8E8] text-slate-900";
+        // Cartes professionnelles Invo
+        // Carte A : Fond blanc avec bordure bleue fine et accent bleu Invo
+        // Carte B : Fond bleu doux #F0F5FF avec bordure #D0E0FD
+        const cardBg = isAlternate 
+          ? "bg-white border border-blue-100 text-slate-900" 
+          : "bg-[#F4F8FF] border border-[#D3E3FD] text-slate-900";
         
-        const tagBg = isLime 
-          ? "bg-[#273E0F] text-[#CCFF00]" 
-          : "bg-[#25284D] text-white";
-
-        const tagBorder = isLime ? "border-transparent" : "border-transparent";
+        const tagBg = isAlternate 
+          ? "bg-[#0062ff] text-white" 
+          : "bg-slate-900 text-white";
 
         const titleColor = "text-slate-900";
-        const descColor = isLime ? "text-slate-700" : "text-slate-600";
-        const footerBorder = isLime ? "border-[#D6EDA6]" : "border-slate-200";
+        const descColor = "text-slate-600";
+        const footerBorder = isAlternate ? "border-slate-100" : "border-blue-100";
 
         let eventTypeLabel = "Mission Commerciale";
         if (ev.event_type === "rdv_client") eventTypeLabel = "Démo Client Live";
@@ -1095,14 +1093,14 @@ function renderSelectedDayEvents(dateStr) {
 
         const statusLabel = ev.status === "termine" ? "Terminé" : (ev.status === "en_cours" ? "En cours" : "Planifié");
         const statusBadgeClass = ev.status === "termine" 
-          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-          : (ev.status === "en_cours" ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-white text-slate-700 border-slate-300");
+          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+          : (ev.status === "en_cours" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-white text-slate-700 border-slate-200");
 
         return `
-          <div class="p-4 rounded-2xl ${cardBg} shadow-sm space-y-2.5 hover:shadow-md transition-all cursor-pointer">
+          <div class="p-4 rounded-2xl ${cardBg} shadow-xs hover:shadow-md transition-all cursor-pointer space-y-2.5">
             <div class="flex items-center justify-between text-[10px]">
               <span class="px-2.5 py-1 rounded-full ${tagBg} font-black uppercase tracking-wider text-[9px] shadow-2xs">${ev.channel || 'WhatsApp'} &bull; ${eventTypeLabel}</span>
-              <span class="font-mono font-black text-slate-700 bg-white/80 px-2 py-0.5 rounded-md border border-black/5">${ev.time_slot || 'Créneau libre'}</span>
+              <span class="font-mono font-bold text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">${ev.time_slot || 'Créneau libre'}</span>
             </div>
             <div>
               <h4 class="text-xs sm:text-sm font-black leading-snug ${titleColor}">${ev.task_title}</h4>
@@ -1110,18 +1108,18 @@ function renderSelectedDayEvents(dateStr) {
             </div>
             <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] pt-2 border-t ${footerBorder}">
               <div class="flex items-center gap-2">
-                ${ev.contact_name ? `<span class="font-bold text-slate-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${ev.contact_name}</span>` : ''}
+                ${ev.contact_name ? `<span class="font-bold text-slate-800 flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-400"></i> ${ev.contact_name}</span>` : ''}
                 <span class="px-2 py-0.5 rounded-full ${statusBadgeClass} font-bold text-[9px] border">${statusLabel}</span>
               </div>
               <div class="flex items-center gap-1.5">
                 ${ev.meeting_link ? `
-                  <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[9px] flex items-center gap-1 shadow-2xs transition">
-                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Visio
+                  <a href="${ev.meeting_link}" target="_blank" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-[9px] flex items-center gap-1 border border-emerald-200 transition">
+                    <i data-lucide="video" class="w-2.5 h-2.5 text-emerald-600"></i> Visio
                   </a>
                 ` : ''}
                 ${ev.status !== 'termine' ? `
-                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg bg-[#0B0F19] text-white font-bold text-[9px] hover:bg-slate-800 flex items-center gap-1 transition shadow-2xs">
-                    <i data-lucide="play" class="w-2.5 h-2.5 text-[#CCFF00]"></i> Exécuter
+                  <button onclick="event.stopPropagation(); runTaskNow(${ev.id})" class="px-2.5 py-1 rounded-lg bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-[9px] flex items-center gap-1 transition shadow-xs">
+                    <i data-lucide="play" class="w-2.5 h-2.5"></i> Exécuter
                   </button>
                 ` : ''}
               </div>
