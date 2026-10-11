@@ -1166,271 +1166,347 @@
 
       <!-- ==================== TAB 4 : CRM LEADS ==================== -->
       <section id="tab-crm" class="tab-pane hidden space-y-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="p-1.5 rounded-lg bg-blue-50 text-[#0062ff] border border-blue-100">
-                <i data-lucide="users" class="w-4 h-4"></i>
-              </span>
-              <h2 class="text-xl font-black text-slate-900">CRM Leads & Répertoire Commercial</h2>
+
+        <!-- En-tête Supérieur Health Platform Style (Salutation, Recherche Globale, Actions Rapides) -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-100 shadow-xs">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#0052cc] to-[#0062ff] text-white flex items-center justify-center font-black text-lg shadow-md shadow-blue-500/20">
+              <i data-lucide="users" class="w-6 h-6"></i>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5">Répertoire centralisé des prospects qualifiés, suivi commercial et historique des échanges.</p>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff]">RÉPERTOIRE CLIENTS & PROSPECTS</span>
+                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> IA Active
+                </span>
+              </div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Bonjour, Dave Sagbo</h2>
+            </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <button onclick="loadLeads();" class="px-3.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 flex items-center gap-1.5 text-xs font-bold shadow-xs transition">
-              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-[#0062ff]"></i> Actualiser
+          <!-- Barre de Recherche et Outils d'Action Supérieurs -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="relative min-w-[240px]">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              <input 
+                id="crm-lead-search" 
+                type="text" 
+                oninput="handleLeadSearchInput(this.value)"
+                placeholder="Rechercher prospect, téléphone, offre..." 
+                class="w-full pl-10 pr-8 py-2 text-xs bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] transition"
+              />
+              <button 
+                id="crm-lead-search-clear" 
+                onclick="clearLeadSearch()" 
+                title="Effacer la recherche"
+                class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <button onclick="loadLeads();" class="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition" title="Actualiser">
+              <i data-lucide="refresh-cw" class="w-4 h-4 text-[#0062ff]"></i>
             </button>
-            <button onclick="window.open('/api/export/leads-csv')" class="px-3.5 py-1.5 rounded-lg bg-[#0062ff] text-white hover:bg-blue-700 flex items-center gap-1.5 text-xs font-bold shadow-xs transition">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i> Exporter CSV
+            <button onclick="window.open('/api/export/leads-csv')" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Exporter CSV</span>
             </button>
-            <button onclick="confirmClearCRM()" class="px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center gap-1.5 text-xs font-bold shadow-xs transition" title="Vider les données de test pour accueillir de vrais prospects">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Vider le CRM
+            <button onclick="confirmClearCRM()" class="p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-600 transition" title="Vider le CRM">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
 
-        <!-- BANNIÈRE ÉTAT EN TEMPS RÉEL DE L'AGENT IA (POLLER FASTY) -->
-        <div class="agent-dashboard">
-          <div class="agent-dashboard-left">
-            <div class="agent-avatar-wrap">
-              <i data-lucide="bot" class="w-6 h-6 text-[#0062ff]"></i>
+        <!-- 1. LES 4 TOP CARDS HEALTH PLATFORM AVEC MICRO-VISU & COULEURS INVO -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- Card 1 : Total Leads (Blanc avec Mini Barchart CSS Bleu) -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+              <div>
+                <strong class="text-3xl font-black text-slate-900 tracking-tight block" id="crm-stat-total">0</strong>
+                <span class="text-xs font-bold text-slate-400">Total Prospects Actifs</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <!-- Mini visual barres bleues Health Platform Card 1 -->
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-end gap-1.5 h-7">
+              <div class="w-1/6 bg-blue-100 rounded-sm h-[30%]"></div>
+              <div class="w-1/6 bg-blue-100 rounded-sm h-[50%]"></div>
+              <div class="w-1/6 bg-blue-200 rounded-sm h-[40%]"></div>
+              <div class="w-1/6 bg-blue-200 rounded-sm h-[75%]"></div>
+              <div class="w-1/6 bg-[#0062ff] rounded-sm h-[100%]"></div>
+              <div class="w-1/6 bg-blue-300 rounded-sm h-[60%]"></div>
+            </div>
+          </div>
+
+          <!-- Card 2 : Leads Chauds / Cas Prioritaires (Alerte Ambre/Rose Soft) -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+              <div>
+                <strong class="text-3xl font-black text-amber-600 tracking-tight block" id="crm-stat-chauds">0</strong>
+                <span class="text-xs font-bold text-slate-400">Leads Chauds Prioritaires</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="flame" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-1.5 text-xs font-bold text-amber-600">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+              <span>Forte intention d'achat & closing</span>
+            </div>
+          </div>
+
+          <!-- Card 3 : Score DUR & Diagnostics en Attente (Carte Jaune Doux / Citron Pastel) -->
+          <div class="bg-gradient-to-br from-[#FEFCE8] to-[#FEF08A] p-5 rounded-3xl border border-yellow-200 shadow-xs flex flex-col justify-between hover:shadow-md transition">
+            <div class="flex items-center justify-between">
+              <div>
+                <strong class="text-3xl font-black text-yellow-900 tracking-tight block" id="crm-stat-dur-moyen">0/100</strong>
+                <span class="text-xs font-bold text-yellow-800">Score DUR Moyen</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-white/70 text-yellow-700 flex items-center justify-center">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-yellow-300/50">
+              <div class="flex items-center justify-between text-[11px] font-bold text-yellow-800 mb-1">
+                <span>Intensité Douleur</span>
+                <span id="crm-stat-inactifs">0</span>
+              </div>
+              <div class="w-full bg-white/70 rounded-full h-1.5 overflow-hidden">
+                <div class="bg-yellow-600 h-1.5 rounded-full" style="width: 78%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4 : Carte Feature Bleue Invo (Clients Convertis / Veille IA) -->
+          <div class="bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#1d4ed8] text-white p-5 rounded-3xl shadow-lg shadow-blue-500/20 flex flex-col justify-between hover:shadow-xl transition relative overflow-hidden">
+            <div class="flex items-center justify-between">
+              <div>
+                <strong class="text-3xl font-black text-white tracking-tight block" id="crm-stat-convertis">0</strong>
+                <span class="text-xs font-bold text-blue-100">Clients Convertis</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-white/20 text-white flex items-center justify-center">
+                <i data-lucide="badge-check" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/20 flex items-center gap-1.5 text-xs font-bold text-blue-100">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-300"></i>
+              <span>Patrouille IA & Transactions Validées</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 2. SECTION CENTRALE : FILE D'ATTENTE LEADS GAUCHE (8 COLS) + WIDGETS DROITE (4 COLS) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Colonne Gauche (8 cols) : Table / Queue Prioritaire Style Health Platform -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs lg:col-span-8 space-y-4 flex flex-col justify-between">
+            <div>
+              <!-- En-tête de la liste avec Filtres Pilules -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                <div>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">File des Prospects Prioritaires</h3>
+                  <p class="text-xs text-slate-400">Classement en temps réel selon le niveau d'intérêt et l'urgence.</p>
+                </div>
+
+                <!-- Filtres Onglets Rapides Style Health Platform -->
+                <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl overflow-x-auto" id="crm-status-chips">
+                  <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="px-3 py-1 rounded-xl text-xs font-bold transition-all bg-[#0062ff] text-white shadow-xs">
+                    Tous (<span id="tab-count-Tous">0</span>)
+                  </button>
+                  <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="px-3 py-1 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    Chauds (<span id="tab-count-Chaud">0</span>)
+                  </button>
+                  <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="px-3 py-1 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    Clients (<span id="tab-count-Converti">0</span>)
+                  </button>
+                  <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="px-3 py-1 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    Tièdes (<span id="tab-count-Tiède">0</span>)
+                  </button>
+                  <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="px-3 py-1 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">
+                    48h (<span id="tab-count-48h_inactif">0</span>)
+                  </button>
+                </div>
+              </div>
+
+              <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS) -->
+              <div id="crm-bulk-bar" class="hidden my-3 p-3 rounded-2xl bg-gradient-to-r from-blue-900 to-[#0062ff] text-white flex flex-wrap items-center justify-between gap-3 shadow-md animate-in fade-in">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span><strong id="bulk-selected-count" class="text-white font-black">0</strong> sélectionné(s)</span>
+                  <button onclick="deselectAllLeads()" class="text-[11px] text-blue-200 hover:text-white underline ml-2">Annuler</button>
+                </div>
+                
+                <div class="flex items-center gap-2 flex-wrap">
+                  <select id="bulk-status-select" onchange="executeBulkStatusChange(this.value)" class="bg-white/20 border border-white/30 text-white text-xs rounded-xl px-2.5 py-1 focus:outline-none">
+                    <option value="" disabled selected class="text-slate-900">Changer Statut...</option>
+                    <option value="Chaud" class="text-slate-900">Chaud</option>
+                    <option value="Tiède" class="text-slate-900">Tiède</option>
+                    <option value="Froid" class="text-slate-900">Froid</option>
+                    <option value="Converti" class="text-slate-900">Client</option>
+                    <option value="Rejeté" class="text-slate-900">Rejeté</option>
+                  </select>
+                  <select id="bulk-offer-select" onchange="executeBulkOfferChange(this.value)" class="bg-white/20 border border-white/30 text-white text-xs rounded-xl px-2.5 py-1 focus:outline-none">
+                    <option value="" disabled selected class="text-slate-900">Assigner Offre...</option>
+                  </select>
+                  <button onclick="bulkCopyContacts('whatsapp')" class="px-2.5 py-1 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-bold flex items-center gap-1 transition">
+                    <i data-lucide="copy" class="w-3 h-3"></i> WA
+                  </button>
+                  <button onclick="openBulkDeleteModal()" class="px-2.5 py-1 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs font-bold flex items-center gap-1 transition">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i> Supprimer
+                  </button>
+                </div>
+              </div>
+
+              <!-- Tableau Épuré Style Health Platform -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                      <th class="py-3 px-3 w-8">
+                        <input 
+                          type="checkbox" 
+                          id="crm-select-all" 
+                          onchange="toggleSelectAllLeads(this.checked)" 
+                          class="rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
+                        />
+                      </th>
+                      <th class="py-3 px-3">Prospect</th>
+                      <th class="py-3 px-3">Contact Direct</th>
+                      <th class="py-3 px-3">Douleur / Offre</th>
+                      <th class="py-3 px-3">Score DUR</th>
+                      <th class="py-3 px-3">Statut</th>
+                      <th class="py-3 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="crm-leads-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <!-- Rempli dynamiquement en JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Compteur inférieur -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+              <span id="crm-leads-counter">0 leads au total</span>
+              <span class="text-[#0062ff] font-bold">Synchronisation omnicanale en temps réel</span>
+            </div>
+          </div>
+
+          <!-- Colonne Droite (4 cols) : Quick Actions & Donut de Répartition -->
+          <div class="space-y-6 lg:col-span-4">
+            
+            <!-- Widget 1 : Quick Actions Health Platform -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3">
+              <h4 class="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center justify-between">
+                <span>Actions Rapides</span>
+                <i data-lucide="sparkles" class="w-4 h-4 text-[#0062ff]"></i>
+              </h4>
+              
+              <div class="space-y-2">
+                <button onclick="triggerPollerInspection()" class="w-full p-3 rounded-2xl bg-slate-50 hover:bg-blue-50 border border-slate-200/80 hover:border-blue-200 transition flex items-center justify-between group text-left cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-[#0062ff] flex items-center justify-center font-bold">
+                      <i data-lucide="play" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] transition block">Lancer Ronde IA</strong>
+                      <span class="text-[11px] text-slate-400 font-medium">Scan des conversations</span>
+                    </div>
+                  </div>
+                  <span class="text-slate-400 group-hover:text-[#0062ff] font-bold text-sm">&rarr;</span>
+                </button>
+
+                <button onclick="openAddCalendarEventModal()" class="w-full p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-200 transition flex items-center justify-between group text-left cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
+                      <i data-lucide="calendar" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-emerald-700 transition block">Planifier un RDV</strong>
+                      <span class="text-[11px] text-slate-400 font-medium">Démo ou relance closing</span>
+                    </div>
+                  </div>
+                  <span class="text-slate-400 group-hover:text-emerald-600 font-bold text-sm">&rarr;</span>
+                </button>
+
+                <button onclick="window.open('/api/export/leads-csv')" class="w-full p-3 rounded-2xl bg-slate-50 hover:bg-indigo-50 border border-slate-200/80 hover:border-indigo-200 transition flex items-center justify-between group text-left cursor-pointer">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                      <i data-lucide="download" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <strong class="text-xs font-black text-slate-900 group-hover:text-indigo-700 transition block">Exporter le Fichier CRM</strong>
+                      <span class="text-[11px] text-slate-400 font-medium">Format CSV prêt pour Excel</span>
+                    </div>
+                  </div>
+                  <span class="text-slate-400 group-hover:text-indigo-600 font-bold text-sm">&rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Widget 2 : Répartition des Risques & Températures (Donut Card Health Platform) -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-900">Répartition des Leads</h4>
+                <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">Live</span>
+              </div>
+
+              <!-- Jauge Donut Semi-Circulaire / Circulaire -->
+              <div class="relative w-full h-44 flex items-center justify-center">
+                <canvas id="chart-crm-distribution"></canvas>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 text-center text-xs pt-2 border-t border-slate-100">
+                <div>
+                  <span class="text-[10px] text-slate-400 block font-bold">Convertis</span>
+                  <strong class="text-emerald-600 font-black text-sm" id="distrib-val-convertis">0%</strong>
+                </div>
+                <div class="border-x border-slate-100">
+                  <span class="text-[10px] text-slate-400 block font-bold">Chauds</span>
+                  <strong class="text-amber-600 font-black text-sm" id="distrib-val-chauds">0%</strong>
+                </div>
+                <div>
+                  <span class="text-[10px] text-slate-400 block font-bold">Tièdes/Froids</span>
+                  <strong class="text-[#0062ff] font-black text-sm" id="distrib-val-autres">0%</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- 3. BANNIÈRE INFÉRIEURE : AI SUMMARY CAPSULE HEALTH PLATFORM -->
+        <div class="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-[#0B1533] to-[#0062ff] text-white flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-white/10 text-white flex items-center justify-center font-black shrink-0">
+              <i data-lucide="sparkles" class="w-5 h-5 text-emerald-300"></i>
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h3 class="text-sm font-bold text-slate-900 tracking-tight">AGENT IA COMMERCIAL</h3>
-                <span id="poller-status-badge" class="poller-badge actif">
-                  <span class="status-pulse-wrap">
-                    <svg width="10" height="10" viewBox="0 0 10 10">
-                      <circle cx="5" cy="5" r="5" fill="#22c55e" opacity="0.3">
-                        <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
-                        <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite"/>
-                      </circle>
-                      <circle cx="5" cy="5" r="3" fill="#22c55e"/>
-                    </svg>
-                  </span>
-                  <span>Ronde Active (2 min)</span>
-                </span>
+                <span class="text-xs font-black uppercase tracking-wider text-emerald-300">Synthèse Intelligente de l'Agent</span>
               </div>
-              <p class="text-xs text-slate-500 mt-0.5" id="poller-last-run-text">
-                Dernière ronde d'inspection : <strong class="text-slate-700">Il y a quelques instants</strong>
+              <p class="text-xs text-blue-100 mt-0.5" id="crm-ai-summary-text">
+                L'Agent IA détecte 7 prospects en phase critique de décision nécessitant un closing rapide aujourd'hui.
               </p>
             </div>
           </div>
 
-          <!-- Stats temps réel du Poller + Bouton déclencheur -->
-          <div class="flex items-center gap-2 sm:gap-3 flex-wrap text-xs">
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Traités aujourd'hui</span>
-              <span class="text-sm font-black text-slate-800" id="poller-today-count">0</span>
-            </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200" id="poller-pending-box">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">En attente active</span>
-              <span class="text-sm font-black text-slate-800" id="poller-pending-count">0</span>
-            </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Temps moyen</span>
-              <span class="text-sm font-black text-[#0062ff]" id="poller-avg-time">2.4 min</span>
-            </div>
-            <div class="px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Taux &lt; 5 min</span>
-              <span class="text-sm font-black text-emerald-600" id="poller-rate-5m">95%</span>
-            </div>
-            <button onclick="triggerPollerInspection()" class="btn btn-sm btn-primary" title="Lancer une ronde d'inspection immédiate">
-              <i data-lucide="play" class="w-3.5 h-3.5"></i>
-              <span>Lancer ronde</span>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="showTab('audit')" class="px-4 py-2 rounded-2xl bg-white text-[#0062ff] hover:bg-slate-50 font-black text-xs transition flex items-center gap-1.5 shadow-sm">
+              <span>Examiner l'Audit Forensique</span>
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
 
-        <!-- KPI WIDGETS CRM EN HAUT (FASTY GRID 5 COLONNES) -->
-        <div class="kpi-grid">
-          <div class="kpi-card fade-in-up">
-            <div class="kpi-icon-wrap kpi-icon-primary">
-              <i data-lucide="users" class="icon-sm"></i>
-            </div>
-            <span class="kpi-label">Total Leads</span>
-            <div class="kpi-value primary" id="crm-stat-total">0</div>
-            <div class="kpi-sublabel">Base de contacts</div>
-          </div>
-          <div class="kpi-card fade-in-up">
-            <div class="kpi-icon-wrap kpi-icon-warning">
-              <i data-lucide="trending-up" class="icon-sm"></i>
-            </div>
-            <span class="kpi-label">Leads Chauds</span>
-            <div class="kpi-value warning" id="crm-stat-chauds">0</div>
-            <div class="kpi-sublabel">Forte intention d'achat</div>
-          </div>
-          <div class="kpi-card fade-in-up">
-            <div class="kpi-icon-wrap kpi-icon-success">
-              <i data-lucide="check-circle-2" class="icon-sm"></i>
-            </div>
-            <span class="kpi-label">Clients Convertis</span>
-            <div class="kpi-value success" id="crm-stat-convertis">0</div>
-            <div class="kpi-sublabel">Transactions conclues</div>
-          </div>
-          <div class="kpi-card fade-in-up">
-            <div class="kpi-icon-wrap kpi-icon-primary">
-              <i data-lucide="activity" class="icon-sm"></i>
-            </div>
-            <span class="kpi-label">Score DUR Moyen</span>
-            <div class="kpi-value primary" id="crm-stat-dur-moyen">0/100</div>
-            <div class="kpi-sublabel">Qualification moyenne</div>
-          </div>
-          <div class="kpi-card fade-in-up" id="crm-stat-48h-card">
-            <div class="kpi-icon-wrap kpi-icon-danger">
-              <i data-lucide="clock-alert" class="icon-sm"></i>
-            </div>
-            <span class="kpi-label">Inactifs > 48h</span>
-            <div class="kpi-value danger" id="crm-stat-inactifs">0</div>
-            <div class="kpi-sublabel">Relance requise</div>
-          </div>
-        </div>
+      </section>
 
-        <!-- ==================== SECTION CRM LEADS : RÉPERTOIRE & RECHERCHE INSTANTANÉE ==================== -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm mb-4 flex flex-col xl:flex-row gap-3 xl:items-center justify-between">
-          <!-- Champ de Recherche Rapide -->
-          <div class="relative flex-1 min-w-[280px] max-w-md">
-            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <input 
-              id="crm-lead-search" 
-              type="text" 
-              oninput="handleLeadSearchInput(this.value)"
-              placeholder="Rechercher nom, téléphone, WhatsApp, email, douleur, offre..." 
-              class="input pl-10 pr-9 py-2 text-xs rounded-full"
-            />
-            <button 
-              id="crm-lead-search-clear" 
-              onclick="clearLeadSearch()" 
-              title="Effacer la recherche"
-              class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded transition">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-
-          <!-- Filtres pilules Fasty -->
-          <div class="flex items-center gap-3 overflow-hidden w-full xl:w-auto justify-between xl:justify-end">
-            <div class="filter-bar" id="crm-status-chips">
-              <button onclick="setLeadStatusFilter('Tous')" id="filter-chip-Tous" class="filter-tab active">
-                <i data-lucide="layout-grid" class="icon-xs"></i>
-                <span>Tous</span>
-                <span class="tab-count" id="tab-count-Tous">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('Chaud')" id="filter-chip-Chaud" class="filter-tab">
-                <i data-lucide="flame" class="icon-xs"></i>
-                <span>Chauds</span>
-                <span class="tab-count" id="tab-count-Chaud">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('Converti')" id="filter-chip-Converti" class="filter-tab">
-                <i data-lucide="badge-check" class="icon-xs"></i>
-                <span>Clients</span>
-                <span class="tab-count" id="tab-count-Converti">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('Tiède')" id="filter-chip-Tiède" class="filter-tab">
-                <i data-lucide="thermometer" class="icon-xs"></i>
-                <span>Tièdes</span>
-                <span class="tab-count" id="tab-count-Tiède">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('Froid')" id="filter-chip-Froid" class="filter-tab">
-                <i data-lucide="snowflake" class="icon-xs"></i>
-                <span>Froids</span>
-                <span class="tab-count" id="tab-count-Froid">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('48h_inactif')" id="filter-chip-48h_inactif" class="filter-tab">
-                <i data-lucide="clock-4" class="icon-xs"></i>
-                <span>Sans contact 48h</span>
-                <span class="tab-count" id="tab-count-48h_inactif">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('diag_sans_offre')" id="filter-chip-diag_sans_offre" class="filter-tab">
-                <i data-lucide="target" class="icon-xs"></i>
-                <span>Diagnostic sans offre</span>
-                <span class="tab-count" id="tab-count-diag_sans_offre">0</span>
-              </button>
-              <button onclick="setLeadStatusFilter('Rejeté')" id="filter-chip-Rejeté" class="filter-tab">
-                <i data-lucide="ban" class="icon-xs"></i>
-                <span>Rejetés / RGPD</span>
-                <span class="tab-count" id="tab-count-Rejeté">0</span>
-              </button>
-            </div>
-
-            <!-- Compteur contextuel -->
-            <div id="crm-leads-counter" class="text-xs font-bold text-slate-600 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 whitespace-nowrap shrink-0">
-              0 leads
-            </div>
-          </div>
-        </div>
-
-        <!-- BARRE D'ACTIONS GROUPÉES (BULK ACTIONS FASTY STYLE) -->
-        <div id="crm-bulk-bar" class="hidden bulk-bar">
-          <div class="bulk-label">
-            <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
-            <span><strong id="bulk-selected-count" class="text-white text-sm">0</strong> lead(s) sélectionné(s)</span>
-            <button onclick="deselectAllLeads()" class="text-[11px] text-white/80 hover:text-white underline ml-2">Désélectionner tout (Échap)</button>
-          </div>
-          
-          <div class="flex items-center gap-2 flex-wrap">
-            <select id="bulk-status-select" onchange="executeBulkStatusChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
-              <option value="" disabled selected>Changer Statut...</option>
-              <option value="Chaud">Marquer Chaud</option>
-              <option value="Tiède">Marquer Tiède</option>
-              <option value="Froid">Marquer Froid</option>
-              <option value="Converti">Marquer Client</option>
-              <option value="Rejeté">Marquer Rejeté</option>
-            </select>
-
-            <select id="bulk-phase-select" onchange="executeBulkPhaseChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
-              <option value="" disabled selected>Changer Phase...</option>
-              <option value="prise_de_contact">1. Setter / Prise de contact</option>
-              <option value="diagnostic">2. Closer / Diagnostic</option>
-              <option value="proposition">3. Closer / Proposition</option>
-              <option value="closing">4. CRM / Closing</option>
-              <option value="suivi_client">5. Conclu / Suivi Client</option>
-            </select>
-
-            <select id="bulk-offer-select" onchange="executeBulkOfferChange(this.value)" class="bg-blue-700/80 border border-blue-500 text-white text-xs rounded-full px-3 py-1.5 focus:outline-none font-medium">
-              <option value="" disabled selected>Assigner Offre...</option>
-            </select>
-
-            <button onclick="bulkCopyContacts('whatsapp')" class="btn btn-sm" title="Copier les numéros WhatsApp">
-              <i data-lucide="copy" class="w-3 h-3"></i> WA
-            </button>
-            <button onclick="bulkCopyContacts('email')" class="btn btn-sm" title="Copier les emails">
-              <i data-lucide="mail" class="w-3 h-3"></i> Emails
-            </button>
-            <button onclick="openBulkDeleteModal()" class="btn btn-sm btn-danger-bulk">
-              <i data-lucide="trash-2" class="w-3 h-3"></i> Supprimer
-            </button>
-          </div>
-        </div>
-
-        <!-- TABLEAU CRM FASTY (STICKY HEADER, PILL BADGES, DUR BAR) -->
-        <div class="table-wrapper">
-          <table class="crm-table">
-            <thead>
-              <tr>
-                <th class="w-10 text-center">
-                  <input 
-                    type="checkbox" 
-                    id="crm-select-all" 
-                    onchange="toggleSelectAllLeads(this.checked)" 
-                    class="rounded border-slate-300 text-[#0062ff] focus:ring-[#0062ff] w-4 h-4 cursor-pointer"
-                  />
-                </th>
-                <th>Lead</th>
-                <th>Contact</th>
-                <th>Douleur Identifiée</th>
-                <th>Score DUR</th>
-                <th>Profil DISC</th>
-                <th>Offre Matchée</th>
-                <th>Statut & Suivi</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="crm-leads-tbody">
-              <!-- Rempli par JavaScript -->
-            </tbody>
-          </table>
-        </div>
 
         <!-- ==================== MODAL DE CONFIRMATION DE SUPPRESSION (NIVEAU 1) ==================== -->
         <div id="modal-bulk-delete" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden flex items-center justify-center p-4">

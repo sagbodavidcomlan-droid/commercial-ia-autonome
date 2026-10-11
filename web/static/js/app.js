@@ -1374,11 +1374,11 @@ function setLeadStatusFilter(status) {
     const badge = document.getElementById(`tab-count-${s}`);
     if (btn) {
       if (s === status) {
-        btn.className = "px-3 py-1 rounded-lg bg-white text-[#0062ff] font-bold shadow-xs transition inline-flex items-center gap-1.5 whitespace-nowrap active";
-        if (badge) badge.className = "tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-blue-100 text-[#0062ff] font-bold";
+        btn.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all bg-[#0062ff] text-white shadow-xs inline-flex items-center gap-1.5 whitespace-nowrap active";
+        if (badge) badge.className = "tab-count text-[11px] font-bold text-white";
       } else {
-        btn.className = "px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition inline-flex items-center gap-1.5 whitespace-nowrap";
-        if (badge) badge.className = "tab-count text-[11px] px-1.5 py-0.2 rounded-full bg-slate-200/70 text-slate-600 font-bold";
+        btn.className = "px-3 py-1 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900 inline-flex items-center gap-1.5 whitespace-nowrap";
+        if (badge) badge.className = "tab-count text-[11px] font-bold text-slate-400";
       }
     }
   });
@@ -1568,10 +1568,69 @@ async function loadCatalogOffersForCrm() {
   }
 }
 
+let crmDistributionChart = null;
+
+function renderCrmDistributionChart(convertis, chauds, autres) {
+  const canvas = document.getElementById("chart-crm-distribution");
+  if (!canvas) return;
+
+  if (typeof Chart === "undefined") {
+    setTimeout(() => renderCrmDistributionChart(convertis, chauds, autres), 250);
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (crmDistributionChart) {
+    try { crmDistributionChart.destroy(); } catch (e) {}
+  }
+
+  const total = convertis + chauds + autres;
+  const dataValues = total > 0 ? [convertis, chauds, autres] : [1, 1, 1];
+  const bgColors = total > 0 ? ["#10b981", "#f59e0b", "#0062ff"] : ["#e2e8f0", "#cbd5e1", "#94a3b8"];
+
+  crmDistributionChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Clients Convertis", "Leads Chauds", "Tièdes & Froids"],
+      datasets: [
+        {
+          data: dataValues,
+          backgroundColor: bgColors,
+          borderWidth: 3,
+          borderColor: "#ffffff",
+          hoverOffset: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "74%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#0f172a",
+          padding: 10,
+          cornerRadius: 10,
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+              return ` ${context.label}: ${val} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 function updateCrmKpis() {
   const total = crmLeadsData.length;
   const chauds = crmLeadsData.filter(l => (l.temperature === "Chaud" || l.statut_lead === "Chaud")).length;
   const convertis = crmLeadsData.filter(l => (l.temperature === "Converti" || l.statut_lead === "Converti")).length;
+  const tiedes = crmLeadsData.filter(l => (l.temperature === "Tiède" || l.statut_lead === "Tiède")).length;
+  const autres = Math.max(0, total - convertis - chauds);
   
   let durSum = 0;
   crmLeadsData.forEach(l => {
@@ -1608,6 +1667,33 @@ function updateCrmKpis() {
     } else {
       stat48hCard.className = "p-4 rounded-xl bg-white border border-slate-200 shadow-xs";
       if (statInactifs) statInactifs.className = "text-2xl font-black text-slate-600 mt-1";
+    }
+  }
+
+  // Pourcentages de répartition pour le Donut Health Platform
+  const pctConvertis = total > 0 ? Math.round((convertis / total) * 100) : 0;
+  const pctChauds = total > 0 ? Math.round((chauds / total) * 100) : 0;
+  const pctAutres = total > 0 ? Math.max(0, 100 - pctConvertis - pctChauds) : 0;
+
+  const distConvEl = document.getElementById("distrib-val-convertis");
+  const distChaudsEl = document.getElementById("distrib-val-chauds");
+  const distAutresEl = document.getElementById("distrib-val-autres");
+  if (distConvEl) distConvEl.innerText = `${pctConvertis}%`;
+  if (distChaudsEl) distChaudsEl.innerText = `${pctChauds}%`;
+  if (distAutresEl) distAutresEl.innerText = `${pctAutres}%`;
+
+  // Rendu Donut Chart
+  renderCrmDistributionChart(convertis, chauds, autres);
+
+  // Synthèse Intelligente de l'Agent IA (Bannière inférieure Health Platform)
+  const aiSummaryEl = document.getElementById("crm-ai-summary-text");
+  if (aiSummaryEl) {
+    if (chauds > 0) {
+      aiSummaryEl.innerHTML = `L'Agent IA détecte <strong>${chauds} prospect${chauds > 1 ? 's' : ''} en phase critique de décision</strong> nécessitant un closing rapide aujourd'hui. (${convertis} déjà converti${convertis > 1 ? 's' : ''}).`;
+    } else if (total > 0) {
+      aiSummaryEl.innerHTML = `Base CRM active de <strong>${total} contacts</strong> avec un score DUR moyen de <strong>${durMoyen}/100</strong>. L'Agent entretient le nurturing sur l'ensemble des canaux.`;
+    } else {
+      aiSummaryEl.innerText = "Aucun prospect en attente. Lancez une ronde d'inspection IA pour synchroniser vos échanges omnicanaux.";
     }
   }
 }
@@ -1802,7 +1888,7 @@ function applyLeadsFilterAndRender() {
     const filterLabel = crmCurrentStatusFilter;
     tbody.innerHTML = `
       <tr>
-        <td colspan="9" class="p-12 text-center text-slate-500 bg-white">
+        <td colspan="7" class="p-12 text-center text-slate-500 bg-white">
           <div class="max-w-md mx-auto space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
               <i data-lucide="${isSearching ? 'search-x' : 'inbox'}" class="w-6 h-6"></i>
@@ -1935,9 +2021,9 @@ function applyLeadsFilterAndRender() {
         const prochaineAction = l.prochaine_action ? String(l.prochaine_action) : "";
 
         return `
-          <tr id="lead-row-${leadId}" class="transition-colors ${isSelected ? 'selected' : ''}">
+          <tr id="lead-row-${leadId}" class="hover:bg-slate-50/70 transition-colors ${isSelected ? 'bg-blue-50/60' : ''}">
             <!-- Col 0 : Checkbox -->
-            <td class="text-center w-10">
+            <td class="py-3 px-3 text-center w-8">
               <input 
                 type="checkbox" 
                 data-lead-id="${leadId}"
@@ -1947,43 +2033,50 @@ function applyLeadsFilterAndRender() {
               />
             </td>
 
-            <!-- Col 1 : Lead -->
-            <td class="min-w-[150px]">
-              <div class="font-extrabold text-slate-900 flex items-center gap-1.5">
-                <i data-lucide="user" class="w-3.5 h-3.5 text-blue-600 shrink-0"></i>
-                <span class="truncate">${escapeHtml(fullName)}</span>
-              </div>
-              <div class="text-[11px] text-slate-500 font-medium truncate mt-0.5" title="${escapeHtml(l.poste || 'Prospect')}">${escapeHtml(l.poste || 'Prospect')}</div>
-              <div class="flex items-center gap-1.5 mt-1">
-                ${canalBadge}
-                <span class="text-[10px] text-slate-400" title="Création">${escapeHtml(dateCreationStr)}</span>
+            <!-- Col 1 : Prospect (Avatar + Nom + Poste + Canal) -->
+            <td class="py-3 px-3 min-w-[180px]">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] font-black text-xs flex items-center justify-center shrink-0 border border-blue-100/80">
+                  ${escapeHtml(getLeadInitials(l))}
+                </div>
+                <div class="min-w-0">
+                  <div class="font-bold text-slate-900 truncate text-xs flex items-center gap-1.5">
+                    <span class="truncate" title="${escapeHtml(fullName)}">${escapeHtml(fullName)}</span>
+                    <span class="badge ${discInfo.cls} text-[9px] px-1 py-0.2 shrink-0">${discCode}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium truncate" title="${escapeHtml(l.poste || 'Prospect')}">${escapeHtml(l.poste || 'Prospect')}</div>
+                  <div class="flex items-center gap-1.5 mt-1">
+                    ${canalBadge}
+                    <span class="text-[10px] text-slate-400 font-medium">${escapeHtml(dateCreationStr)}</span>
+                  </div>
+                </div>
               </div>
             </td>
 
-            <!-- Col 2 : Contact -->
-            <td class="min-w-[130px] text-xs">
+            <!-- Col 2 : Contact Direct -->
+            <td class="py-3 px-3 min-w-[140px] text-xs">
               ${cleanWa ? `
-                <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-semibold mb-0.5">
-                  <i data-lucide="message-circle" class="w-3 h-3 text-emerald-600"></i>
+                <a href="https://wa.me/${cleanWa}" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 font-bold mb-1">
+                  <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
                   <span>${escapeHtml(rawWa)}</span>
                 </a>
-              ` : '<div class="text-slate-400 text-[11px]">WA : Non renseigné</div>'}
+              ` : '<div class="text-slate-400 text-[11px] mb-1">WA : Non renseigné</div>'}
               ${emailVal ? `
                 <a href="mailto:${emailVal}" class="flex items-center gap-1 text-slate-600 hover:text-slate-900 truncate max-w-[150px] text-[11px]">
-                  <i data-lucide="mail" class="w-3 h-3 text-slate-400"></i>
-                  <span>${escapeHtml(emailVal)}</span>
+                  <i data-lucide="mail" class="w-3 h-3 text-slate-400 shrink-0"></i>
+                  <span class="truncate">${escapeHtml(emailVal)}</span>
                 </a>
               ` : ''}
               ${liVal ? `
-                <a href="${liVal}" target="_blank" class="flex items-center gap-1 text-sky-700 hover:text-sky-900 text-[11px]">
-                  <i data-lucide="linkedin" class="w-3 h-3 text-sky-600"></i>
+                <a href="${liVal}" target="_blank" class="flex items-center gap-1 text-sky-700 hover:text-sky-900 text-[11px] mt-0.5">
+                  <i data-lucide="linkedin" class="w-3 h-3 text-sky-600 shrink-0"></i>
                   <span>LinkedIn</span>
                 </a>
               ` : ''}
             </td>
 
-            <!-- Col 3 : Douleur identifiée -->
-            <td class="max-w-[200px]">
+            <!-- Col 3 : Douleur & Offre combinées -->
+            <td class="py-3 px-3 max-w-[200px]">
               ${douleurVal ? `
                 <div class="text-xs text-slate-800 font-medium line-clamp-2" title="${escapeHtml(douleurVal)}">
                   ${escapeHtml(douleurVal)}
@@ -1991,68 +2084,50 @@ function applyLeadsFilterAndRender() {
               ` : `
                 <span class="text-slate-400 italic text-[11px]">Diagnostic en cours...</span>
               `}
+              ${offreNom ? `
+                <div class="mt-1.5 flex items-center gap-1 text-[11px] font-bold text-[#0062ff] truncate" title="${escapeHtml(offreNom)}">
+                  <i data-lucide="package" class="w-3 h-3 shrink-0"></i>
+                  <span class="truncate">${escapeHtml(offreNom)}</span>
+                </div>
+              ` : ''}
             </td>
 
-            <!-- Col 4 : Score DUR (Fasty Bar) -->
-            <td class="min-w-[130px]">
-              <div class="score-cell">
-                <div class="flex items-center justify-between mb-0.5">
-                  <span class="score-label">${scoreVal}/100</span>
-                  <div class="flex items-center gap-1 text-[9px] font-bold">
+            <!-- Col 4 : Score DUR -->
+            <td class="py-3 px-3 min-w-[130px]">
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-800">${scoreVal}/100</span>
+                  <div class="flex items-center gap-1 text-[9px]">
                     <span class="px-1 py-0.2 rounded border ${hasDouleur ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Douleur validée (40 pts)">D</span>
                     <span class="px-1 py-0.2 rounded border ${hasUrgence ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Urgence confirmée (30 pts)">U</span>
                     <span class="px-1 py-0.2 rounded border ${hasRessources ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-slate-50 text-slate-400 border-slate-200'}" title="Ressources / Budget (30 pts)">R</span>
                   </div>
                 </div>
-                <div class="score-bar-track">
-                  <div class="score-bar-fill" style="width: ${scoreVal}%" data-score="${scoreLevel}"></div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div class="h-1.5 rounded-full ${scoreVal >= 75 ? 'bg-emerald-500' : scoreVal >= 50 ? 'bg-[#0062ff]' : scoreVal >= 30 ? 'bg-amber-500' : 'bg-slate-300'}" style="width: ${scoreVal}%"></div>
                 </div>
               </div>
             </td>
 
-            <!-- Col 5 : Profil DISC -->
-            <td class="whitespace-nowrap">
-              <span class="badge ${discInfo.cls}">
-                ${discInfo.label}
-              </span>
-            </td>
-
-            <!-- Col 6 : Offre matchée -->
-            <td class="max-w-[160px]">
-              ${offreNom ? `
-                <div class="text-xs font-bold text-slate-900 truncate" title="${escapeHtml(offreNom)}">
-                  <i data-lucide="package" class="w-3 h-3 text-[#0062ff] inline mr-0.5"></i>${escapeHtml(offreNom)}
-                </div>
-              ` : `
-                <span class="text-slate-400 text-[11px] italic">Non assignée</span>
-              `}
-            </td>
-
-            <!-- Col 7 : Statut & Suivi -->
-            <td class="min-w-[130px]">
-              <span class="badge ${statusBadgeClass}">
+            <!-- Col 5 : Statut Pilule Health Platform -->
+            <td class="py-3 px-3 min-w-[120px]">
+              <span class="badge ${statusBadgeClass} text-[11px] font-bold">
                 ${escapeHtml(statutVal)}
               </span>
-              <div class="text-[10px] text-slate-500 mt-1">
-                Dernier : <strong class="text-slate-700">${escapeHtml(lastContactStr)}</strong>
+              <div class="text-[10px] text-slate-400 mt-1">
+                ${escapeHtml(lastContactStr)}
               </div>
-              ${prochaineAction ? `
-                <div class="text-[10px] text-indigo-700 font-semibold truncate max-w-[130px] flex items-center gap-1" title="Action: ${escapeHtml(prochaineAction)}">
-                  <i data-lucide="arrow-right" class="w-3 h-3 text-indigo-500 shrink-0"></i>
-                  <span>${escapeHtml(prochaineAction)}</span>
-                </div>
-              ` : ''}
             </td>
 
-            <!-- Col 8 : Actions (Fasty Slide-in Drawer + Edit) -->
-            <td class="text-right whitespace-nowrap">
+            <!-- Col 6 : Actions Rapides -->
+            <td class="py-3 px-3 text-right whitespace-nowrap">
               <div class="flex items-center justify-end gap-1.5">
-                <button onclick="openDrawer(${leadId})" class="btn btn-sm btn-primary" title="Ouvrir le panneau latéral avec dossier et conversation">
-                  <i data-lucide="messages-square" class="w-3 h-3"></i>
-                  <span>Conversation</span>
+                <button onclick="openDrawer(${leadId})" class="px-3 py-1.5 rounded-xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer" title="Ouvrir le panneau latéral avec dossier et conversation">
+                  <i data-lucide="messages-square" class="w-3.5 h-3.5"></i>
+                  <span>Consulter</span>
                 </button>
-                <button onclick="openLeadEditModal(${leadId})" class="btn btn-sm btn-secondary p-1.5" title="Modifier la fiche lead">
-                  <i data-lucide="edit-2" class="w-3.5 h-3.5 text-slate-600"></i>
+                <button onclick="openLeadEditModal(${leadId})" class="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer" title="Modifier la fiche lead">
+                  <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
             </td>
