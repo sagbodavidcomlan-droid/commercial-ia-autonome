@@ -556,25 +556,14 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 full_name = f"{first_name} {last_name}".strip()
                 if not full_name:
                     full_name = sender.get("name") or event.get("from", {}).get("name") or ""
-                if not full_name and "nom" in extracted_info:
-                    full_name = extracted_info["nom"]
-                    first_name = extracted_info.get("prenom", "")
-                    last_name = extracted_info.get("nom_famille", "")
-
-                if not full_name or "prospect" in full_name.lower():
-                    fallback_personas = [
-                        ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp"),
-                        ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes"),
-                        ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel smartphone"),
-                        ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet pour rassurer les acheteurs"),
-                        ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier"),
-                        ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice Coopérative", "Pertes sur récoltes et besoin de débouchés rapides")
-                    ]
-                    c_num = sum(ord(c) for c in sender_psid) if sender_psid else 0
-                    fb = fallback_personas[c_num % len(fallback_personas)]
-                    first_name = first_name or fb[0]
-                    last_name = last_name or fb[1]
+                if not full_name:
+                    first_name = "Contact"
+                    last_name = f"Messenger #{sender_psid[-4:] if sender_psid else ''}".strip()
                     full_name = f"{first_name} {last_name}".strip()
+                elif not first_name:
+                    parts = full_name.split()
+                    first_name = parts[0]
+                    last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
 
                 lead_name = full_name
                 extracted_phone = extracted_info.get("telephone")
@@ -860,24 +849,22 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
                     conn.commit()
                 else:
-                    lead_name = sender_profile_name or extracted_info.get("nom")
-                    first_name = extracted_info.get("prenom", "")
-                    last_name = extracted_info.get("nom_famille", "")
+                    lead_name = (sender_profile_name or extracted_info.get("nom") or "").strip()
+                    first_name = extracted_info.get("prenom", "").strip()
+                    last_name = extracted_info.get("nom_famille", "").strip()
 
                     if not lead_name or "prospect" in lead_name.lower() or "contact" in lead_name.lower():
-                        fallback_personas = [
-                            ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp"),
-                            ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes"),
-                            ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel smartphone"),
-                            ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet pour rassurer les acheteurs"),
-                            ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier"),
-                            ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice Coopérative", "Pertes sur récoltes et besoin de débouchés rapides")
-                        ]
-                        c_num = sum(ord(c) for c in clean_phone_digits) if clean_phone_digits else 0
-                        fb = fallback_personas[c_num % len(fallback_personas)]
-                        first_name = first_name or fb[0]
-                        last_name = last_name or fb[1]
-                        lead_name = f"{first_name} {last_name}".strip()
+                        if sender_profile_name:
+                            lead_name = sender_profile_name.strip()
+                        elif formatted_phone:
+                            lead_name = f"Contact WhatsApp {formatted_phone}"
+                        else:
+                            lead_name = "Contact WhatsApp"
+
+                    if not first_name and lead_name:
+                        parts = lead_name.split()
+                        first_name = parts[0]
+                        last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
 
                     extracted_email = extracted_info.get("email")
 
@@ -885,8 +872,8 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     lead_id, _ = get_or_create_lead(
                         canal_source="whatsapp",
                         canal_id=canal_id_val,
-                        prenom=first_name or (lead_name.split()[0] if " " in lead_name else lead_name),
-                        nom=last_name or (lead_name.split()[-1] if " " in lead_name else ""),
+                        prenom=first_name,
+                        nom=last_name,
                         nom_complet=lead_name,
                         telephone=formatted_phone,
                         whatsapp=formatted_phone,

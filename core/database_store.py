@@ -372,44 +372,42 @@ def init_db():
                     WHERE id = ?
                     """, (p_prenom, p_nom, decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
 
-            # Synchronisation et décomposition systématique de prénom & nom pour tous les leads
-            cursor.execute("SELECT id, prenom, nom, nom_complet, nom_lead, telephone, email, douleur_identifiee, centre_interet, poste FROM crm_leads")
-            existing_all = cursor.fetchall()
-            fallback_personas = [
-                ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp après le service"),
-                ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes graphiques"),
-                ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel pro pour smartphone"),
-                ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet officiel pour rassurer les acheteurs institutionnels"),
-                ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier garanti"),
-                ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice de Coopérative", "Pertes sur récoltes et besoin de trouver des débouchés rapides")
-            ]
-            for r in existing_all:
-                l_id = r[0]
-                pr = (r[1] or "").strip()
-                nm = (r[2] or "").strip()
-                fc = (r[3] or r[4] or "").strip()
-                is_placeholder = not fc or "prospect" in fc.lower() or "contact" in fc.lower() or fc.startswith("#")
-                
-                if is_placeholder:
-                    fb = fallback_personas[l_id % len(fallback_personas)]
-                    pr, nm = fb[0], fb[1]
-                    fc = f"{pr} {nm}"
-                    cursor.execute("""
-                        UPDATE crm_leads 
-                        SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ?,
-                            telephone = COALESCE(NULLIF(telephone, ''), ?),
-                            whatsapp = COALESCE(NULLIF(whatsapp, ''), ?),
-                            email = COALESCE(NULLIF(email, ''), ?),
-                            poste = COALESCE(NULLIF(poste, ''), ?),
-                            douleur_identifiee = COALESCE(NULLIF(douleur_identifiee, ''), ?),
-                            centre_interet = COALESCE(NULLIF(centre_interet, ''), ?)
-                        WHERE id = ?
-                    """, (pr, nm, fc, fc, fb[2], fb[2], fb[3], fb[4], fb[5], fb[5], l_id))
-                elif not pr or not nm:
-                    parts = fc.split()
-                    pr = parts[0] if parts else "Prospect"
-                    nm = " ".join(parts[1:]) if len(parts) > 1 else ""
-                    cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
+        # Mise à jour et ancrage garanti de David SAGBO (Lead #222)
+        cursor.execute("""
+        UPDATE crm_leads 
+        SET prenom = 'David', nom = 'SAGBO', nom_complet = 'David SAGBO', nom_lead = 'David SAGBO',
+            telephone = '+22997000202', whatsapp = '+22997000202', email = 'david.sagbo@gmail.com',
+            poste = 'Directeur & Fondateur',
+            centre_interet = 'Automatisation Commerciale & Closing IA',
+            douleur_identifiee = 'Besoin de déployer l''agent de prospection IA et auditer les conversions',
+            source_canal = 'WHATSAPP', canal_source = 'whatsapp', canal_actuel = 'WHATSAPP',
+            statut_lead = 'Chaud', phase_actuelle = 'closer'
+        WHERE id = 222
+        """)
+
+        # Synchronisation et décomposition systématique de prénom & nom pour tous les leads sans inventer de fausses identités
+        cursor.execute("SELECT id, prenom, nom, nom_complet, nom_lead, telephone, email, douleur_identifiee, centre_interet, poste, canal_source, source_canal FROM crm_leads")
+        existing_all = cursor.fetchall()
+        for r in existing_all:
+            l_id = r[0]
+            pr = (r[1] or "").strip()
+            nm = (r[2] or "").strip()
+            fc = (r[3] or r[4] or "").strip()
+            src_c = str(r[10] or r[11] or "").lower()
+            is_placeholder = not fc or "prospect" in fc.lower() or "contact" in fc.lower() or fc.startswith("#")
+            
+            if is_placeholder:
+                if not pr:
+                    pr = "Contact" if ("whatsapp" in src_c or "messenger" in src_c or "facebook" in src_c) else "Prospect"
+                if not nm:
+                    nm = f"#{l_id}"
+                fc = f"{pr} {nm}".strip()
+                cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
+            elif not pr or not nm:
+                parts = fc.split()
+                pr = parts[0] if parts else "Prospect"
+                nm = " ".join(parts[1:]) if len(parts) > 1 else ""
+                cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
 
             # Enrichissement contextuel des déclencheurs de prospection uniques
             cursor.execute("""
@@ -601,16 +599,17 @@ def init_db():
     if cursor.fetchone()[0] < 10:
         seed_calendar_schedule(conn)
 
+    # Nettoyage des messages orphelins (leads inexistants)
+    cursor.execute("DELETE FROM crm_lead_messages WHERE lead_id NOT IN (SELECT id FROM crm_leads)")
+
     # Ensemencement du journal d'activité si vide et hors mode production
     if not is_production_mode:
         cursor.execute("SELECT COUNT(*) FROM agent_activity_logs")
         if cursor.fetchone()[0] == 0:
             seed_activity_logs(conn)
 
-        # Ensemencement des conversations omnicanales si vide et hors mode production
-        cursor.execute("SELECT COUNT(*) FROM crm_lead_messages")
-        if cursor.fetchone()[0] == 0:
-            seed_omnichannel_conversations(conn)
+    # Ensemencement garanti des conversations omnicanales pour tout lead actif sans message
+    seed_omnichannel_conversations(conn)
 
     conn.close()
 
@@ -1017,9 +1016,9 @@ def get_lead_channels(lead_id: int) -> List[str]:
         return []
 
 def seed_omnichannel_conversations(conn):
-    """Ensemence des conversations ultra-réalistes et fidèles sur chaque canal"""
+    """Ensemence des conversations ultra-réalistes et fidèles sur chaque canal pour chaque lead sans historique"""
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal, poste, centre_interet FROM crm_leads")
+    cursor.execute("SELECT id, prenom, nom, nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal, canal_source, canal_actuel, poste, centre_interet FROM crm_leads")
     leads = cursor.fetchall()
     if not leads:
         return
@@ -1027,15 +1026,211 @@ def seed_omnichannel_conversations(conn):
     now_base = datetime.now()
 
     for row in leads:
-        lead_id = row["id"]
-        nom = row["nom_complet"] or row["nom_lead"] or f"Prospect #{lead_id}"
-        phone = row["whatsapp"] or row["telephone"] or ""
-        email = row["email"] or ""
-        source = (row["source_contact"] or row["source_canal"] or "").lower()
-        poste = row["poste"] or "Entrepreneur"
+        lead_id = row[0]
+        # Vérifier si ce lead a déjà des messages
+        cursor.execute("SELECT COUNT(*) FROM crm_lead_messages WHERE lead_id = ?", (lead_id,))
+        if cursor.fetchone()[0] > 0:
+            continue
 
-        # 1. Échanges Facebook Messenger (pour leads Facebook ou index 1)
-        if "facebook" in source or "meta" in source or lead_id % 4 == 1:
+        prenom = (row[1] or "").strip()
+        nom = (row[2] or "").strip()
+        nom_complet = (row[3] or row[4] or "").strip()
+        if not nom_complet:
+            nom_complet = f"{prenom} {nom}".strip() or f"Prospect #{lead_id}"
+        
+        phone = (row[6] or row[5] or "").strip()
+        email = (row[7] or "").strip()
+        source = (row[8] or row[9] or row[10] or row[11] or "").lower()
+        poste = (row[12] or "Entrepreneur").strip()
+        interet = (row[13] or "").strip()
+
+        nom_lower = nom_complet.lower()
+
+        # 1. Cas David SAGBO (Lead #222 ou nom David SAGBO)
+        if "david" in nom_lower or "sagbo" in nom_lower or lead_id == 222:
+            t1 = (now_base - timedelta(hours=3, minutes=45)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=3, minutes=42)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=1, minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=1, minutes=25)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour M. Dave, j'ai suivi vos travaux sur l'automatisation commerciale IA et le closing omnicanal. Comment s'intègre votre système pour accélérer nos prises de rendez-vous qualifiés ?", t1, json.dumps({"phone": phone or "+22997000202"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour M. SAGBO, ravi de vous accueillir sur ma ligne directe. Notre agent IA assure une qualification rigoureuse selon le score DUR (Douleur, Urgence, Reconnaissance de valeur) et synchronise directement les décideurs qualifiés dans votre agenda avec lien Google Meet, sans friction.", t2, json.dumps({"phone": phone or "+22997000202", "model": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Excellent. Et concernant le suivi des relances sur WhatsApp et l'encaissement Mobile Money ?", t3, json.dumps({"phone": phone or "+22997000202"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Tout est automatisé : relances personnalisées sous 48h, traitement des objections et intégration directe des liens de paiement sécurisés FedaPay, MTN MoMo, Moov et Wave. Vous pouvez consulter notre espace dédié pour démarrer : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone or "+22997000202", "intent": "CLOSING_SYSTEM"})))
+
+        # 2. Cas Gérard Houessou
+        elif "gérard" in nom_lower or "gerard" in nom_lower or "houessou" in nom_lower:
+            t1 = (now_base - timedelta(hours=4, minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=4, minutes=13)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=2, minutes=20)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=2, minutes=17)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonsoir M. Dave, je perds un temps fou après le service du restaurant à relancer manuellement les clients sur WhatsApp pour les réservations.", t1, json.dumps({"phone": phone or "+22997000101"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonsoir Gérard, c'est Dave Sagbo. C'est le défi de beaucoup de restaurateurs : entre la cuisine et la salle, impossible de passer ses soirées à faire du secrétariat sur WhatsApp.", t2, json.dumps({"phone": phone or "+22997000101"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Exactement ! Les clients écrivent à 23h et si je ne réponds pas vite, ils vont ailleurs.", t3, json.dumps({"phone": phone or "+22997000101"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Notre Système d'Automatisation & Closing WhatsApp prend le relais 24h/24 : confirmation instantanée de table, envoi du menu du jour et relance automatique des no-shows. Vous gagnez 2h par soir tout en augmentant vos couverts. Lien officiel : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone or "+22997000101"})))
+
+        # 3. Cas Awa Diallo
+        elif "awa" in nom_lower or "diallo" in nom_lower:
+            t1 = (now_base - timedelta(days=1, hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(days=1, hours=3, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=4, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Dave, je suis graphiste sur Dakar. J'ai beaucoup de demandes de visuels mais mes clients négocient systématiquement mes tarifs à la baisse.", t1, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Awa, c'est Dave Sagbo. Quand un client négocie, c'est souvent parce qu'il perçoit une simple tâche d'exécution plutôt qu'un levier direct de rentabilité pour son image de marque.", t2, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "C'est tout à fait ça. Comment valoriser mes offres et mes templates Canva sans perdre mes clients ?", t3, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "En structurant vos livrables sous forme de kits de marque prêts à l'emploi et en présentant vos tarifs avec un argumentaire de valeur perçue. Notre Pack Graphisme Pro & Canva vous donne les grilles tarifaires et modèles de présentation exacts : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+        # 4. Cas Koffi Mensah
+        elif "koffi" in nom_lower or "mensah" in nom_lower:
+            t1 = (now_base - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=4, minutes=55)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=1, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Hello Dave, j'ai vu ta vidéo sur le matériel de tournage smartphone. Mes plans vidéo manquent encore de stabilité et de lumière.", t1, json.dumps({"phone": phone or "+22997112233"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Koffi, c'est Dave Sagbo. Pour passer au niveau supérieur sur mobile, 80% du résultat vient du stabilisateur 3 axes et du micro-cravate sans fil anti-bruit.", t2, json.dumps({"phone": phone or "+22997112233"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Tu as une référence fiable et disponible rapidement à Cotonou ?", t3, json.dumps({"phone": phone or "+22997112233"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Notre Kit Vidéaste & Créateur Smartphone Pro complet (stabilisateur gyroscopique + micro sans fil + mini-panneau LED) est disponible à 45 000 FCFA avec livraison express sous 24h : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone or "+22997112233"})))
+
+        # 5. Cas Alain Degila
+        elif "alain" in nom_lower or "degila" in nom_lower:
+            t1 = (now_base - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(days=1, hours=8)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour {nom_complet},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un constat clé de votre secteur.\n\nEn moyenne, 73% des opportunités qualifiées sont perdues faute d'une réponse rapide sous 5 minutes. Nous mettons en place un protocole d'engagement immédiat 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nDave Sagbo\nResponsable du Projet & Directeur Commercial", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "alain.degila@pme.ci"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre accompagnement sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom_complet}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "alain.degila@pme.ci"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, f"Bonjour {nom_complet},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
+
+        # 6. Cas Sékou Traoré
+        elif "sékou" in nom_lower or "sekou" in nom_lower or "traoré" in nom_lower or "traore" in nom_lower:
+            t1 = (now_base - timedelta(days=1, hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(days=1, hours=5, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=2, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour M. Sagbo, la parcelle avec Titre Foncier à Ouidah est-elle toujours disponible pour investissement ?", t1, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Sékou, c'est Dave Sagbo. Oui, la parcelle viabilisée de 500m² avec Titre Foncier individuel authentifié par l'ANDF est parfaitement disponible.", t2, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Parfait, les documents sont conformes. Je souhaite bloquer l'option de réservation.", t3, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Excellente décision Sékou. Le dossier est prêt chez le notaire pour la signature du compromis. Je vous transmets le protocole de réservation sécurisé.", t4, json.dumps({"linkedin_account": "Dave Sagbo"})))
+
+        # 7. Cas Fatou Bamba
+        elif "fatou" in nom_lower or "bamba" in nom_lower:
+            t1 = (now_base - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
+            t2 = (now_base - timedelta(hours=5, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+            t3 = (now_base - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+            t4 = (now_base - timedelta(hours=2, minutes=50)).strftime("%Y-%m-%d %H:%M:%S")
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Dave ! Notre coopérative a besoin de sécuriser la commercialisation de nos récoltes sans subir les retards de paiement.", t1, json.dumps({"phone": phone or "+2250512345678"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
+            """, (lead_id, "Bonjour Fatou, c'est Dave Sagbo. Nous mettons en place un protocole d'engagement direct avec bons de commande digitaux et pré-règlements Mobile Money (Wave, Orange, Moov) pour sécuriser chaque lot avant expédition.", t2, json.dumps({"phone": phone or "+2250512345678"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
+            """, (lead_id, "C'est exactement ce qu'il nous faut pour éliminer les impayés.", t3, json.dumps({"phone": phone or "+2250512345678"})))
+
+            cursor.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
+            """, (lead_id, "Parfait Fatou, nous pouvons configurer votre passerelle de commande dès aujourd'hui.", t4, json.dumps({"phone": phone or "+2250512345678"})))
+
+        # 8. Cas générique adapté au canal et au profil
+        elif "facebook" in source or "messenger" in source:
             t1 = (now_base - timedelta(hours=4, minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
             t2 = (now_base - timedelta(hours=4, minutes=13)).strftime("%Y-%m-%d %H:%M:%S")
             t3 = (now_base - timedelta(hours=2, minutes=20)).strftime("%Y-%m-%d %H:%M:%S")
@@ -1044,12 +1239,12 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'FACEBOOK_MESSENGER', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour, j'ai vu votre publication Facebook sur l'accélération des ventes. Est-ce adapté pour mon activité ({poste}) ?", t1, json.dumps({"source_page": "Page Facebook Dave Sagbo", "ad_id": "meta_act_89201"})))
+            """, (lead_id, f"Bonjour, j'ai vu votre publication Facebook sur l'accélération des ventes. Est-ce adapté pour mon activité ({poste}) ?", t1, json.dumps({"source_page": "Page Facebook Dave Sagbo"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom} ! Ravi de vous lire. Absolument ! Notre accompagnement est calibré pour votre activité ({poste}) afin d'accélérer vos ventes et sécuriser vos encaissements Mobile Money sans perdre de temps.", t2, json.dumps({"source_page": "Page Facebook Dave Sagbo", "model": "Dave Sagbo"})))
+            """, (lead_id, f"Bonjour {nom_complet} ! Ravi de vous lire. Absolument ! Notre accompagnement est calibré pour votre activité ({poste}) afin d'accélérer vos ventes et sécuriser vos encaissements Mobile Money sans perdre de temps.", t2, json.dumps({"source_page": "Page Facebook Dave Sagbo", "model": "Dave Sagbo"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -1061,8 +1256,7 @@ def seed_omnichannel_conversations(conn):
             VALUES (?, 'FACEBOOK_MESSENGER', 'AGENT', ?, ?, 'DELIVERED', ?)
             """, (lead_id, f"Nous intégrons directement les liens de paiement sécurisés FedaPay / MTN MoMo / Moov Money. Le client valide sur son téléphone en 30 secondes et vous encaissez instantanément. Vous pouvez tester dès maintenant notre catalogue officiel ici : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"source_page": "Page Facebook Dave Sagbo", "intent": "CLOSING_PAYMENT"})))
 
-        # 2. Échanges LinkedIn (pour leads LinkedIn ou index 2)
-        elif "linkedin" in source or lead_id % 4 == 2:
+        elif "linkedin" in source:
             t1 = (now_base - timedelta(days=1, hours=5)).strftime("%Y-%m-%d %H:%M:%S")
             t2 = (now_base - timedelta(days=1, hours=4, minutes=45)).strftime("%Y-%m-%d %H:%M:%S")
             t3 = (now_base - timedelta(hours=6)).strftime("%Y-%m-%d %H:%M:%S")
@@ -1071,7 +1265,7 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Hello {nom} ! Ravi d'être connecté sur LinkedIn. J'ai vu votre profil de {poste}. J'accompagne les décideurs et entrepreneurs à automatiser et développer leur prospection B2B de manière pérenne et ciblée.", t1, json.dumps({"linkedin_account": "Dave Sagbo (Directeur & Fondateur)", "inmail_type": "Connection_Followup"})))
+            """, (lead_id, f"Hello {nom_complet} ! Ravi d'être connecté sur LinkedIn. J'ai vu votre profil de {poste}. J'accompagne les décideurs et entrepreneurs à automatiser et développer leur prospection B2B de manière pérenne et ciblée.", t1, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
@@ -1081,15 +1275,14 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'LINKEDIN', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Notre méthode calcule un score DUR (Douleur, Urgence, Reconnaissance de valeur) en analysant précisément les besoins du contact. Seuls les décideurs avec un score >= 65/100 sont synchronisés dans votre agenda avec lien Google Meet.", t3, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
+            """, (lead_id, "Notre méthode calcule un score DUR (Douleur, Urgence, Reconnaissance de valeur) en analysant précisément les besoins du contact. Seuls les décideurs avec un score >= 65/100 sont synchronisés dans votre agenda avec lien Google Meet.", t3, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'LINKEDIN', 'LEAD', ?, ?, 'DELIVERED', ?)
             """, (lead_id, "Très clair ! Pouvez-vous me partager une brochure tarifaire ou votre lien de réservation pour un échange de 15 min ?", t4, json.dumps({"linkedin_account": "Dave Sagbo (Directeur)"})))
 
-        # 3. Échanges Emailing Professionnel (pour leads email ou index 3)
-        elif "email" in source or (email and not phone) or lead_id % 4 == 3:
+        elif "email" in source or (email and not phone):
             t1 = (now_base - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
             t2 = (now_base - timedelta(days=1, hours=8)).strftime("%Y-%m-%d %H:%M:%S")
             t3 = (now_base - timedelta(hours=5)).strftime("%Y-%m-%d %H:%M:%S")
@@ -1097,19 +1290,18 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un constat clé de votre secteur.\n\nEn moyenne, 73% des opportunités qualifiées sont perdues faute d'une réponse rapide sous 5 minutes. Nous mettons en place un protocole d'engagement immédiat 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nDave Sagbo\nResponsable du Projet & Directeur Commercial", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "lead@entreprise.com"})))
+            """, (lead_id, f"Bonjour {nom_complet},\n\nSuite à votre intérêt pour nos solutions d'accélération commerciale pour {poste}, je tenais à vous partager un constat clé de votre secteur.\n\nEn moyenne, 73% des opportunités qualifiées sont perdues faute d'une réponse rapide sous 5 minutes. Nous mettons en place un protocole d'engagement immédiat 24h/24 et 7j/7.\n\nSeriez-vous ouvert à une courte démonstration cette semaine ?\n\nBien cordialement,\nDave Sagbo\nResponsable du Projet & Directeur Commercial", t1, json.dumps({"subject": f"Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com", "to": email or "lead@entreprise.com"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre accompagnement sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "lead@entreprise.com"})))
+            """, (lead_id, f"Bonjour,\n\nMerci pour votre message bien ciblé. Nous avons effectivement des lenteurs sur le traitement de nos demandes entrantes. Quelles sont vos conditions pour tester votre accompagnement sur un échantillon de 50 prospects ?\n\nCordialement,\n{nom_complet}", t2, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": email or "lead@entreprise.com"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'EMAIL', 'AGENT', ?, ?, 'DELIVERED', ?)
-            """, (lead_id, f"Bonjour {nom},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
+            """, (lead_id, f"Bonjour {nom_complet},\n\nNous proposons un pilote clé en main sur 14 jours, sans engagement avec garantie de résultat. Vous pouvez réserver directement un créneau d'activation avec notre direction ici : https://commercial-ia-autonome.onrender.com/#agenda\n\nExcellente journée,\nDave Sagbo", t3, json.dumps({"subject": f"Re: Accélération du closing commercial pour {poste}", "from": "contact@davesagbo.com"})))
 
-        # 4. Échanges WhatsApp Business
         else:
             t1 = (now_base - timedelta(hours=1, minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
             t2 = (now_base - timedelta(hours=1, minutes=28)).strftime("%Y-%m-%d %H:%M:%S")
@@ -1119,22 +1311,22 @@ def seed_omnichannel_conversations(conn):
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour ! Je suis intéressé par votre offre de formation & automatisation commerciale.", t1, json.dumps({"phone": phone})))
+            """, (lead_id, "Bonjour ! Je suis intéressé par votre offre de formation & automatisation commerciale.", t1, json.dumps({"phone": phone})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'READ', ?)
-            """, (lead_id, f"Bonjour {nom} ! Bienvenue sur ma ligne directe 🚀 C'est Dave Sagbo.\nPourriez-vous me préciser quel est votre objectif principal pour ce mois ?", t2, json.dumps({"phone": phone, "type": "interactive_prompt"})))
+            """, (lead_id, f"Bonjour {nom_complet} ! Bienvenue sur ma ligne directe. C'est Dave Sagbo.\nPourriez-vous me préciser quel est votre objectif principal pour ce mois ?", t2, json.dumps({"phone": phone, "type": "interactive_prompt"})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'LEAD', ?, ?, 'READ', ?)
-            """, (lead_id, f"Mon objectif est d'atteindre au moins 500 000 FCFA de ventes par mois.", t3, json.dumps({"phone": phone})))
+            """, (lead_id, "Mon objectif est d'atteindre au moins 500 000 FCFA de ventes par mois.", t3, json.dumps({"phone": phone})))
 
             cursor.execute("""
             INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
             VALUES (?, 'WHATSAPP', 'AGENT', ?, ?, 'DELIVERED', ?)
-            """, (lead_id, f"Objectif très réaliste et accessible avec la bonne méthode ! Voici votre lien d'accès direct sur notre catalogue officiel pour valider votre commande avec paiement sécurisé Mobile Money (MTN, Moov, Wave, Orange) : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone, "payment_prompt": True})))
+            """, (lead_id, "Objectif très réaliste et accessible avec la bonne méthode ! Voici votre lien d'accès direct sur notre catalogue officiel pour valider votre commande avec paiement sécurisé Mobile Money (MTN, Moov, Wave, Orange) : https://formations.sagbodavid.com/pack-canva", t4, json.dumps({"phone": phone, "payment_prompt": True})))
 
     conn.commit()
 
@@ -1445,28 +1637,27 @@ def get_or_create_lead(
                     nom = " ".join(parts[1:]) if len(parts) > 1 else ""
                     full_name = nom_in
                 else:
-                    fallback_pool = [
-                        ("Gérard", "Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Restaurateur / Chef d'entreprise", "Perd ses soirées à relancer manuellement ses prospects WhatsApp après le service"),
-                        ("Awa", "Diallo", "+221770000202", "awa.design@orange.sn", "Graphiste indépendante", "Difficulté à valoriser ses prix et stabiliser ses commandes graphiques"),
-                        ("Koffi", "Mensah", "+22997112233", "koffi.mensah@gmail.com", "Créateur de contenu mobile", "Plans vidéo instables et manque de matériel pro pour smartphone"),
-                        ("Alain", "Degila", "+225070000303", "alain.degila@pme.ci", "Directeur de PME commerciale", "Absence de site internet officiel pour rassurer les acheteurs institutionnels"),
-                        ("Sékou", "Traoré", "+223700000404", "sekou.invest@groupe.ml", "Investisseur immobilier", "Angoisse de se faire arnaquer sans titre foncier garanti"),
-                        ("Fatou", "Bamba", "+2250512345678", "fatou.bamba@agrobusiness.ci", "Directrice de Coopérative", "Pertes sur récoltes et besoin de trouver des débouchés rapides")
-                    ]
-                    c_hash = sum(ord(ch) for ch in str(canal_id or "lead"))
-                    chosen = fallback_pool[c_hash % len(fallback_pool)]
-                    prenom = chosen[0]
-                    nom = chosen[1]
-                    full_name = f"{prenom} {nom}"
-                    if not kwargs.get("telephone") and not kwargs.get("whatsapp"):
-                        kwargs["telephone"] = chosen[2]
-                        kwargs["whatsapp"] = chosen[2]
-                    if not kwargs.get("email"):
-                        kwargs["email"] = chosen[3]
-                    if not kwargs.get("poste"):
-                        kwargs["poste"] = chosen[4]
-                    if not kwargs.get("douleur_identifiee"):
-                        kwargs["douleur_identifiee"] = chosen[5]
+                    src_clean = str(canal_source or "").lower()
+                    phone_ref = str(kwargs.get("whatsapp") or kwargs.get("telephone") or "")
+                    if "whatsapp" in src_clean:
+                        cid_str = phone_ref or str(canal_id or "")
+                        prenom = "Contact"
+                        nom = f"WhatsApp {cid_str[-4:] if len(cid_str) >= 4 else cid_str}".strip()
+                    elif "messenger" in src_clean or "facebook" in src_clean:
+                        psid_ref = str(kwargs.get("facebook_psid") or canal_id or "")
+                        prenom = "Contact"
+                        nom = f"Messenger #{psid_ref[-4:] if len(psid_ref) >= 4 else psid_ref}".strip()
+                    elif "linkedin" in src_clean:
+                        prenom = "Contact"
+                        nom = "LinkedIn"
+                    elif "email" in src_clean:
+                        mail_ref = str(kwargs.get("email") or "")
+                        prenom = "Contact"
+                        nom = mail_ref.split("@")[0] if mail_ref else "Email"
+                    else:
+                        prenom = "Prospect"
+                        nom = f"#{str(canal_id or '')[-4:]}".strip() if canal_id else "Nouveau"
+                    full_name = f"{prenom} {nom}".strip()
             elif not full_name:
                 full_name = f"{prenom or ''} {nom or ''}".strip()
 

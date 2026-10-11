@@ -810,6 +810,11 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
         available_channels = omnichannel_messenger.get_available_channels(lead)
         messages = get_lead_messages(lead_id, active_channel)
+        if not messages and not requested_channel:
+            all_msgs = get_lead_messages(lead_id, None)
+            if all_msgs:
+                messages = all_msgs
+                active_channel = all_msgs[-1]["channel"]
 
         suggested_pitch = omnichannel_messenger.generate_channel_pitch(lead, active_channel)
         product_item, checkout_url = omnichannel_messenger.get_catalog_link_for_lead(lead)
