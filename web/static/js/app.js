@@ -125,6 +125,7 @@ window.fetch = async function(url, options = {}) {
 };
 
 function showLockScreen() {
+  document.body.classList.add("app-locked");
   const overlay = document.getElementById("auth-lock-overlay");
   if (overlay) {
     overlay.classList.remove("hidden");
@@ -134,9 +135,15 @@ function showLockScreen() {
       setTimeout(() => inp.focus(), 150);
     }
   }
+  try {
+    if (window.lucide && typeof lucide.createIcons === "function") {
+      lucide.createIcons();
+    }
+  } catch (_) {}
 }
 
 function hideLockScreen() {
+  document.body.classList.remove("app-locked");
   const overlay = document.getElementById("auth-lock-overlay");
   if (overlay) {
     overlay.classList.add("hidden");

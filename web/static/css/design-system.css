@@ -1309,3 +1309,34 @@ body {
   color: #475569; 
 }
 
+/* ==========================================================================
+   ECRAN DE VERROUILLAGE TOTAL (AUTHENTIFICATION MASTER PASS)
+   ========================================================================== */
+#auth-lock-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background: #090e1a !important;
+  background: radial-gradient(ellipse at 50% 25%, #1e293b 0%, #090e1a 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+}
+
+#auth-lock-overlay.hidden {
+  display: none !important;
+}
+
+body.app-locked .sidebar,
+body.app-locked .topbar,
+body.app-locked .main-content,
+body.app-locked #modal-backdrop,
+body.app-locked .modal {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
