@@ -327,11 +327,11 @@
 
   <!-- TOP BAR FIXE (FASTY STYLE) -->
   <header class="topbar">
-    <!-- Left: Hamburger Toggle (Desktop & Mobile) & Search Bar -->
+    <!-- Left: Hamburger Toggle (Mobile Only) & Search Bar -->
     <div class="flex items-center gap-3 flex-1 max-w-xl">
-      <!-- Universal Sidebar Toggle (Développer / Réduire le menu latéral) -->
-      <button onclick="toggleSidebarCollapse()" id="btn-sidebar-toggle" class="p-2 rounded-xl text-slate-600 hover:text-[#0062ff] hover:bg-slate-100 flex items-center justify-center transition-all focus:outline-none cursor-pointer border border-transparent hover:border-slate-200" title="Développer / Réduire le menu latéral (Ctrl + B)">
-        <i data-lucide="panel-left" class="w-5 h-5"></i>
+      <!-- Mobile Only Sidebar Toggle -->
+      <button onclick="toggleMobileSidebar()" class="p-2 rounded-xl text-slate-600 hover:text-[#0062ff] hover:bg-slate-100 flex items-center justify-center transition-all focus:outline-none cursor-pointer border border-transparent hover:border-slate-200 md:hidden" title="Ouvrir le menu">
+        <i data-lucide="menu" class="w-5 h-5"></i>
       </button>
 
       <!-- Logo on Mobile Header -->
