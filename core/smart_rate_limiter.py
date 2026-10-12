@@ -64,7 +64,7 @@ class SmartRateLimiter:
         is_safe = remaining > 0
 
         # Statut de rodage
-        health_status = "🟢 Excellent (Sécurisé)" if (current_count / max_quota) < 0.8 else "🟡 Attention (Proche du plafond)"
+        health_status = "Excellent (Sécurisé)" if (current_count / max_quota) < 0.8 else "Attention (Proche du plafond)"
 
         return {
             "channel": channel,

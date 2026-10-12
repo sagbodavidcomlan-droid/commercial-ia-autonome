@@ -28,8 +28,9 @@ class SwarmStrategist:
             {
                 "id": "agent_strategist",
                 "role": "Agent 1 : Stratège & Directeur Adjoint",
-                "avatar": "👔",
-                "status": "Actif 🟢",
+                "avatar_icon": "briefcase",
+                "status": "Actif",
+                "status_type": "active",
                 "mission_actuelle": "Analyse prédictive Monte Carlo & Allocation des canaux",
                 "actions_aujourdhui": 14,
                 "derniere_action": f"{now_time} - Simulation de probabilité de CA validée (78.4%)"
@@ -37,8 +38,9 @@ class SwarmStrategist:
             {
                 "id": "agent_prospector",
                 "role": "Agent 2 : Prospecteur & OSINT Multi-Canal",
-                "avatar": "🔍",
-                "status": "En veille active 🟢",
+                "avatar_icon": "search",
+                "status": "En veille active",
+                "status_type": "standby",
                 "mission_actuelle": "Scan périodique Facebook Ads Library, LinkedIn & TikTok",
                 "actions_aujourdhui": 47,
                 "derniere_action": f"{now_time} - 8 nouveaux profils qualifiés détectés sur Meta Ads"
@@ -46,8 +48,9 @@ class SwarmStrategist:
             {
                 "id": "agent_analyst",
                 "role": "Agent 3 : Analyste DUR & Profilage DISC",
-                "avatar": "🧠",
-                "status": "Actif 🟢",
+                "avatar_icon": "brain",
+                "status": "Actif",
+                "status_type": "active",
                 "mission_actuelle": "Scoring prédictif & Détection psychologique (DISC)",
                 "actions_aujourdhui": 32,
                 "derniere_action": f"{now_time} - Lead Koffi M. classé Profil D (Dominant / Direct)"
@@ -55,8 +58,9 @@ class SwarmStrategist:
             {
                 "id": "agent_closer",
                 "role": "Agent 4 : Closer d'Élite & Négociateur WhatsApp",
-                "avatar": "💼",
-                "status": "En conversation ⚡",
+                "avatar_icon": "message-square-code",
+                "status": "En conversation",
+                "status_type": "busy",
                 "mission_actuelle": "Désamorçage des objections tarifaires & Envoi Mobile Money",
                 "actions_aujourdhui": 28,
                 "derniere_action": f"{now_time} - Argumentaire rentabilité envoyé à Awa D. sur WhatsApp"
@@ -64,8 +68,9 @@ class SwarmStrategist:
             {
                 "id": "agent_customer_success",
                 "role": "Agent 5 : Customer Success & Ambassadeur",
-                "avatar": "🌟",
-                "status": "Actif 🟢",
+                "avatar_icon": "award",
+                "status": "Actif",
+                "status_type": "active",
                 "mission_actuelle": "Envoi des liens de formation, suivi J+7 & Enquêtes NPS",
                 "actions_aujourdhui": 19,
                 "derniere_action": f"{now_time} - Accès Pack délivré à Marcelle K. après validation Wave"
@@ -85,4 +90,4 @@ if __name__ == "__main__":
     print("=== État de l'Unité Commerciale Multi-Agents (Swarm) ===")
     print(f"Santé : {status['swarm_health']} ({status['active_agents_count']} agents actifs)")
     for ag in status["agents"]:
-        print(f"[{ag['avatar']}] {ag['role']} -> {ag['mission_actuelle']}")
+        print(f"[{ag.get('avatar_icon', 'agent')}] {ag['role']} -> {ag['mission_actuelle']}")

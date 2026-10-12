@@ -4160,43 +4160,63 @@ async function loadSwarmStatus() {
     if (totalActionsEl) totalActionsEl.innerText = data.total_collaborative_actions_today || 140;
     if (cumulativeEl) cumulativeEl.innerText = (12400 + (data.total_collaborative_actions_today || 140)).toLocaleString("fr-FR");
 
-    // Palette & thèmes par agent (Xiaodianpu Card Themes)
+    // Palette, icônes SVG & thèmes par agent (Design Vectoriel Invo)
     const agentThemes = {
       "agent_strategist": {
+        icon: "briefcase",
+        iconColor: "text-[#0062ff]",
+        iconBg: "bg-blue-50 border-blue-100",
         borderHover: "hover:border-blue-400",
         badgeBg: "bg-blue-50 text-[#0062ff] border-blue-200",
+        dotColor: "bg-[#0062ff]",
         accentBar: "bg-[#0062ff]",
         tag: "Supervision & Monte Carlo",
         btnText: "Voir Prévisions",
         btnAction: "switchTab('forecasting')"
       },
       "agent_prospector": {
+        icon: "search",
+        iconColor: "text-sky-600",
+        iconBg: "bg-sky-50 border-sky-100",
         borderHover: "hover:border-sky-400",
         badgeBg: "bg-sky-50 text-sky-700 border-sky-200",
+        dotColor: "bg-sky-500",
         accentBar: "bg-sky-500",
         tag: "OSINT Facebook & LinkedIn",
         btnText: "Inspecter Leads",
         btnAction: "switchTab('crm')"
       },
       "agent_analyst": {
+        icon: "brain",
+        iconColor: "text-purple-600",
+        iconBg: "bg-purple-50 border-purple-100",
         borderHover: "hover:border-purple-400",
         badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+        dotColor: "bg-purple-500",
         accentBar: "bg-purple-500",
         tag: "Scoring DUR & DISC",
         btnText: "Voir l'Audit",
         btnAction: "switchTab('audit')"
       },
       "agent_closer": {
+        icon: "message-square-code",
+        iconColor: "text-emerald-600",
+        iconBg: "bg-emerald-50 border-emerald-100",
         borderHover: "hover:border-emerald-400",
         badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        dotColor: "bg-emerald-500",
         accentBar: "bg-emerald-500",
         tag: "Négociation & Closing",
         btnText: "Flux WhatsApp",
         btnAction: "switchTab('history')"
       },
       "agent_customer_success": {
+        icon: "award",
+        iconColor: "text-amber-600",
+        iconBg: "bg-amber-50 border-amber-100",
         borderHover: "hover:border-amber-400",
         badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+        dotColor: "bg-amber-500",
         accentBar: "bg-amber-500",
         tag: "Fidélisation & Suivi J+7",
         btnText: "Catalogue Packs",
@@ -4207,8 +4227,12 @@ async function loadSwarmStatus() {
     if (container && data.agents) {
       container.innerHTML = data.agents.map((ag, idx) => {
         const theme = agentThemes[ag.id] || {
+          icon: "bot",
+          iconColor: "text-[#0062ff]",
+          iconBg: "bg-blue-50 border-blue-100",
           borderHover: "hover:border-blue-300",
           badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+          dotColor: "bg-[#0062ff]",
           accentBar: "bg-[#0062ff]",
           tag: "Agent Collaboratif",
           btnText: "Consulter",
@@ -4216,6 +4240,7 @@ async function loadSwarmStatus() {
         };
 
         const pctProgress = Math.min(100, Math.max(25, (ag.actions_aujourdhui || 10) * 2));
+        const cleanStatus = (ag.status || "Actif").replace(/[🟢🟡🔴⚡👔🔍🧠💼🌟]/g, "").trim();
 
         return `
           <div class="bg-white rounded-3xl p-5 border border-slate-100 ${theme.borderHover} hover:shadow-xs transition-all flex flex-col justify-between space-y-4">
@@ -4223,16 +4248,17 @@ async function loadSwarmStatus() {
             <div class="space-y-3">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-3">
-                  <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shadow-2xs">
-                    ${ag.avatar}
+                  <div class="w-12 h-12 rounded-2xl ${theme.iconBg} border flex items-center justify-center ${theme.iconColor} shadow-2xs">
+                    <i data-lucide="${theme.icon}" class="w-6 h-6"></i>
                   </div>
                   <div>
                     <h4 class="text-sm font-black text-slate-900 tracking-tight">${escapeHtml(ag.role)}</h4>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">${theme.tag}</span>
                   </div>
                 </div>
-                <span class="text-[10px] font-black px-2.5 py-1 rounded-full border ${theme.badgeBg} shadow-2xs whitespace-nowrap">
-                  ${ag.status}
+                <span class="text-[10px] font-black px-2.5 py-1 rounded-full border ${theme.badgeBg} shadow-2xs whitespace-nowrap flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full ${theme.dotColor}"></span>
+                  ${escapeHtml(cleanStatus)}
                 </span>
               </div>
 

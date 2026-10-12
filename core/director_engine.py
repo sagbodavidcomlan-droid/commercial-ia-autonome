@@ -158,9 +158,9 @@ class DirectorEngine:
 
 | Indicateur Clé | Cible Fixée par le Directeur | Réalisé Actuel | Taux d'Atteinte | Évaluation IA |
 | :--- | :--- | :--- | :--- | :--- |
-| **Chiffre d'Affaires** | **{goals.get('target_revenue', 0):,.0f} FCFA** | **{goals.get('current_revenue', 0):,.0f} FCFA** | **{goals.get('revenue_progress_pct')}%** | 🟢 En bonne voie |
-| **Volume de Ventes** | {goals.get('target_conversions')} ventes | {goals.get('current_conversions')} ventes | {goals.get('conversions_progress_pct')}% | 🟢 Solide |
-| **Prospects Qualifiés** | {goals.get('target_leads')} leads | {goals.get('current_leads')} leads | {goals.get('leads_progress_pct')}% | 🟡 Régulier |
+| **Chiffre d'Affaires** | **{goals.get('target_revenue', 0):,.0f} FCFA** | **{goals.get('current_revenue', 0):,.0f} FCFA** | **{goals.get('revenue_progress_pct')}%** | En bonne voie |
+| **Volume de Ventes** | {goals.get('target_conversions')} ventes | {goals.get('current_conversions')} ventes | {goals.get('conversions_progress_pct')}% | Solide |
+| **Prospects Qualifiés** | {goals.get('target_leads')} leads | {goals.get('current_leads')} leads | {goals.get('leads_progress_pct')}% | Régulier |
 
 **Note d'Évaluation Périodique attribuée à l'IA :** `{eval_data['score_evaluation']}/100` (Grade : **{eval_data['grade']} - {eval_data['mention']}**).
 

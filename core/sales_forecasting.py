@@ -83,11 +83,11 @@ class SalesForecastingEngine:
 
         advice = ""
         if probability_pct >= 85:
-            advice = "🟢 Trajectoire ultra-sécurisée. L'objectif sera dépassé selon les projections statistiques."
+            advice = "Trajectoire ultra-sécurisée : L'objectif sera dépassé selon les projections statistiques."
         elif probability_pct >= 60:
-            advice = f"🟡 Objectif atteignable avec une saine intensité. {missing_deals} ventes additionnelles requises pour atteindre 100% de certitude."
+            advice = f"Objectif atteignable avec une saine intensité : {missing_deals} ventes additionnelles requises pour atteindre 100% de certitude."
         else:
-            advice = f"🔴 Alerte décalage : Intensifier le volume d'appels à froid et les relances à 48h. Il manque environ {missing_deals} ventes."
+            advice = f"Alerte décalage : Intensifier le volume d'appels à froid et les relances à 48h. Il manque environ {missing_deals} ventes."
 
         return {
             "target_revenue": target_revenue,
