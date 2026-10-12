@@ -412,13 +412,16 @@
     <!-- SIDEBAR NAVIGATION VITALIY D. STYLE (GLASS FLOAT / EXPAND & COLLAPSE) -->
     <aside id="main-sidebar" class="sidebar sidebar-vitaliy">
       
-      <!-- 1. Top Bar Mac Style (3 Dots Rouge Jaune Vert & Bouton Collapse) -->
+      <!-- 1. Top Bar : Logo Invo Complet & Bouton de Réduction -->
       <div class="vitaliy-header">
-        <div class="vitaliy-mac-dots">
-          <span class="mac-dot mac-dot-red"></span>
-          <span class="mac-dot mac-dot-yellow"></span>
-          <span class="mac-dot mac-dot-green"></span>
+        <!-- Logo Invo Complet (Icone carrée bleue + Typographie Invo.) -->
+        <div class="vitaliy-brand-logo" onclick="showTab('dashboard')" title="Invo - Accueil Dashboard">
+          <div class="vitaliy-brand-icon">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i>
+          </div>
+          <span class="vitaliy-brand-text">Invo<span class="vitaliy-brand-dot">.</span></span>
         </div>
+
         <!-- Desktop Collapse Toggle (Chevron en mode développé / Logo Invo en mode réduit) -->
         <button onclick="toggleSidebarCollapse()" class="vitaliy-collapse-btn hidden md:flex" title="Développer / Réduire le menu (Ctrl + B)">
           <i data-lucide="chevron-left" class="vitaliy-collapse-icon-chevron w-3.5 h-3.5 text-slate-400"></i>

@@ -169,32 +169,36 @@ body {
   padding: 4px 4px 8px 4px;
 }
 
-.vitaliy-mac-dots {
+.vitaliy-brand-logo {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.mac-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
+.vitaliy-brand-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0062ff 0%, #1d4ed8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 98, 255, 0.3);
+  flex-shrink: 0;
 }
 
-.mac-dot-red {
-  background: #ff5f56;
-  box-shadow: 0 0 0 1px #e0443e inset;
+.vitaliy-brand-text {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
 
-.mac-dot-yellow {
-  background: #ffbd2e;
-  box-shadow: 0 0 0 1px #dea123 inset;
-}
-
-.mac-dot-green {
-  background: #27c93f;
-  box-shadow: 0 0 0 1px #1aab29 inset;
+.vitaliy-brand-dot {
+  color: #0062ff;
 }
 
 .vitaliy-collapse-btn {
@@ -561,8 +565,8 @@ body {
   justify-content: center;
 }
 
-.sidebar-vitaliy.collapsed .vitaliy-mac-dots {
-  display: none;
+.sidebar-vitaliy.collapsed .vitaliy-brand-logo {
+  display: none !important;
 }
 
 .sidebar-vitaliy.collapsed .vitaliy-collapse-btn {
