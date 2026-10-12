@@ -4629,6 +4629,69 @@ async function triggerCompetitorHunt() {
   }
 }
 
+// --- MACHINE À CASH MULTI-OFFRES & MULTI-CANAUX ---
+async function triggerMultiOfferCashMachine() {
+  const modal = document.getElementById("modal-autopilot");
+  const modalBody = document.getElementById("autopilot-modal-body");
+  modal.classList.remove("hidden");
+
+  modalBody.innerHTML = `
+    <div class="text-center py-6">
+      <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+      <p class="font-bold text-slate-900 text-sm">Déploiement de la Machine à Cash Multi-Offres...</p>
+      <p class="text-slate-500 text-xs mt-1">Scan du catalogue &bull; Ciblage ICP (LinkedIn, TikTok, FB Ads) &bull; Extraction de leads & matching automatique</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("/api/bd-prospector/hunt-all-offers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ country: "BJ" })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      const summary = result.data?.summary_by_offer || {};
+      const offerRows = Object.entries(summary).map(([name, info]) => `
+        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+          <div>
+            <div class="font-bold text-slate-900">${name}</div>
+            <div class="text-[10px] text-slate-500">${info.prix ? info.prix.toLocaleString() + ' FCFA' : 'Sur devis'}</div>
+          </div>
+          <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px] font-mono">
+            +${info.leads_count} prospect(s)
+          </span>
+        </div>
+      `).join("");
+
+      modalBody.innerHTML = `
+        <div class="space-y-4">
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center justify-between">
+            <span class="font-bold flex items-center gap-2">
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-600"></i>
+              ${result.message}
+            </span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold">${result.data?.total_leads_acquired || 0} leads</span>
+          </div>
+
+          <div class="space-y-2 max-h-72 overflow-y-auto">
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Répartition par Offre du Catalogue :</h4>
+            ${offerRows || '<div class="text-xs text-slate-500 p-2">Aucune offre traitée.</div>'}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+      loadDashboardData();
+      loadLeads("Tous");
+    } else {
+      modalBody.innerHTML = `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">Erreur lors de la traque : ${result.message || result.error}</div>`;
+    }
+  } catch (err) {
+    modalBody.innerHTML = `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">Erreur de communication : ${err.message}</div>`;
+  }
+}
+
 // --- HUB PAIEMENTS & WEBHOOKS ---
 async function generateCheckoutLink() {
   const leadId = document.getElementById("pay-lead-id").value;

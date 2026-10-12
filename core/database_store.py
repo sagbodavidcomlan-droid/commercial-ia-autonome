@@ -1802,10 +1802,34 @@ def get_or_create_lead(
             elif not full_name:
                 full_name = f"{prenom or ''} {nom or ''}".strip()
 
-            phone = kwargs.get("whatsapp") or kwargs.get("telephone") or ""
-            email = kwargs.get("email") or ""
-            psid = kwargs.get("facebook_psid") or ""
-            li_url = kwargs.get("linkedin_url") or ""
+            phone_val = kwargs.get("whatsapp") or kwargs.get("telephone")
+            phone = str(phone_val).strip() if phone_val and str(phone_val).strip() else None
+
+            # Si le téléphone est renseigné, vérifier s'il existe déjà un lead avec ce numéro
+            if phone:
+                c.execute("SELECT id, prenom, nom, nom_complet, conversation_count FROM crm_leads WHERE whatsapp = ? OR telephone = ?", (phone, phone))
+                existing_by_phone = c.fetchone()
+                if existing_by_phone:
+                    lead_id = existing_by_phone[0]
+                    c.execute("""
+                        UPDATE crm_leads 
+                        SET last_contact_at = datetime('now'),
+                            conversation_count = COALESCE(conversation_count, 1) + 1,
+                            updated_at = datetime('now')
+                        WHERE id = ?
+                    """, (lead_id,))
+                    conn.commit()
+                    return lead_id, False
+
+            email_val = kwargs.get("email")
+            email = str(email_val).strip() if email_val and str(email_val).strip() else None
+
+            psid_val = kwargs.get("facebook_psid")
+            psid = str(psid_val).strip() if psid_val and str(psid_val).strip() else None
+
+            li_url_val = kwargs.get("linkedin_url")
+            li_url = str(li_url_val).strip() if li_url_val and str(li_url_val).strip() else None
+
             notes = kwargs.get("notes") or kwargs.get("centre_interet") or ""
             poste = kwargs.get("poste") or "Entrepreneur"
             douleur = kwargs.get("douleur_identifiee") or ""

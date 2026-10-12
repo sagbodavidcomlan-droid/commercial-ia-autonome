@@ -340,6 +340,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_autopilot_run(body)
         elif path == "/api/bd-prospector/hunt":
             self.handle_api_bd_prospector_hunt(body)
+        elif path == "/api/bd-prospector/hunt-all-offers":
+            self.handle_api_bd_prospector_hunt_all_offers(body)
         elif path == "/api/agent/trigger-cycle":
             run_poller_cycle()
             self.send_json_response({"success": True, "status": get_agent_poller_status()})
@@ -1295,6 +1297,24 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "success": False,
                 "error": str(e),
                 "message": f"Erreur lors de la traque des concurrents : {str(e)}"
+            }, status=500)
+
+    def handle_api_bd_prospector_hunt_all_offers(self, body):
+        country = body.get("country", "BJ")
+        try:
+            from core.multi_offer_hunter import MultiOfferHunter
+            hunter = MultiOfferHunter()
+            result = hunter.hunt_for_all_offers(country=country)
+            self.send_json_response({
+                "success": True,
+                "data": result,
+                "message": f"Machine à Cash déployée avec succès ! {result.get('total_leads_acquired', 0)} prospect(s) qualifié(s) capté(s) sur l'ensemble du catalogue d'offres."
+            })
+        except Exception as e:
+            self.send_json_response({
+                "success": False,
+                "error": str(e),
+                "message": f"Erreur lors du déploiement Multi-Offres : {str(e)}"
             }, status=500)
 
     def handle_api_autopilot_status(self):
