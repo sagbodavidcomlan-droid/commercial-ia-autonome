@@ -407,97 +407,161 @@
     <!-- Mobile Backdrop Overlay -->
     <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-30 hidden md:hidden transition-opacity"></div>
 
-    <!-- LEFT SIDEBAR NAVIGATION (240px FIXE FASTY) -->
-    <aside id="main-sidebar" class="sidebar">
-      <!-- Logo Invo. + Desktop Collapse & Mobile Close -->
-      <div class="sidebar-logo justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="sidebar-logo-icon">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>
-          </div>
-          <span>Invo<span class="text-[#0062ff]">.</span></span>
+    <!-- SIDEBAR NAVIGATION VITALIY D. STYLE (GLASS FLOAT / EXPAND & COLLAPSE) -->
+    <aside id="main-sidebar" class="sidebar sidebar-vitaliy">
+      
+      <!-- 1. Top Bar Mac Style (3 Dots Rouge Jaune Vert & Bouton Collapse) -->
+      <div class="vitaliy-header">
+        <div class="vitaliy-mac-dots">
+          <span class="mac-dot mac-dot-red"></span>
+          <span class="mac-dot mac-dot-yellow"></span>
+          <span class="mac-dot mac-dot-green"></span>
         </div>
-        <!-- Desktop Collapse Button -->
-        <button onclick="toggleSidebarCollapse()" class="hidden md:flex text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors" title="Réduire le menu (Ctrl + B)">
-          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        <!-- Desktop Collapse Chevron Toggle -->
+        <button onclick="toggleSidebarCollapse()" class="vitaliy-collapse-btn hidden md:flex" title="Développer / Réduire le menu (Ctrl + B)">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
         </button>
-        <!-- Mobile close button -->
-        <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100" title="Fermer le menu">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <div class="sidebar-nav">
-        <div class="nav-section-title">Opérations</div>
-
-        <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-item active">
-          <i data-lucide="layout-dashboard" class="nav-icon"></i>
-          <span>Dashboard</span>
-        </button>
-
-        <button onclick="showTab('crm')" id="nav-crm" class="nav-item">
-          <i data-lucide="users" class="nav-icon"></i>
-          <span>CRM Leads</span>
-        </button>
-
-        <button onclick="showTab('audit')" id="nav-audit" class="nav-item">
-          <i data-lucide="microscope" class="nav-icon"></i>
-          <span>Audit Médico-Légal</span>
-        </button>
-
-        <button onclick="showTab('simulator')" id="nav-simulator" class="nav-item">
-          <i data-lucide="messages-square" class="nav-icon"></i>
-          <span>Conversations</span>
-        </button>
-
-        <button onclick="showTab('pipeline')" id="nav-pipeline" class="nav-item">
-          <i data-lucide="columns-3" class="nav-icon"></i>
-          <span>Pipeline</span>
-        </button>
-
-        <button onclick="showTab('director')" id="nav-director" class="nav-item">
-          <i data-lucide="bar-chart-3" class="nav-icon"></i>
-          <span>Analytics</span>
-        </button>
-
-        <button onclick="showTab('catalog')" id="nav-catalog" class="nav-item">
-          <i data-lucide="package" class="nav-icon"></i>
-          <span>Catalogue</span>
-        </button>
-
-        <button onclick="showTab('agenda')" id="nav-agenda" class="nav-item">
-          <i data-lucide="calendar-days" class="nav-icon"></i>
-          <span>Calendrier</span>
-        </button>
-
-        <button onclick="showTab('creative')" id="nav-creative" class="nav-item">
-          <i data-lucide="palette" class="nav-icon"></i>
-          <span>Studio Créatif</span>
-        </button>
-
-        <button onclick="showTab('history')" id="nav-history" class="nav-item">
-          <i data-lucide="history" class="nav-icon"></i>
-          <span>Historique</span>
-        </button>
-
-        <div class="nav-section-title">Configuration</div>
-
-        <button onclick="showTab('settings')" id="nav-settings" class="nav-item">
-          <i data-lucide="sliders-horizontal" class="nav-icon"></i>
-          <span>Paramètres</span>
+        <!-- Mobile Close Button -->
+        <button onclick="toggleMobileSidebar()" class="vitaliy-collapse-btn md:hidden" title="Fermer le menu">
+          <i data-lucide="x" class="w-3.5 h-3.5 text-slate-400"></i>
         </button>
       </div>
 
-      <!-- Bottom Mini-Info (Fasty Status) -->
-      <div class="sidebar-footer">
-        <div class="agent-status-mini">
-          <div class="flex items-center">
-            <span class="status-dot"></span>
-            <strong class="text-slate-800 text-xs">Agent IA Actif</strong>
-          </div>
-          <span class="text-[11px] text-slate-500">Ronde toutes les 2 min</span>
+      <!-- 2. Profil Utilisateur (Avatar Dave + Salutation) -->
+      <div class="vitaliy-user-card" onclick="showTab('settings')" title="Paramètres du Profil">
+        <div class="vitaliy-user-avatar">
+          <span>DS</span>
+        </div>
+        <div class="vitaliy-user-info">
+          <div class="vitaliy-user-greeting">Bonjour 👋</div>
+          <div class="vitaliy-user-name">Dave Sagbo</div>
         </div>
       </div>
+
+      <!-- 3. Navigation Principale (Menu: 8) -->
+      <div class="vitaliy-nav-scroll">
+        <div class="vitaliy-section-header">
+          <span>Menu</span>
+          <span class="vitaliy-count-badge">8</span>
+        </div>
+
+        <div class="vitaliy-nav-list">
+          <button onclick="showTab('dashboard')" id="nav-dashboard" class="vitaliy-nav-item active" title="Dashboard">
+            <i data-lucide="layout-grid" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">Dashboard</span>
+          </button>
+
+          <button onclick="showTab('crm')" id="nav-crm" class="vitaliy-nav-item" title="CRM Leads">
+            <i data-lucide="users" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">CRM Leads</span>
+          </button>
+
+          <button onclick="showTab('pipeline')" id="nav-pipeline" class="vitaliy-nav-item" title="Pipeline Commercial">
+            <i data-lucide="kanban" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">Pipeline Ventes</span>
+          </button>
+
+          <button onclick="showTab('agenda')" id="nav-agenda" class="vitaliy-nav-item justify-between" title="Calendrier">
+            <div class="flex items-center gap-3">
+              <i data-lucide="calendar" class="vitaliy-nav-icon"></i>
+              <span class="vitaliy-nav-label">Calendrier</span>
+            </div>
+            <span onclick="event.stopPropagation(); openAddCalendarEventModal();" class="vitaliy-item-action" title="Ajouter un RDV">+</span>
+          </button>
+
+          <button onclick="showTab('simulator')" id="nav-simulator" class="vitaliy-nav-item justify-between" title="Conversations">
+            <div class="flex items-center gap-3">
+              <i data-lucide="mail" class="vitaliy-nav-icon"></i>
+              <span class="vitaliy-nav-label">Conversations</span>
+            </div>
+            <span class="vitaliy-badge-pill">4</span>
+          </button>
+
+          <button onclick="showTab('director')" id="nav-director" class="vitaliy-nav-item" title="Console Directeur & Quotas">
+            <i data-lucide="pie-chart" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">Console Directeur</span>
+          </button>
+
+          <button onclick="showTab('catalog')" id="nav-catalog" class="vitaliy-nav-item" title="Catalogue Produits">
+            <i data-lucide="shopping-bag" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">Catalogue</span>
+          </button>
+
+          <button onclick="showTab('creative')" id="nav-creative" class="vitaliy-nav-item" title="Studio Créatif IA">
+            <i data-lucide="sparkles" class="vitaliy-nav-icon"></i>
+            <span class="vitaliy-nav-label">Studio Créatif</span>
+          </button>
+        </div>
+
+        <!-- 4. Carte Intégrations & Services (Jira, Slack, WhatsApp, Meta) -->
+        <div class="vitaliy-section-header mt-4">
+          <span>Canaux & IA</span>
+          <span class="vitaliy-count-badge">4</span>
+        </div>
+
+        <div class="vitaliy-services-card">
+          <div class="vitaliy-service-item" onclick="openWhatsAppQrModal()" title="WhatsApp Business">
+            <div class="vitaliy-service-icon bg-emerald-50 text-emerald-600">
+              <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="vitaliy-service-label">WhatsApp Live</span>
+          </div>
+
+          <div class="vitaliy-service-item" onclick="showTab('swarm')" title="Essaim Multi-Agents">
+            <div class="vitaliy-service-icon bg-blue-50 text-[#0062ff]">
+              <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="vitaliy-service-label">Swarm Agents</span>
+          </div>
+
+          <div class="vitaliy-service-item" onclick="showTab('audit')" title="Audit Médico-Légal">
+            <div class="vitaliy-service-icon bg-purple-50 text-purple-600">
+              <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="vitaliy-service-label">Audit DUR & DISC</span>
+          </div>
+
+          <div class="vitaliy-service-item" onclick="triggerAutopilotSprint()" title="Déclencher Sprint IA">
+            <div class="vitaliy-service-icon bg-amber-50 text-amber-600">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="vitaliy-service-label">Sprint Autonome</span>
+          </div>
+        </div>
+
+        <!-- 5. Barre d'Outils Paramètres (Icônes Compactes) -->
+        <div class="vitaliy-section-header mt-3">
+          <span>Outils & Config</span>
+        </div>
+
+        <div class="vitaliy-settings-bar">
+          <button onclick="showTab('history')" id="nav-history" class="vitaliy-tool-btn" title="Historique">
+            <i data-lucide="history" class="w-4 h-4"></i>
+          </button>
+          <button onclick="window.open('/api/export/dossier', '_blank')" class="vitaliy-tool-btn" title="Dossier PDF">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+          </button>
+          <button onclick="openSwarmGuideModal()" class="vitaliy-tool-btn" title="Guide de l'Essaim">
+            <i data-lucide="help-circle" class="w-4 h-4"></i>
+          </button>
+          <button onclick="showTab('settings')" id="nav-settings" class="vitaliy-tool-btn" title="Paramètres">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+          </button>
+          <button onclick="logoutAdmin()" class="vitaliy-tool-btn" title="Verrouiller la session">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 6. Gros Bouton Flottant Circulaire d'Action Rapide (+ Nouveau RDV) -->
+      <div class="vitaliy-action-footer">
+        <button onclick="openAddCalendarEventModal()" class="vitaliy-add-btn" title="Créer un nouveau rendez-vous ou tâche">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+          <span class="vitaliy-add-btn-text">Nouveau RDV</span>
+        </button>
+      </div>
+
     </aside>
 
     <!-- MAIN VIEW AREA (FASTY LAYOUT) -->

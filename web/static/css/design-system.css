@@ -145,6 +145,453 @@ body {
   margin: 0;
 }
 
+/* ==========================================================================
+   SIDEBAR VITALIY D. STYLE (EXPANDED & COLLAPSED)
+   ========================================================================== */
+.sidebar-vitaliy {
+  width: 250px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 4px 0 24px -4px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 14px;
+  gap: 12px;
+}
+
+/* Top Bar: Mac Dots + Collapse button */
+.vitaliy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px 4px;
+}
+
+.vitaliy-mac-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mac-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.mac-dot-red {
+  background: #ff5f56;
+  box-shadow: 0 0 0 1px #e0443e inset;
+}
+
+.mac-dot-yellow {
+  background: #ffbd2e;
+  box-shadow: 0 0 0 1px #dea123 inset;
+}
+
+.mac-dot-green {
+  background: #27c93f;
+  box-shadow: 0 0 0 1px #1aab29 inset;
+}
+
+.vitaliy-collapse-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vitaliy-collapse-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* User Profile Card */
+.vitaliy-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vitaliy-user-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.vitaliy-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0062ff 0%, #3b82f6 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 98, 255, 0.25);
+}
+
+.vitaliy-user-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  line-height: 1.25;
+}
+
+.vitaliy-user-greeting {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.vitaliy-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nav Scroll Area */
+.vitaliy-nav-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 2px;
+}
+
+.vitaliy-nav-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.vitaliy-nav-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.vitaliy-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.vitaliy-count-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Nav Item Pill */
+.vitaliy-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.vitaliy-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.vitaliy-nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.vitaliy-nav-item.active {
+  background: #0062ff !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 98, 255, 0.32);
+}
+
+.vitaliy-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #64748b;
+  transition: color 0.18s ease;
+}
+
+.vitaliy-nav-item:hover .vitaliy-nav-icon {
+  color: #0f172a;
+}
+
+.vitaliy-nav-item.active .vitaliy-nav-icon {
+  color: #ffffff !important;
+}
+
+.vitaliy-nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vitaliy-item-action {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vitaliy-item-action:hover {
+  background: #0062ff;
+  color: #ffffff;
+}
+
+.vitaliy-nav-item.active .vitaliy-item-action {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.vitaliy-badge-pill {
+  font-size: 10px;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  border: 1px solid #fee2e2;
+}
+
+.vitaliy-nav-item.active .vitaliy-badge-pill {
+  background: #ffffff;
+  color: #0062ff;
+  border-color: #ffffff;
+}
+
+/* Services Card */
+.vitaliy-services-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vitaliy-service-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vitaliy-service-item:hover {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.vitaliy-service-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vitaliy-service-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Settings & Tools Bar */
+.vitaliy-settings-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 4px;
+  margin-top: 4px;
+}
+
+.vitaliy-tool-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vitaliy-tool-btn:hover {
+  background: #ffffff;
+  color: #0062ff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Action Footer: + Nouveau RDV */
+.vitaliy-action-footer {
+  padding-top: 4px;
+}
+
+.vitaliy-add-btn {
+  width: 100%;
+  height: 42px;
+  background: #0062ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 98, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.vitaliy-add-btn:hover {
+  background: #0052d9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 98, 255, 0.38);
+}
+
+/* ==========================================================================
+   COLLAPSED MODE VITALIY D. (72px Mini-Rail)
+   ========================================================================== */
+.sidebar-vitaliy.collapsed {
+  width: 72px;
+  padding: 16px 10px;
+  align-items: center;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-header {
+  width: 100%;
+  justify-content: center;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-mac-dots {
+  display: none;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-collapse-btn {
+  transform: rotate(180deg);
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-user-card {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  border: none;
+  background: transparent;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-user-info,
+.sidebar-vitaliy.collapsed .vitaliy-section-header,
+.sidebar-vitaliy.collapsed .vitaliy-nav-label,
+.sidebar-vitaliy.collapsed .vitaliy-item-action,
+.sidebar-vitaliy.collapsed .vitaliy-badge-pill,
+.sidebar-vitaliy.collapsed .vitaliy-services-card,
+.sidebar-vitaliy.collapsed .vitaliy-settings-bar,
+.sidebar-vitaliy.collapsed .vitaliy-add-btn-text {
+  display: none !important;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-nav-scroll {
+  width: 100%;
+  padding-right: 0;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-nav-item {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-nav-icon {
+  margin: 0;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-action-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-add-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+}
+
 .sidebar-logo {
   height: 64px;
   display: flex;
