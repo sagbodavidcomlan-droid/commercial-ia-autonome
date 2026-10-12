@@ -5381,6 +5381,67 @@ function getRelativeTimeStr(dateStr) {
   }
 }
 
+let historyDistributionChartInstance = null;
+
+function renderHistoryDistributionChart(counts) {
+  const canvas = document.getElementById("chart-history-distribution");
+  if (!canvas) return;
+
+  const durCount = counts["QUALIFICATION_DUR"] || 0;
+  const waCount = counts["CLOSING_WHATSAPP"] || 0;
+  const socialCount = (counts["MESSENGER_FACEBOOK"] || 0) + (counts["LINKEDIN_MESSAGING"] || 0) + (counts["PROSPECTION"] || 0);
+  const salesCount = counts["VENTE_PAIEMENT"] || 0;
+
+  const dataValues = [durCount, waCount, socialCount, salesCount];
+  const allZero = dataValues.every(v => v === 0);
+  const chartData = allZero ? [1, 1, 1, 1] : dataValues;
+  const chartColors = allZero 
+    ? ["#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b"] 
+    : ["#a855f7", "#10b981", "#0062ff", "#f59e0b"];
+
+  if (historyDistributionChartInstance) {
+    historyDistributionChartInstance.data.datasets[0].data = chartData;
+    historyDistributionChartInstance.data.datasets[0].backgroundColor = chartColors;
+    historyDistributionChartInstance.update('none'); // Update smoothly without full animation reset
+    return;
+  }
+
+  if (typeof Chart === "undefined") return;
+
+  const ctx = canvas.getContext("2d");
+  historyDistributionChartInstance = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["DUR", "WhatsApp", "Social", "Ventes"],
+      datasets: [{
+        data: chartData,
+        backgroundColor: chartColors,
+        borderWidth: 2,
+        borderColor: "#ffffff",
+        hoverOffset: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "75%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: !allZero,
+          callbacks: {
+            label: function(context) {
+              const label = context.label || "";
+              const val = context.raw || 0;
+              return ` ${label} : ${val} actions`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 async function loadHistoryFeed(isSilent = false) {
   const container = document.getElementById("history-feed-container");
   if (!container) return;
@@ -5397,8 +5458,9 @@ async function loadHistoryFeed(isSilent = false) {
 
     const logs = data.logs || [];
     const counts = data.category_counts || {};
+    const totalCount = data.total || logs.length || 0;
 
-    // Mettre à jour les compteurs KPI
+    // 1. Mettre à jour les compteurs KPI PBD
     const totalEl = document.getElementById("hist-stat-total");
     const durEl = document.getElementById("hist-stat-dur");
     const waEl = document.getElementById("hist-stat-whatsapp");
@@ -5406,7 +5468,7 @@ async function loadHistoryFeed(isSilent = false) {
     const badgeEl = document.getElementById("history-items-count-badge");
     const syncTimeEl = document.getElementById("history-last-sync-time");
 
-    if (totalEl) totalEl.innerText = data.total || 0;
+    if (totalEl) totalEl.innerText = totalCount;
     if (durEl) durEl.innerText = counts["QUALIFICATION_DUR"] || 0;
     if (waEl) waEl.innerText = counts["CLOSING_WHATSAPP"] || 0;
     if (salesEl) salesEl.innerText = counts["VENTE_PAIEMENT"] || 0;
@@ -5416,9 +5478,40 @@ async function loadHistoryFeed(isSilent = false) {
       syncTimeEl.innerText = `Synchronisé à ${now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
     }
 
+    // 2. Barres de progression PBD Analytics
+    const durVal = counts["QUALIFICATION_DUR"] || 0;
+    const waVal = counts["CLOSING_WHATSAPP"] || 0;
+    const socialVal = (counts["MESSENGER_FACEBOOK"] || 0) + (counts["LINKEDIN_MESSAGING"] || 0) + (counts["PROSPECTION"] || 0);
+    const salesVal = counts["VENTE_PAIEMENT"] || 0;
+    const refMax = Math.max(totalCount, 1);
+
+    const durBarVal = document.getElementById("pbd-bar-dur-val");
+    const durBar = document.getElementById("pbd-bar-dur");
+    if (durBarVal) durBarVal.innerText = durVal;
+    if (durBar) durBar.style.width = `${Math.min(100, Math.round((durVal / refMax) * 100))}%`;
+
+    const waBarVal = document.getElementById("pbd-bar-wa-val");
+    const waBar = document.getElementById("pbd-bar-wa");
+    if (waBarVal) waBarVal.innerText = waVal;
+    if (waBar) waBar.style.width = `${Math.min(100, Math.round((waVal / refMax) * 100))}%`;
+
+    const socialBarVal = document.getElementById("pbd-bar-social-val");
+    const socialBar = document.getElementById("pbd-bar-social");
+    if (socialBarVal) socialBarVal.innerText = socialVal;
+    if (socialBar) socialBar.style.width = `${Math.min(100, Math.round((socialVal / refMax) * 100))}%`;
+
+    const salesBarVal = document.getElementById("pbd-bar-sales-val");
+    const salesBar = document.getElementById("pbd-bar-sales");
+    if (salesBarVal) salesBarVal.innerText = salesVal;
+    if (salesBar) salesBar.style.width = `${Math.min(100, Math.round((salesVal / refMax) * 100))}%`;
+
+    // 3. Mettre à jour le Donut Chart
+    renderHistoryDistributionChart(counts);
+
+    // 4. Rendu de la liste d'activités (Style PBD Activity Card)
     if (logs.length === 0) {
       container.innerHTML = `
-        <div class="p-12 text-center text-slate-400 text-xs">
+        <div class="p-10 text-center text-slate-400 text-xs">
           <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
           Aucune action enregistrée pour le moment dans cette catégorie.
         </div>
@@ -5427,28 +5520,27 @@ async function loadHistoryFeed(isSilent = false) {
       return;
     }
 
-    // Icônes & Couleurs par catégorie
     const catConfig = {
-      "PROSPECTION": { icon: "radar", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Prospection & Ads" },
-      "QUALIFICATION_DUR": { icon: "brain-circuit", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Qualification DUR" },
-      "MESSENGER_FACEBOOK": { icon: "facebook", bg: "bg-blue-50 text-blue-700 border-blue-200/60", label: "Messenger Facebook" },
-      "LINKEDIN_MESSAGING": { icon: "linkedin", bg: "bg-sky-50 text-sky-800 border-sky-200/60", label: "LinkedIn B2B" },
-      "EMAIL_CLOSING": { icon: "mail", bg: "bg-purple-50 text-purple-700 border-purple-200/60", label: "Emailing Pro" },
-      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", label: "Closing WhatsApp" },
-      "VENTE_PAIEMENT": { icon: "badge-dollar-sign", bg: "bg-amber-50 text-amber-700 border-amber-200/60", label: "Vente & Paiement" },
-      "PATROUILLE": { icon: "zap", bg: "bg-rose-50 text-rose-700 border-rose-200/60", label: "Patrouille Autonome" },
-      "CONFORMITE_RGPD": { icon: "shield-check", bg: "bg-teal-50 text-teal-700 border-teal-200/60", label: "Conformité RGPD" }
+      "PROSPECTION": { icon: "radar", bg: "bg-blue-50 text-blue-700 border-blue-200/60", badgeColor: "bg-blue-50 text-blue-700", label: "Prospection & Ads" },
+      "QUALIFICATION_DUR": { icon: "brain-circuit", bg: "bg-purple-50 text-purple-700 border-purple-200/60", badgeColor: "bg-purple-50 text-purple-700", label: "Qualification DUR" },
+      "MESSENGER_FACEBOOK": { icon: "facebook", bg: "bg-blue-50 text-blue-700 border-blue-200/60", badgeColor: "bg-blue-50 text-blue-700", label: "Messenger Facebook" },
+      "LINKEDIN_MESSAGING": { icon: "linkedin", bg: "bg-sky-50 text-sky-800 border-sky-200/60", badgeColor: "bg-sky-50 text-sky-800", label: "LinkedIn B2B" },
+      "EMAIL_CLOSING": { icon: "mail", bg: "bg-purple-50 text-purple-700 border-purple-200/60", badgeColor: "bg-purple-50 text-purple-700", label: "Emailing Pro" },
+      "CLOSING_WHATSAPP": { icon: "message-circle", bg: "bg-emerald-50 text-emerald-700 border-emerald-200/60", badgeColor: "bg-emerald-50 text-emerald-700", label: "Closing WhatsApp" },
+      "VENTE_PAIEMENT": { icon: "badge-dollar-sign", bg: "bg-amber-50 text-amber-700 border-amber-200/60", badgeColor: "bg-amber-50 text-amber-700", label: "Vente & Paiement" },
+      "PATROUILLE": { icon: "zap", bg: "bg-rose-50 text-rose-700 border-rose-200/60", badgeColor: "bg-rose-50 text-rose-700", label: "Patrouille Autonome" },
+      "CONFORMITE_RGPD": { icon: "shield-check", bg: "bg-teal-50 text-teal-700 border-teal-200/60", badgeColor: "bg-teal-50 text-teal-700", label: "Conformité RGPD" }
     };
 
     let html = "";
     logs.forEach(log => {
-      const cfg = catConfig[log.category] || { icon: "activity", bg: "bg-slate-100 text-slate-700 border-slate-200", label: log.category };
+      const cfg = catConfig[log.category] || { icon: "activity", bg: "bg-slate-50 text-slate-700 border-slate-200", badgeColor: "bg-slate-100 text-slate-700", label: log.category || "Action" };
       const relTime = getRelativeTimeStr(log.timestamp);
       
       const statusBadge = log.status === "PAID"
         ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">ENCAISSÉ</span>'
         : (log.status === "CLOSING"
-          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">CLOSING</span>'
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-[#0062ff] border border-blue-200">CLOSING</span>'
           : (log.status === "SUCCESS"
             ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">RÉUSSI</span>'
             : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">INFO</span>'));
@@ -5460,40 +5552,46 @@ async function loadHistoryFeed(isSilent = false) {
         : (log.lead_phone && log.lead_phone !== "N/A" ? `<span class="text-[11px] text-slate-400 font-mono">${escapeHtml(log.lead_phone)}</span>` : '');
 
       html += `
-        <div class="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-start justify-between gap-3">
-          <div class="flex items-start gap-3.5">
-            <div class="p-2.5 rounded-xl border ${cfg.bg} flex-shrink-0 mt-0.5 shadow-2xs">
-              <i data-lucide="${cfg.icon}" class="w-4 h-4"></i>
-            </div>
-            <div class="space-y-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-extrabold text-slate-900">${escapeHtml(log.action)}</span>
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border ${cfg.bg}">${cfg.label}</span>
-                ${statusBadge}
+        <div class="p-3.5 bg-white rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-xs transition-all space-y-2">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 border ${cfg.bg}">
+                <i data-lucide="${cfg.icon}" class="w-3.5 h-3.5"></i>
               </div>
-
-              ${log.lead_name ? `
-                <div class="flex items-center gap-2 text-xs text-slate-700 font-semibold">
-                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
-                  <span>${escapeHtml(log.lead_name)}</span>
-                  ${phoneLink ? `&bull; ${phoneLink}` : ''}
+              <div class="min-w-0">
+                <h4 class="text-xs font-black text-slate-900 truncate tracking-tight">${escapeHtml(log.action)}</h4>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <span class="text-[10px] font-semibold text-slate-500">${cfg.label}</span>
                 </div>
-              ` : ''}
-
-              ${log.details ? `
-                <p class="text-xs text-slate-600 font-normal bg-slate-50/90 rounded-lg p-2 border border-slate-100 mt-1 max-w-3xl">
-                  ${escapeHtml(log.details)}
-                </p>
-              ` : ''}
+              </div>
+            </div>
+            <div class="flex-shrink-0 text-right">
+              ${statusBadge}
             </div>
           </div>
 
-          <div class="flex-shrink-0 text-right md:pt-1">
-            <span class="inline-flex items-center gap-1 text-xs font-bold text-slate-500">
-              <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+          ${log.lead_name ? `
+            <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-50">
+              <span class="font-bold text-slate-800 flex items-center gap-1 truncate">
+                <i data-lucide="user" class="w-3 h-3 text-slate-400 flex-shrink-0"></i>
+                <span class="truncate">${escapeHtml(log.lead_name)}</span>
+              </span>
+              ${phoneLink ? `<div class="flex-shrink-0">${phoneLink}</div>` : ''}
+            </div>
+          ` : ''}
+
+          ${log.details ? `
+            <p class="text-[11px] text-slate-600 font-normal bg-slate-50/80 rounded-xl p-2 border border-slate-100 leading-relaxed">
+              ${escapeHtml(log.details)}
+            </p>
+          ` : ''}
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-50">
+            <span class="inline-flex items-center gap-1 font-semibold text-slate-500">
+              <i data-lucide="clock" class="w-3 h-3 text-slate-400"></i>
               ${relTime}
             </span>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${escapeHtml(log.timestamp)}</div>
+            <span class="font-mono text-slate-400">${escapeHtml(log.timestamp ? log.timestamp.split(" ")[1] || log.timestamp : '')}</span>
           </div>
         </div>
       `;
