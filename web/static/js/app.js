@@ -1034,6 +1034,67 @@ function navigateAgendaPeriod(delta) {
   renderCalendar(calCurrentMonth, calCurrentYear);
 }
 
+let agendaDonutChartInstance = null;
+
+function renderAgendaDonutChart(events) {
+  const canvas = document.getElementById("chart-agenda-donut");
+  if (!canvas) return;
+
+  let demoCount = 0;
+  let closingCount = 0;
+  let relanceCount = 0;
+
+  events.forEach(e => {
+    if (e.event_type === "rdv_client") demoCount++;
+    else if (e.event_type === "closing") closingCount++;
+    else relanceCount++;
+  });
+
+  const total = demoCount + closingCount + relanceCount;
+  const chartData = total === 0 ? [1, 1, 1] : [demoCount || 1, closingCount || 1, relanceCount || 1];
+  const chartColors = total === 0 ? ["#e2e8f0", "#cbd5e1", "#94a3b8"] : ["#0062ff", "#10b981", "#f59e0b"];
+
+  if (agendaDonutChartInstance) {
+    agendaDonutChartInstance.data.datasets[0].data = chartData;
+    agendaDonutChartInstance.data.datasets[0].backgroundColor = chartColors;
+    agendaDonutChartInstance.update('none');
+    return;
+  }
+
+  if (typeof Chart === "undefined") return;
+
+  const ctx = canvas.getContext("2d");
+  agendaDonutChartInstance = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Démos", "Closings", "Relances"],
+      datasets: [{
+        data: chartData,
+        backgroundColor: chartColors,
+        borderWidth: 2,
+        borderColor: "#ffffff",
+        hoverOffset: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "70%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: total > 0,
+          callbacks: {
+            label: function(ctx) {
+              return ` ${ctx.label} : ${ctx.raw} tâches`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
 async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
   calCurrentMonth = month;
   calCurrentYear = year;
@@ -1045,11 +1106,22 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
 
   const events = await loadCalendarEvents(month, year);
   
-  // Mettre à jour le compteur global de missions
+  // 1. Mettre à jour les Top Cards ClickUp
   const totalCountEl = document.getElementById("agenda-total-events-count");
-  if (totalCountEl) {
-    totalCountEl.textContent = `${events.length} missions`;
-  }
+  const statTotalEl = document.getElementById("agenda-stat-total");
+  const statInProgressEl = document.getElementById("agenda-stat-inprogress");
+  const statCompletedEl = document.getElementById("agenda-stat-completed");
+
+  const inProgressCount = events.filter(e => e.status === "en_cours" || e.status === "planifie").length;
+  const completedCount = events.filter(e => e.status === "termine").length;
+
+  if (totalCountEl) totalCountEl.textContent = `${events.length} missions`;
+  if (statTotalEl) statTotalEl.textContent = events.length;
+  if (statInProgressEl) statInProgressEl.textContent = inProgressCount;
+  if (statCompletedEl) statCompletedEl.textContent = completedCount;
+
+  // 2. Rendu du Donut Chart ClickUp
+  renderAgendaDonutChart(events);
 
   const gridEl = document.getElementById("calendar-month-grid");
   if (!gridEl) return;
@@ -1063,7 +1135,7 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
 
   // 1. Cases vides pour aligner sur le jour de départ (Lundi = col 0)
   for (let i = 0; i < startDayOfWeek; i++) {
-    html += `<div class="py-1 text-white/20 select-none">-</div>`;
+    html += `<div class="py-1 text-slate-300 select-none">-</div>`;
   }
 
   // 2. Cases du mois actif
@@ -1074,18 +1146,17 @@ async function renderCalendar(month = calCurrentMonth, year = calCurrentYear) {
     const isToday = dStr === todayStr;
     const isSelected = dStr === calSelectedDate;
 
-    let dayClass = "py-1.5 rounded-xl cursor-pointer transition hover:bg-white/20 font-bold relative text-white";
-    let inlineStyle = "color: #ffffff !important;";
+    let dayClass = "py-1.5 rounded-xl cursor-pointer transition hover:bg-slate-100 font-bold relative text-slate-700";
+    let inlineStyle = "";
     if (isSelected) {
-      dayClass = "mini-cal-day-active py-1.5 rounded-xl font-black shadow-md relative";
-      inlineStyle = "background-color: #ffffff !important; color: #0062ff !important;";
+      dayClass = "mini-cal-day-active py-1.5 rounded-xl font-black shadow-xs relative bg-[#0062ff] text-white";
+      inlineStyle = "background-color: #0062ff !important; color: #ffffff !important;";
     } else if (isToday) {
-      dayClass = "py-1.5 rounded-xl font-bold border border-white/30 relative text-white";
-      inlineStyle = "background-color: rgba(255, 255, 255, 0.15) !important; color: #ffffff !important;";
+      dayClass = "py-1.5 rounded-xl font-black border border-blue-200 text-[#0062ff] bg-blue-50/60 relative";
     }
 
     const dotHtml = (dayEvents.length > 0 && !isSelected) 
-      ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white shadow-xs"></span>` 
+      ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#0062ff] shadow-xs"></span>` 
       : '';
 
     html += `

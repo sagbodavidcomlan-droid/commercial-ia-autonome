@@ -1080,159 +1080,302 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 3 : CALENDRIER COMMERCIAL INTERACTIF (DESIGN INVO BRAND) ==================== -->
+      <!-- ==================== TAB 3 : CALENDRIER COMMERCIAL INTERACTIF (DESIGN CLICKUP PROJECT DASHBOARD) ==================== -->
       <section id="tab-agenda" class="tab-pane hidden space-y-6">
         
-        <!-- Conteneur Maître Invo Bleu Royal avec Dégradé Élégant -->
-        <div class="bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#1d4ed8] rounded-3xl p-6 sm:p-8 text-slate-800 shadow-2xl space-y-6 select-none transition-all">
-          
-          <!-- Top Bar Invo Calendar -->
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/20 pb-5">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] font-black uppercase tracking-wider text-blue-100 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  Invo Calendar &bull; Dave Sagbo
-                </span>
-              </div>
-              <h2 class="text-2xl font-black text-white tracking-tight">Mon Calendrier Commercial</h2>
-              <p class="text-xs text-blue-100/90 font-medium">Planification autonome des prospections, rendez-vous démo et relances de closing.</p>
+        <!-- En-tête Supérieur ClickUp : Titre, Vues & Action Principale -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                PLANNING COMMERCIAL & PILOTAGE DES TÂCHES
+              </span>
+              <span class="text-xs text-slate-400 font-bold">&bull;</span>
+              <span class="text-xs text-slate-500 font-semibold" id="agenda-total-events-count">0 missions</span>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2.5">
+              <span>Tableau de Bord & Agenda Opérationnel</span>
+            </h2>
+          </div>
+
+          <!-- Contrôles Vues (Overview / Timeline / Semaine / Mois) + Bouton + New ClickUp -->
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center bg-slate-100/80 p-1 rounded-2xl border border-slate-200">
+              <button onclick="setAgendaViewMode('daily')" id="agenda-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Vue Jour</button>
+              <button onclick="setAgendaViewMode('weekly')" id="agenda-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-white text-[#0062ff] shadow-2xs">Semaine</button>
+              <button onclick="setAgendaViewMode('monthly')" id="agenda-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Mois</button>
             </div>
 
-            <!-- Contrôles Vues & Métriques -->
-            <div class="flex flex-wrap items-center gap-3">
-              <!-- Switch Vue Jour / Semaine / Mois -->
-              <div class="flex items-center bg-black/25 p-1 rounded-2xl backdrop-blur-md border border-white/15">
-                <button onclick="setAgendaViewMode('daily')" id="agenda-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Jour</button>
-                <button onclick="setAgendaViewMode('weekly')" id="agenda-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-white text-[#0062ff] shadow-sm">Semaine</button>
-                <button onclick="setAgendaViewMode('monthly')" id="agenda-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Mois</button>
-              </div>
+            <button onclick="openAddCalendarEventModal()" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer">
+              <i data-lucide="plus" class="w-4 h-4 text-white"></i>
+              <span>+ Nouvelle Tâche</span>
+            </button>
+          </div>
+        </div>
 
-              <!-- Métriques en-tête -->
-              <div class="hidden xl:flex items-center gap-4 px-4 py-2 bg-black/25 rounded-2xl backdrop-blur-md text-white border border-white/15">
-                <div>
-                  <span class="text-[9px] uppercase font-bold tracking-wider text-blue-200 block">Missions Actives</span>
-                  <strong class="text-sm font-black text-white" id="agenda-total-events-count">0 missions</strong>
-                </div>
-                <div class="w-px h-6 bg-white/20"></div>
-                <div>
-                  <span class="text-[9px] uppercase font-bold tracking-wider text-blue-200 block">Taux Présence</span>
-                  <strong class="text-sm font-black text-emerald-300">92% Démo</strong>
-                </div>
+        <!-- 1. TOP CARDS CLICKUP (4 BLOCS KPI & DONUT CHART DE RÉPARTITION) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- Carte 1 : Total Tasks (ClickUp Style Blanc Pur) -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:border-blue-200 transition">
+            <div class="flex items-start justify-between">
+              <div>
+                <strong class="text-3xl font-black text-slate-900 tracking-tight block" id="agenda-stat-total">0</strong>
+                <span class="text-xs font-bold text-slate-400 mt-0.5 block">Tâches & RDVs Actifs</span>
               </div>
+              <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium mt-3 pt-2.5 border-t border-slate-50">
+              Missions réparties sur l'ensemble des canaux.
+            </p>
+          </div>
 
-              <!-- Bouton Ajouter Événement -->
-              <button onclick="openAddCalendarEventModal()" class="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-[#0062ff] font-black text-xs flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer">
-                <i data-lucide="plus" class="w-4 h-4 text-[#0062ff]"></i>
-                <span>+ Planifier un RDV</span>
-              </button>
+          <!-- Carte 2 : En Cours / In Progress (Mise en avant Ambre/Orange ClickUp) -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:border-amber-200 transition">
+            <div class="flex items-start justify-between">
+              <div>
+                <strong class="text-3xl font-black text-amber-600 tracking-tight block" id="agenda-stat-inprogress">0</strong>
+                <span class="text-xs font-bold text-slate-400 mt-0.5 block">En Cours (In Progress)</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium mt-3 pt-2.5 border-t border-slate-50">
+              Relances en attente et démarchage actif.
+            </p>
+          </div>
+
+          <!-- Carte 3 : Terminées / Completed (Émeraude ClickUp) -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:border-emerald-200 transition">
+            <div class="flex items-start justify-between">
+              <div>
+                <strong class="text-3xl font-black text-emerald-600 tracking-tight block" id="agenda-stat-completed">0</strong>
+                <span class="text-xs font-bold text-slate-400 mt-0.5 block">Terminées (Completed)</span>
+              </div>
+              <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium mt-3 pt-2.5 border-t border-slate-50">
+              Closings réussis et sessions démo validées.
+            </p>
+          </div>
+
+          <!-- Carte 4 : Donut Chart ClickUp de Ventilation des Tâches -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex items-center justify-between hover:border-blue-200 transition">
+            <div class="min-w-0 pr-2">
+              <span class="text-xs font-bold text-slate-400 block">Ventilation Missions</span>
+              <strong class="text-sm font-black text-slate-900 block mt-0.5">Par Canal Commercial</strong>
+              <div class="flex items-center gap-1.5 mt-2 text-[10px] text-slate-500 font-medium">
+                <span class="w-2 h-2 rounded-full bg-[#0062ff]"></span> Démos
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Closings
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> Relances
+              </div>
+            </div>
+            <div class="w-20 h-20 flex-shrink-0 relative flex items-center justify-center">
+              <canvas id="chart-agenda-donut"></canvas>
             </div>
           </div>
 
-          <!-- Grille Principale : Sidebar Gauche + Timeline Droite -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        </div>
 
-            <!-- Colonne Gauche : Mini-Calendrier + Catégories & Checklists -->
-            <div class="lg:col-span-4 space-y-4">
+        <!-- 2. GRILLE PRINCIPALE (8 COLS GAUCHE : LISTE TASKS & TIMELINE GANTT / 4 COLS DROITE : GOALS & CALENDRIER) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- COLONNE GAUCHE (8 COLS) -->
+          <div class="lg:col-span-8 space-y-6">
+
+            <!-- Section Tâches & Missions Journalières (ClickUp Tasks Table / Cards) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
               
-              <!-- Carte 1 : Mini Calendrier Mensuel Bleu Nuit Pro -->
-              <div class="mini-cal-container invo-preserve-white bg-[#0041b3] p-5 rounded-2xl text-white shadow-lg space-y-3 border border-white/20">
-                <div class="flex items-center justify-between">
-                  <span id="calendar-month-title" class="text-xs font-black uppercase tracking-wider text-white">Octobre 2026</span>
-                  <div class="flex items-center gap-1.5">
-                    <button onclick="prevCalendarMonth()" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs font-bold transition text-white" title="Mois Précédent">&lt;</button>
-                    <button onclick="goToTodayCalendar()" class="px-2.5 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-bold transition text-white">Auj.</button>
-                    <button onclick="nextCalendarMonth()" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs font-bold transition text-white" title="Mois Suivant">&gt;</button>
+              <!-- Navigation Période & Titre ClickUp -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                  <h3 id="selected-day-heading" class="text-base font-black text-slate-900 tracking-tight">Missions de la Période</h3>
+                  <span id="selected-day-count-badge" class="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] text-[10px] font-black border border-blue-200">0 mission</span>
+                </div>
+                <div class="flex items-center gap-1.5 self-end sm:self-auto">
+                  <button onclick="navigateAgendaPeriod(-1)" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 flex items-center justify-center text-xs font-black transition border border-slate-200">&lt;</button>
+                  <button onclick="goToTodayCalendar()" class="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-bold transition border border-slate-200">Aujourd'hui</button>
+                  <button onclick="navigateAgendaPeriod(1)" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-800 flex items-center justify-center text-xs font-black transition border border-slate-200">&gt;</button>
+                </div>
+              </div>
+
+              <!-- Jours de la Semaine Colonnes (Lundi à Dimanche) -->
+              <div id="agenda-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-2 pb-2 border-b border-slate-100">
+                <!-- Rempli dynamiquement en JS -->
+              </div>
+
+              <!-- Liste Déroulante des Tâches / Cartes Format ClickUp -->
+              <div id="selected-day-events-list" class="space-y-3 min-h-[300px]">
+                <!-- Rempli dynamiquement en JS -->
+              </div>
+
+            </div>
+
+            <!-- Section TIMELINE / GANTT HORIZONTALE (Inspiré de ClickUp Timeline) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">Chronologie & Timeline d'Exécution (Gantt)</h3>
+                  <p class="text-xs text-slate-400 font-medium">Répartition temporelle continue des phases commerciales de l'agent.</p>
+                </div>
+                <span class="text-[11px] font-bold text-[#0062ff] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                  Vue Multi-Phases
+                </span>
+              </div>
+
+              <!-- Barres Horizontales Chronologiques ClickUp -->
+              <div class="space-y-3.5 pt-2">
+                
+                <!-- Phase 1 : Prospection & Scan OSINT -->
+                <div class="grid grid-cols-12 gap-3 items-center">
+                  <div class="col-span-3 text-xs font-bold text-slate-700 flex items-center gap-1.5 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+                    <span class="truncate">Prospection Ads</span>
+                  </div>
+                  <div class="col-span-9 bg-slate-100 rounded-xl h-7 relative flex items-center p-1">
+                    <div class="absolute left-[5%] w-[45%] h-5 bg-gradient-to-r from-blue-500 to-[#0062ff] rounded-lg shadow-2xs flex items-center px-2 text-[10px] font-black text-white truncate">
+                      Meta Ads & LinkedIn Scan (08:00 - 12:00)
+                    </div>
                   </div>
                 </div>
 
-                <!-- Grille des Jours du Mini-Calendrier -->
-                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold text-blue-200/90 pt-1 uppercase">
-                  <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
+                <!-- Phase 2 : Qualification DUR & Audit -->
+                <div class="grid grid-cols-12 gap-3 items-center">
+                  <div class="col-span-3 text-xs font-bold text-slate-700 flex items-center gap-1.5 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full bg-purple-500 flex-shrink-0"></span>
+                    <span class="truncate">Qualification DUR</span>
+                  </div>
+                  <div class="col-span-9 bg-slate-100 rounded-xl h-7 relative flex items-center p-1">
+                    <div class="absolute left-[30%] w-[40%] h-5 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-2xs flex items-center px-2 text-[10px] font-black text-white truncate">
+                      Scoring Psychologique (11:00 - 15:00)
+                    </div>
+                  </div>
                 </div>
-                <div id="calendar-month-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium pt-1">
-                  <!-- Rempli dynamiquement en JS -->
+
+                <!-- Phase 3 : Démos Clients & Visios -->
+                <div class="grid grid-cols-12 gap-3 items-center">
+                  <div class="col-span-3 text-xs font-bold text-slate-700 flex items-center gap-1.5 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+                    <span class="truncate">Démos & Visios</span>
+                  </div>
+                  <div class="col-span-9 bg-slate-100 rounded-xl h-7 relative flex items-center p-1">
+                    <div class="absolute left-[50%] w-[35%] h-5 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg shadow-2xs flex items-center px-2 text-[10px] font-black text-white truncate">
+                      Google Meet & Démos Live (14:00 - 18:00)
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Phase 4 : Closings WhatsApp & Ventes -->
+                <div class="grid grid-cols-12 gap-3 items-center">
+                  <div class="col-span-3 text-xs font-bold text-slate-700 flex items-center gap-1.5 truncate">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                    <span class="truncate">Closing & Encaissements</span>
+                  </div>
+                  <div class="col-span-9 bg-slate-100 rounded-xl h-7 relative flex items-center p-1">
+                    <div class="absolute left-[20%] w-[75%] h-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg shadow-2xs flex items-center px-2 text-[10px] font-black text-white truncate">
+                      Négociations WhatsApp & Wave Mobile Money (Permanent)
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- COLONNE DROITE (4 COLS) : OBJECTIFS CLICKUP (GOALS) & MINI CALENDRIER -->
+          <div class="lg:col-span-4 space-y-6">
+
+            <!-- 1. Cartes d'Objectifs Commerciaux (Style ClickUp Goals) -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-5">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center">
+                    <i data-lucide="target" class="w-4 h-4"></i>
+                  </div>
+                  <h4 class="text-sm font-black text-slate-900 tracking-tight">Objectifs Commerciaux (Goals)</h4>
+                </div>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Semaine 41
+                </span>
+              </div>
+
+              <!-- Goal 1 : Lancement Campagne & Conversion -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-800">Objectif CA Hebdomadaire</span>
+                  <span class="text-emerald-600 font-black">84%</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 84%"></div>
+                </div>
+                <div class="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
+                  <span>Réalisé : <strong>2 520 000 FCFA</strong></span>
+                  <span>Cible : 3 000 000 FCFA</span>
                 </div>
               </div>
 
-              <!-- Carte 2 : Filtres Catégories & Missions -->
-              <div class="bg-white p-4 rounded-2xl shadow-md space-y-2.5 border border-slate-100">
-                <div class="flex items-center justify-between text-xs font-black text-slate-900">
-                  <span>Catégories d'Agenda</span>
-                  <span class="text-[10px] text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-full font-bold uppercase border border-blue-200">5 Pôles</span>
+              <!-- Goal 2 : Checklist des Jalons ClickUp -->
+              <div class="pt-3 border-t border-slate-100 space-y-2.5">
+                <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block">Jalons Validés</span>
+                
+                <div class="flex items-center gap-2.5 text-xs text-slate-700">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+                  <span class="font-bold line-through text-slate-400">Prospection de 100 leads qualifiés</span>
                 </div>
-                <div class="space-y-1.5 text-xs text-slate-700">
-                  <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition">
-                    <span class="w-2.5 h-2.5 rounded-full bg-[#0062ff] shadow-2xs"></span>
-                    <span class="font-bold text-[11px] text-slate-800">RDVs Clients & Démos Live</span>
-                  </label>
-                  <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition">
-                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 shadow-2xs"></span>
-                    <span class="font-bold text-[11px] text-slate-800">Closings & Signatures</span>
-                  </label>
-                  <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition">
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-2xs"></span>
-                    <span class="font-bold text-[11px] text-slate-800">Relances H+24 & Suivi</span>
-                  </label>
-                  <label class="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-lg hover:bg-slate-50 transition">
-                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-600 shadow-2xs"></span>
-                    <span class="font-bold text-[11px] text-slate-800">Prospection Autonome Outbound</span>
-                  </label>
-                </div>
-              </div>
 
-              <!-- Carte 3 : Pôle Commercial Récap -->
-              <div class="bg-white p-4 rounded-2xl shadow-md space-y-2 border border-slate-100">
-                <div class="flex items-center justify-between text-xs font-black text-slate-900">
-                  <span>Unité Commerciale IA</span>
-                  <span class="text-[10px] text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-full font-bold border border-blue-200">Patrouille 24/7</span>
+                <div class="flex items-center gap-2.5 text-xs text-slate-700">
+                  <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+                  <span class="font-bold line-through text-slate-400">20 Démos live programmées</span>
                 </div>
-                <div class="flex flex-wrap gap-1.5 pt-1">
-                  <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-[#0062ff] text-[10px] font-bold border border-blue-200">WhatsApp</span>
-                  <span class="px-2.5 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">Visio Google Meet</span>
-                  <span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">Closing Téléphonique</span>
+
+                <div class="flex items-center gap-2.5 text-xs text-slate-700">
+                  <i data-lucide="circle" class="w-4 h-4 text-[#0062ff] flex-shrink-0"></i>
+                  <span class="font-bold text-slate-900">Finaliser les 5 closings VIP en cours</span>
                 </div>
               </div>
 
             </div>
 
-            <!-- Colonne Droite : Grille Hebdomadaire Timeline Pro -->
-            <div class="lg:col-span-8 bg-white rounded-2xl p-5 sm:p-6 shadow-md border border-slate-100 space-y-4 flex flex-col justify-between">
-              
-              <div>
-                <!-- En-tête Navigation Temporelle Droite -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
-                  <div class="flex items-center gap-2.5">
-                    <h3 id="selected-day-heading" class="text-sm sm:text-base font-black text-slate-900 tracking-tight">Missions de la Période</h3>
-                    <span id="selected-day-count-badge" class="px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] text-[10px] font-black border border-blue-200">0 mission</span>
-                  </div>
-                  <div class="flex items-center gap-1.5 self-end sm:self-auto">
-                    <button onclick="navigateAgendaPeriod(-1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center text-xs font-black transition border border-slate-200">&lt;</button>
-                    <button onclick="goToTodayCalendar()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition border border-slate-200">Aujourd'hui</button>
-                    <button onclick="navigateAgendaPeriod(1)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 flex items-center justify-center text-xs font-black transition border border-slate-200">&gt;</button>
-                  </div>
-                </div>
-
-                <!-- Jours de la Semaine Colonnes (Lundi à Dimanche) -->
-                <div id="agenda-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-3 pb-2 border-b border-slate-100">
-                  <!-- Rempli dynamiquement en JS avec le jour sélectionné -->
-                </div>
-
-                <!-- Grille Timeline avec les cartes d'événements du jour / de la période -->
-                <div id="selected-day-events-list" class="mt-4 min-h-[360px] space-y-3">
-                  <!-- Rempli dynamiquement par renderSelectedDayEvents() -->
+            <!-- 2. Mini Calendrier Mensuel ClickUp Style -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <span id="calendar-month-title" class="text-xs font-black uppercase tracking-wider text-slate-900">Octobre 2026</span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="prevCalendarMonth()" class="w-7 h-7 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-xs font-bold transition text-slate-700 border border-slate-200" title="Mois Précédent">&lt;</button>
+                  <button onclick="goToTodayCalendar()" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-[10px] font-bold transition text-slate-700 border border-slate-200">Auj.</button>
+                  <button onclick="nextCalendarMonth()" class="w-7 h-7 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-xs font-bold transition text-slate-700 border border-slate-200" title="Mois Suivant">&gt;</button>
                 </div>
               </div>
 
-              <!-- Footer Informations & Synchro -->
-              <div class="pt-3.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 font-medium">
-                <span>Fuseau horaire : <strong class="text-slate-800">Afrique de l'Ouest (GMT+1)</strong> &bull; Synchro continue</span>
-                <button onclick="openAddCalendarEventModal()" class="text-xs text-[#0062ff] hover:text-blue-800 font-black flex items-center gap-1.5 transition">
-                  <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                  <span>Nouveau Créneau</span>
-                </button>
+              <!-- Jours Mini Calendrier -->
+              <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold text-slate-400 uppercase pb-1">
+                <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
               </div>
+              <div id="calendar-month-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium">
+                <!-- Rempli dynamiquement en JS -->
+              </div>
+            </div>
 
+            <!-- 3. Répartition des Canaux Commerciaux -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-3">
+              <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Canaux de Rendez-Vous</h4>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-1">
+                  <i data-lucide="message-circle" class="w-3.5 h-3.5 text-emerald-600"></i> WhatsApp
+                </span>
+                <span class="px-3 py-1.5 rounded-xl bg-blue-50 text-[#0062ff] text-xs font-bold border border-blue-200 flex items-center gap-1">
+                  <i data-lucide="video" class="w-3.5 h-3.5 text-[#0062ff]"></i> Google Meet
+                </span>
+                <span class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200 flex items-center gap-1">
+                  <i data-lucide="phone" class="w-3.5 h-3.5 text-purple-600"></i> Appel Direct
+                </span>
+              </div>
             </div>
 
           </div>
