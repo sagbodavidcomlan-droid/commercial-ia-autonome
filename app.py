@@ -338,6 +338,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_enrich_disc(body)
         elif path == "/api/autopilot/run":
             self.handle_api_autopilot_run(body)
+        elif path == "/api/bd-prospector/hunt":
+            self.handle_api_bd_prospector_hunt(body)
         elif path == "/api/agent/trigger-cycle":
             run_poller_cycle()
             self.send_json_response({"success": True, "status": get_agent_poller_status()})
@@ -1266,6 +1268,34 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         batch_size = int(body.get("batch_size", 5))
         result = autopilot_orchestrator.run_autopilot_sprint(batch_size=batch_size)
         self.send_json_response(result)
+
+    def handle_api_bd_prospector_hunt(self, body):
+        max_competitors = int(body.get("max_competitors", 2))
+        query = body.get("query")
+        country = body.get("country", "BJ")
+        try:
+            from modules.facebook_ads_collector import FacebookAdsCollector
+            bd = FacebookAdsCollector()
+            keywords = [query] if query else None
+            countries = [country] if country else None
+            leads = bd.hunt_competitor_audience(
+                keywords=keywords,
+                countries=countries,
+                max_competitors=max_competitors,
+                auto_ingest_crm=True
+            )
+            self.send_json_response({
+                "success": True,
+                "leads_found": len(leads),
+                "leads": leads,
+                "message": f"Traque terminée avec succès. {len(leads)} prospect(s) qualifié(s) intercepté(s) et injecté(s) dans le CRM."
+            })
+        except Exception as e:
+            self.send_json_response({
+                "success": False,
+                "error": str(e),
+                "message": f"Erreur lors de la traque des concurrents : {str(e)}"
+            }, status=500)
 
     def handle_api_autopilot_status(self):
         logs = autopilot_orchestrator.get_recent_logs(limit=40)

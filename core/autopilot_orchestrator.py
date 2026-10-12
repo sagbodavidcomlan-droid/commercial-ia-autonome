@@ -82,6 +82,31 @@ class AutopilotOrchestrator:
 
         processed_leads = []
 
+        if not leads_to_process:
+            # AUCUN LEAD EN ATTENTE DANS LE CRM :
+            # Le Digital Business Developer passe à l'action pour traquer l'audience active
+            # (commentateurs réels sous annonces/posts des concurrents de notre niche)
+            self.log("PATROUILLE", "Aucun prospect en attente dans le CRM. Déclenchement de la traque d'audience concurrente...")
+            try:
+                from modules.facebook_ads_collector import FacebookAdsCollector
+                bd_agent = FacebookAdsCollector()
+                intercepted = bd_agent.hunt_competitor_audience(
+                    max_competitors=2,
+                    auto_ingest_crm=True
+                )
+                if intercepted:
+                    self.log("INTERCEPTION", f"🎯 {len(intercepted)} prospect(s) réel(s) intercepté(s) sous les publications concurrentes et injecté(s) au CRM.", status="SUCCESS")
+                    # Re-sélectionner les leads fraîchement interceptés
+                    cursor.execute("""
+                        SELECT id, nom_lead, nom_complet, telephone, whatsapp, source_canal, source_contact,
+                               poste, centre_interet, notes, facebook_psid, score_dur, profil_disc
+                        FROM crm_leads
+                        WHERE id IN ({seq})
+                    """.format(seq=','.join(str(l['crm_lead_id']) for l in intercepted if l.get('crm_lead_id'))))
+                    leads_to_process = cursor.fetchall()
+            except Exception as e:
+                self.log("ERREUR_TRAQUE", f"Échec de la patrouille de traque : {e}", status="WARN")
+
         if leads_to_process:
             self.log("COLLECTE", f"{len(leads_to_process)} lead(s) réel(s) identifié(s) dans le CRM pour traitement autonome.")
             for row in leads_to_process:
@@ -154,20 +179,11 @@ class AutopilotOrchestrator:
 
         else:
             # Aucun lead réel dans le CRM à traiter
-            if not meta_status.get("valid"):
-                msg_info = (
-                    "Aucun nouveau prospect dans le CRM et le compte Facebook/Meta n'est pas encore connecté "
-                    f"({meta_status.get('message')}). Aucun lead fictif n'a été inséré. "
-                    "Veuillez connecter votre Page Facebook ou votre compte WhatsApp Cloud API dans les 'Paramètres' "
-                    "pour commencer à capter et closer des prospects réels automatiquement."
-                )
-                self.log("ATTENTE_CANAUX", msg_info, status="WARN")
-            else:
-                msg_info = (
-                    f"Page Facebook connectée ({meta_status.get('page_name')}), mais aucun nouveau prospect non traité dans le CRM. "
-                    "Le webhook est à l'écoute des nouveaux messages entrants."
-                )
-                self.log("VEILLE", msg_info, status="INFO")
+            msg_info = (
+                "Patrouille de traque achevée. Aucune nouvelle intention forte détectée sous les publications actuelles des concurrents. "
+                "Le système maintient la veille active sans injecter de prospect fictif."
+            )
+            self.log("VEILLE", msg_info, status="INFO")
 
         conn.commit()
 

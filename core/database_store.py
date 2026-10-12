@@ -1809,6 +1809,10 @@ def get_or_create_lead(
             notes = kwargs.get("notes") or kwargs.get("centre_interet") or ""
             poste = kwargs.get("poste") or "Entrepreneur"
             douleur = kwargs.get("douleur_identifiee") or ""
+            init_statut = kwargs.get("statut_lead") or "Nouveau"
+            init_temperature = kwargs.get("temperature") or ("Chaud" if init_statut == "Chaud" else "Tiède")
+            init_score_dur = int(kwargs.get("score_dur") or 0)
+            init_score_qual = int(kwargs.get("score_qualification") or init_score_dur)
 
             c.execute("""
                 INSERT INTO crm_leads (
@@ -1825,9 +1829,9 @@ def get_or_create_lead(
                     ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?,
                     ?, ?, ?,
-                    'Nouveau', 'Tiède', 'setter',
+                    ?, ?, 'setter',
                     ?, ?,
-                    0, 0,
+                    ?, ?,
                     ?, ?,
                     datetime('now'), datetime('now'), datetime('now'), datetime('now'), datetime('now'),
                     1
@@ -1836,7 +1840,9 @@ def get_or_create_lead(
                 canal_source, canal_id, prenom, nom, full_name, full_name,
                 phone, phone, email, psid, li_url,
                 canal_source, canal_source, canal_source.upper(),
+                init_statut, init_temperature,
                 poste, douleur,
+                init_score_dur, init_score_qual,
                 notes, notes
             ))
             new_id = c.lastrowid

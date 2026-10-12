@@ -4560,6 +4560,75 @@ function closeAutopilotModal() {
   document.getElementById("modal-autopilot").classList.add("hidden");
 }
 
+// --- TRAQUE D'AUDIENCE CONCURRENTE (DIGITAL BUSINESS DEVELOPER) ---
+async function triggerCompetitorHunt() {
+  const modal = document.getElementById("modal-autopilot");
+  const modalBody = document.getElementById("autopilot-modal-body");
+  modal.classList.remove("hidden");
+
+  modalBody.innerHTML = `
+    <div class="text-center py-6">
+      <div class="w-12 h-12 border-4 border-[#0062ff] border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+      <p class="font-bold text-slate-900 text-sm">Traque des Audiences Concurrentes en cours...</p>
+      <p class="text-slate-500 text-xs mt-1">Inspection des annonces et posts &bull; Aspiration des commentaires réels &bull; Extraction d'intention & coordonnées</p>
+    </div>
+  `;
+
+  try {
+    const res = await fetch("/api/bd-prospector/hunt", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ max_competitors: 2 })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      modalBody.innerHTML = `
+        <div class="space-y-4">
+          <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-center justify-between">
+            <span class="font-bold flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+              ${result.message}
+            </span>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-mono font-bold">${result.leads_found} lead(s)</span>
+          </div>
+
+          <div class="space-y-2 max-h-72 overflow-y-auto">
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Commentateurs Qualifiés Interceptés :</h4>
+            ${(result.leads || []).length > 0 ? result.leads.map(l => `
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                  <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                    ${l.nom_complet}
+                    ${l.phone_detected ? `<span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] rounded font-mono font-bold">${l.phone_detected}</span>` : ''}
+                  </div>
+                  <div class="text-[11px] text-slate-600 italic mt-0.5">"${l.comment_sample}"</div>
+                  <div class="text-[10px] text-slate-400 mt-0.5">Sous publication : ${l.competitor_name}</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="font-bold text-emerald-600">Score DUR ${l.score_dur}/100</span>
+                  <div class="text-[10px] text-blue-600 font-medium">Injecté CRM</div>
+                </div>
+              </div>
+            `).join("") : `
+              <div class="p-4 text-center bg-slate-50 rounded-xl border border-slate-200 text-slate-500 text-xs">
+                Annonces analysées, mais aucun commentateur avec intention d'achat explicite trouvé sur ce cycle. La patrouille 24/7 reste active.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+      lucide.createIcons();
+      loadDashboardData();
+      loadLeads("Tous");
+    } else {
+      modalBody.innerHTML = `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">Erreur lors de la traque : ${result.message || result.error}</div>`;
+    }
+  } catch (err) {
+    modalBody.innerHTML = `<div class="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">Erreur de communication serveur : ${err.message}</div>`;
+  }
+}
+
 // --- HUB PAIEMENTS & WEBHOOKS ---
 async function generateCheckoutLink() {
   const leadId = document.getElementById("pay-lead-id").value;
