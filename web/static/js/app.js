@@ -2786,23 +2786,48 @@ function renderConversationMessages(messages, leadName) {
         </div>
       `;
     } else {
+      const isDraft = m.status && (
+        m.status.includes("EN_ATTENTE") ||
+        m.status.includes("PRET_POUR") ||
+        m.status.includes("NON_CONNECTE")
+      );
+
+      let statusBadge = '';
+      if (isDraft) {
+        statusBadge = `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold">
+            <i data-lucide="clock" class="w-2.5 h-2.5 text-amber-600"></i>
+            Brouillon IA (En attente d'envoi manuel / API non reliée)
+          </span>
+        `;
+      } else {
+        statusBadge = `
+          <span class="text-[#0062ff] font-bold">Dave Sagbo</span>
+          <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
+        `;
+      }
+
+      const bubbleBg = isDraft ? 'bg-amber-50/90 text-slate-800 border border-amber-200/90' : 'bg-[#0062ff] text-white';
+
       return dateDivider + `
         <div class="flex items-start gap-3 max-w-[85%] ml-auto flex-row-reverse">
-          <div class="w-8 h-8 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs border border-blue-200">
+          <div class="w-8 h-8 rounded-2xl ${isDraft ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-blue-50 text-[#0062ff] border-blue-200'} flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs border">
             DS
           </div>
           <div class="space-y-1.5 text-right flex-1">
-            <div class="p-4 rounded-3xl rounded-tr-sm bg-[#0062ff] text-white text-xs shadow-md shadow-blue-500/10 leading-relaxed text-left whitespace-pre-wrap font-medium">
+            <div class="p-4 rounded-3xl rounded-tr-sm ${bubbleBg} text-xs shadow-xs leading-relaxed text-left whitespace-pre-wrap font-medium">
               ${escapeHtml(m.message)}
             </div>
-            <div class="text-[10px] text-slate-400 pr-2 font-medium flex items-center justify-end gap-2">
+            <div class="text-[10px] text-slate-400 pr-2 font-medium flex items-center justify-end gap-2 flex-wrap">
               <span>${escapeHtml(timeOnly)}</span>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] font-semibold">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
                 <i data-lucide="${canalIcon}" class="w-2.5 h-2.5"></i>
                 <span class="text-[9px]">${canalLabel}</span>
               </span>
-              <span class="text-[#0062ff] font-bold">Dave Sagbo</span>
-              <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
+              ${statusBadge}
+              <button onclick="navigator.clipboard.writeText(this.closest('.space-y-1.5').querySelector('div').innerText); showToast('Message copié pour envoi manuel !', 'success');" class="hover:text-blue-600 text-[10px] font-semibold flex items-center gap-1 transition">
+                <i data-lucide="copy" class="w-2.5 h-2.5"></i> Copier
+              </button>
             </div>
           </div>
         </div>

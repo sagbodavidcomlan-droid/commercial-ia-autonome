@@ -369,8 +369,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_onboarding_step(body)
         elif path == "/api/crm/ambassador-invite":
             self.handle_api_ambassador_invite(body)
-        elif path == "/api/crm/clear":
-            self.handle_api_crm_clear(body)
+        elif path == "/api/audience/schedule-lead-magnet":
+            self.handle_api_audience_schedule_lead_magnet(body)
+        elif path == "/api/audience/publish-facebook":
+            self.handle_api_audience_publish_facebook(body)
         elif path == "/api/creative/generate-carousel":
             self.handle_api_generate_carousel(body)
         elif path == "/api/creative/generate-motion":
@@ -1707,6 +1709,32 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
     def handle_api_payments_webhook(self, body):
         res = payment_hub.process_webhook_payment(body)
         self.send_json_response(res)
+
+    def handle_api_audience_schedule_lead_magnet(self, body):
+        topic = body.get("topic", "Comment automatiser vos relances WhatsApp et tripler vos ventes")
+        trigger_keyword = body.get("trigger_keyword", "AUTOMATISATION")
+        channel = body.get("channel", "FACEBOOK")
+        try:
+            from modules.audience_growth_engine import AudienceGrowthEngine
+            engine = AudienceGrowthEngine()
+            result = engine.generate_and_schedule_lead_magnet(topic, trigger_keyword, channel)
+            self.send_json_response(result)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_audience_publish_facebook(self, body):
+        message = body.get("message", "")
+        link = body.get("link")
+        if not message:
+            self.send_json_response({"success": False, "error": "Le message est obligatoire"}, status=400)
+            return
+        try:
+            from modules.audience_growth_engine import AudienceGrowthEngine
+            engine = AudienceGrowthEngine()
+            result = engine.publish_post_to_facebook_page(message, link)
+            self.send_json_response(result)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
 
     def handle_api_export_dossier(self):
         html_content = export_service.generate_executive_dossier_html()
