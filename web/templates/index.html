@@ -893,158 +893,318 @@
 
       </section>
 
-      <!-- ==================== TAB 2 : CONSOLE DIRECTEUR ==================== -->
+      <!-- ==================== TAB 2 : CONSOLE DE COMMANDEMENT & ASSIGNATION D'OBJECTIFS ==================== -->
       <section id="tab-director" class="tab-pane hidden space-y-6">
+        
+        <!-- En-tête Principal Moderne & Salutation Style Référence ("Welcome, Director!") -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 class="text-xl font-black text-slate-900">Console de Commandement : Assignation d'Objectifs & Suivi</h2>
-            <p class="text-xs text-slate-500">Fixez vos quotas, supervisez l'exécution en temps réel et analysez le bulletin de performance de l'IA.</p>
-          </div>
-          <button onclick="openReportModal()" class="bg-[#0062ff] hover:bg-[#0052cc] text-white text-xs font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
-            <i data-lucide="sparkles" class="w-4 h-4"></i>
-            Rédiger Rapport Hebdo / Mensuel
-          </button>
-        </div>
-
-        <!-- BANNIÈRE OBJECTIF PRODUIT/SERVICE ACTIF -->
-        <div class="glass-card p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-blue-50/60 border border-blue-200">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-[#0062ff]/10 text-[#0062ff] flex items-center justify-center font-bold">
-              <i data-lucide="package" class="w-5 h-5"></i>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                SUPERVISION STRATÉGIQUE & PILOTAGE DIRECTEUR
+              </span>
+              <span class="text-xs text-slate-400 font-bold">&bull;</span>
+              <span class="text-xs text-slate-500 font-semibold" id="director-active-period-badge">Octobre 2026</span>
             </div>
-            <div>
-              <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Offre Assignée au Commercial IA :</span>
-              <div id="director-active-product-name" class="text-sm font-black text-slate-900">Toutes les Offres (Catalogue Global)</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span id="director-active-period-badge" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 shadow-2xs">Mensuel (Octobre 2026)</span>
-            <span class="px-2.5 py-1 rounded-lg bg-[#0062ff] text-white text-xs font-bold shadow-xs">Objectif en Cours</span>
-          </div>
-        </div>
-
-        <!-- 1. BARRES DE SUIVI & RÉALISATION EN DIRECT -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <!-- Chiffre d'Affaires -->
-          <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Chiffre d'Affaires</span>
-              <span id="director-revenue-pct" class="px-2 py-0.5 rounded-full text-xs font-black bg-blue-50 text-[#0062ff] border border-blue-200">62%</span>
-            </div>
-            <div class="my-3">
-              <div class="text-2xl font-black text-slate-900" id="director-revenue-current">929,000 FCFA</div>
-              <div class="text-xs text-slate-500 mt-0.5">Objectif fixé : <span id="director-revenue-target" class="font-bold text-slate-800">1,500,000 FCFA</span></div>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div id="director-revenue-bar" class="bg-[#0062ff] h-2 rounded-full transition-all duration-500" style="width: 62%;"></div>
-            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
+              <span>Console de Commandement Commerciale</span>
+            </h1>
+            <p class="text-xs text-slate-500 font-medium">Assignez des quotas chiffrés à l'IA, supervisez la cadence opérationnelle et analysez les bulletins d'évaluation.</p>
           </div>
 
-          <!-- Quota Leads Qualifiés -->
-          <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Leads Qualifiés</span>
-              <span id="director-leads-pct" class="px-2 py-0.5 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200">58%</span>
-            </div>
-            <div class="my-3">
-              <div class="text-2xl font-black text-slate-900" id="director-leads-current">70 / 120</div>
-              <div class="text-xs text-slate-500 mt-0.5">Progression mensuelle du pipeline</div>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div id="director-leads-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 58%;"></div>
-            </div>
-          </div>
-
-          <!-- Quota Ventes Clôturées -->
-          <div class="glass-card p-5 rounded-2xl flex flex-col justify-between">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ventes Clôturées</span>
-              <span id="director-sales-pct" class="px-2 py-0.5 rounded-full text-xs font-black bg-purple-50 text-purple-700 border border-purple-200">68%</span>
-            </div>
-            <div class="my-3">
-              <div class="text-2xl font-black text-slate-900" id="director-sales-current">17 / 25</div>
-              <div class="text-xs text-slate-500 mt-0.5">Transactions validées</div>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div id="director-sales-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-500" style="width: 68%;"></div>
-            </div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <button onclick="document.getElementById('director-assign-drawer')?.classList.toggle('hidden')" class="bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-extrabold px-4 py-2.5 rounded-2xl flex items-center gap-2 shadow-xs transition active:scale-95 cursor-pointer">
+              <i data-lucide="target" class="w-4 h-4"></i>
+              <span>Assigner Nouveaux Quotas</span>
+            </button>
+            <button onclick="openReportModal()" class="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-3.5 py-2.5 rounded-2xl flex items-center gap-2 shadow-2xs transition cursor-pointer">
+              <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+              <span>Rédiger Rapport</span>
+            </button>
           </div>
         </div>
 
-        <!-- 2. SECTION 2 COLS : ASSIGNATION DES OBJECTIFS & BULLETIN D'EVALUATION -->
+        <!-- BARRE DE FILTRAGE HORIZONTALE FLOTTANTE (REPRODUCTION FIDÈLE DU COMPOSANT SUPÉRIEUR DU MODÈLE) -->
+        <div class="bg-white rounded-3xl p-4 sm:p-5 border border-slate-100 shadow-xs space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#0062ff]"></span>
+              <span class="text-xs font-black uppercase tracking-wider text-slate-800">Paramétrage des Objectifs & Filtres Actifs</span>
+            </div>
+            <span class="text-xs font-bold text-slate-400" id="director-active-product-name">Offre : Catalogue Global</span>
+          </div>
+
+          <!-- Barre avec 4 Sélecteurs Épurés + Bouton Action Bleu Royal Circulaire -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            
+            <!-- Sélecteur 1 : Offre Produit / Service Cible -->
+            <div class="bg-slate-50/80 rounded-2xl p-2.5 border border-slate-200/80 focus-within:border-[#0062ff] focus-within:bg-white transition">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Offre Cible Prioritaire</label>
+              <select id="goal-product" onchange="onGoalProductChange()" class="w-full bg-transparent text-xs font-bold text-slate-900 focus:outline-none mt-0.5 cursor-pointer">
+                <option value="0" data-price="0">Toutes les Offres (Catalogue Global)</option>
+              </select>
+            </div>
+
+            <!-- Sélecteur 2 : Période Cible -->
+            <div class="bg-slate-50/80 rounded-2xl p-2.5 border border-slate-200/80 focus-within:border-[#0062ff] focus-within:bg-white transition">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Horizon Temporel</label>
+              <input type="text" id="goal-period" value="Mensuel (Octobre 2026)" class="w-full bg-transparent text-xs font-bold text-slate-900 focus:outline-none mt-0.5">
+            </div>
+
+            <!-- Sélecteur 3 : Chiffre d'Affaires Visé -->
+            <div class="bg-slate-50/80 rounded-2xl p-2.5 border border-slate-200/80 focus-within:border-[#0062ff] focus-within:bg-white transition">
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Objectif Chiffre d'Affaires</label>
+              <div class="flex items-baseline gap-1 mt-0.5">
+                <input type="number" id="goal-revenue" value="1500000" oninput="onGoalProductChange()" class="w-full bg-transparent text-xs font-bold text-slate-900 focus:outline-none">
+                <span class="text-[10px] font-bold text-slate-400">FCFA</span>
+              </div>
+            </div>
+
+            <!-- Sélecteur 4 & Validation Rapide -->
+            <div class="flex items-center gap-2">
+              <div class="flex-1 bg-slate-50/80 rounded-2xl p-2.5 border border-slate-200/80 focus-within:border-[#0062ff] focus-within:bg-white transition">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-tight">Quotas (Leads / Ventes)</label>
+                <div class="flex items-center gap-1.5 mt-0.5">
+                  <input type="number" id="goal-leads" value="120" title="Quota Leads Qualifiés" class="w-12 bg-transparent text-xs font-bold text-slate-900 focus:outline-none">
+                  <span class="text-slate-300">/</span>
+                  <input type="number" id="goal-conversions" value="25" title="Quota Ventes Clôturées" class="w-12 bg-transparent text-xs font-bold text-slate-900 focus:outline-none">
+                </div>
+              </div>
+
+              <!-- Bouton Filtre / Validation Style Modèle (Cercle Arrondi Bleu Royal) -->
+              <button onclick="saveDirectorGoals(event)" class="w-11 h-11 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white flex items-center justify-center transition shadow-xs active:scale-95 shrink-0 cursor-pointer" title="Enregistrer et appliquer ces quotas">
+                <i data-lucide="check" class="w-5 h-5 text-white stroke-[2.5]"></i>
+              </button>
+            </div>
+
+          </div>
+
+          <p id="goal-product-hint" class="text-[11px] text-slate-500 font-medium pt-1">
+            L'Agent IA orientera prioritairement ses argumentaires de négociation et ses relances sur cette offre.
+          </p>
+        </div>
+
+        <!-- SECTION "BEST FOR YOU / SUPERVISION DES AGENTS & OBJECTIFS" (FORMAT GRILLE DE CARTES BLANCHES RONDES DU MODÈLE) -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-black text-slate-900 tracking-tight">Pôles d'Exécution & Quotas en Direct</h2>
+              <span class="text-xs font-extrabold bg-blue-50 text-[#0062ff] px-2.5 py-0.5 rounded-full border border-blue-100">3 Piliers Clés</span>
+            </div>
+            <button onclick="loadDirectorTab()" class="text-xs font-extrabold text-[#0062ff] hover:underline flex items-center gap-1">
+              <span>Actualiser les Métriques</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- GRILLE DES 3 CARTES FORMAT PROFIL MENTALHY (Style Avatar Rond, Note Étoile, Localisation/Canal, Tags, Prix/FCFA & Bouton Bleu) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+            <!-- Carte 1 : Chiffre d'Affaires & Revenus Encaissés -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col justify-between group">
+              <div class="space-y-3.5">
+                <!-- En-tête profil carte : Avatar rond + Nom + Rôle + Note -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-blue-50 text-[#0062ff] flex items-center justify-center font-black text-base shadow-xs border border-blue-100">
+                      <i data-lucide="wallet" class="w-6 h-6 text-[#0062ff]"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Chiffre d'Affaires</h3>
+                      <p class="text-xs text-slate-400 font-semibold">Encaissements & Paiements</p>
+                    </div>
+                  </div>
+                  <!-- Badge Rating / Progression -->
+                  <div class="flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200/80 px-2 py-0.5 rounded-full text-xs font-black shadow-2xs">
+                    <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-500"></i>
+                    <span id="director-revenue-pct">62%</span>
+                  </div>
+                </div>
+
+                <!-- Métadonnées & Localisation / Canal -->
+                <div class="text-xs text-slate-500 space-y-1 pt-1">
+                  <div class="flex items-center gap-1.5 font-medium">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Afrique Francophone (UEMOA)</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">
+                    Objectif fixé : <strong id="director-revenue-target" class="text-slate-800 font-extrabold">1 500 000 FCFA</strong>
+                  </div>
+                </div>
+
+                <!-- Jauge de progression -->
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
+                  <div id="director-revenue-bar" class="bg-[#0062ff] h-2 rounded-full transition-all duration-500" style="width: 62%;"></div>
+                </div>
+
+                <!-- Tags / Pilules comme dans la référence -->
+                <div class="flex flex-wrap items-center gap-1.5 pt-2">
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Mobile Money</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Cartes Bancaires</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-[#0062ff] text-[10px] font-bold">+Auto</span>
+                </div>
+              </div>
+
+              <!-- Bas de carte : Valeur Clé & Grand Bouton Bleu Royal Invo -->
+              <div class="pt-5 border-t border-slate-100 flex items-center justify-between gap-3 mt-4">
+                <div>
+                  <span class="text-xs text-slate-400 font-bold block uppercase tracking-wider text-[9px]">Total Réalisé</span>
+                  <div class="text-lg font-black text-slate-900 tracking-tight" id="director-revenue-current">929 000 FCFA</div>
+                </div>
+                <button onclick="document.getElementById('director-assign-drawer')?.classList.remove('hidden')" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs transition shadow-xs active:scale-95 cursor-pointer">
+                  Ajuster Quota
+                </button>
+              </div>
+            </div>
+
+            <!-- Carte 2 : Leads Qualifiés & Volume Pipeline -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col justify-between group">
+              <div class="space-y-3.5">
+                <!-- En-tête profil carte -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-base shadow-xs border border-emerald-100">
+                      <i data-lucide="users" class="w-6 h-6 text-emerald-600"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Leads Qualifiés</h3>
+                      <p class="text-xs text-slate-400 font-semibold">Volume Pipeline Actif</p>
+                    </div>
+                  </div>
+                  <!-- Badge Rating / Progression -->
+                  <div class="flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-full text-xs font-black shadow-2xs">
+                    <i data-lucide="star" class="w-3 h-3 fill-emerald-400 text-emerald-500"></i>
+                    <span id="director-leads-pct">58%</span>
+                  </div>
+                </div>
+
+                <!-- Métadonnées & Localisation / Canal -->
+                <div class="text-xs text-slate-500 space-y-1 pt-1">
+                  <div class="flex items-center gap-1.5 font-medium">
+                    <i data-lucide="share-2" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Omnicanal : WhatsApp, Messenger, LinkedIn</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">
+                    Objectif mensuel : <strong class="text-slate-800 font-extrabold">120 prospects qualifiés</strong>
+                  </div>
+                </div>
+
+                <!-- Jauge de progression -->
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
+                  <div id="director-leads-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 58%;"></div>
+                </div>
+
+                <!-- Tags / Pilules -->
+                <div class="flex flex-wrap items-center gap-1.5 pt-2">
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Qualification DUR</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Profil DISC</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-[10px] font-bold">+Cadence</span>
+                </div>
+              </div>
+
+              <!-- Bas de carte -->
+              <div class="pt-5 border-t border-slate-100 flex items-center justify-between gap-3 mt-4">
+                <div>
+                  <span class="text-xs text-slate-400 font-bold block uppercase tracking-wider text-[9px]">Leads Atteints</span>
+                  <div class="text-lg font-black text-slate-900 tracking-tight" id="director-leads-current">70 / 120</div>
+                </div>
+                <button onclick="showTab('crm')" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs transition shadow-xs active:scale-95 cursor-pointer">
+                  Voir Pipeline
+                </button>
+              </div>
+            </div>
+
+            <!-- Carte 3 : Ventes Fermées & Clôture Finale -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all flex flex-col justify-between group">
+              <div class="space-y-3.5">
+                <!-- En-tête profil carte -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-black text-base shadow-xs border border-purple-100">
+                      <i data-lucide="check-circle-2" class="w-6 h-6 text-purple-600"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Ventes Clôturées</h3>
+                      <p class="text-xs text-slate-400 font-semibold">Taux de Closing Final</p>
+                    </div>
+                  </div>
+                  <!-- Badge Rating / Progression -->
+                  <div class="flex items-center gap-1 bg-purple-50 text-purple-800 border border-purple-200/80 px-2 py-0.5 rounded-full text-xs font-black shadow-2xs">
+                    <i data-lucide="star" class="w-3 h-3 fill-purple-400 text-purple-500"></i>
+                    <span id="director-sales-pct">68%</span>
+                  </div>
+                </div>
+
+                <!-- Métadonnées & Localisation / Canal -->
+                <div class="text-xs text-slate-500 space-y-1 pt-1">
+                  <div class="flex items-center gap-1.5 font-medium">
+                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Livraison automatique & facturation</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 font-medium">
+                    Objectif mensuel : <strong class="text-slate-800 font-extrabold">25 ventes fermées</strong>
+                  </div>
+                </div>
+
+                <!-- Jauge de progression -->
+                <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mt-2">
+                  <div id="director-sales-bar" class="bg-purple-600 h-2 rounded-full transition-all duration-500" style="width: 68%;"></div>
+                </div>
+
+                <!-- Tags / Pilules -->
+                <div class="flex flex-wrap items-center gap-1.5 pt-2">
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Tunnel Invo</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Relance J+1</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 text-[10px] font-bold">+Closing</span>
+                </div>
+              </div>
+
+              <!-- Bas de carte -->
+              <div class="pt-5 border-t border-slate-100 flex items-center justify-between gap-3 mt-4">
+                <div>
+                  <span class="text-xs text-slate-400 font-bold block uppercase tracking-wider text-[9px]">Transactions</span>
+                  <div class="text-lg font-black text-slate-900 tracking-tight" id="director-sales-current">17 / 25</div>
+                </div>
+                <button onclick="showTab('simulator')" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs transition shadow-xs active:scale-95 cursor-pointer">
+                  Simuler Clôture
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2. SECTION 2 COLS : BULLETIN D'EVALUATION IA & HISTORIQUE DES RAPPORTS DIRECTEUR -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Formulaire de fixation des objectifs -->
-          <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+
+          <!-- BULLETIN D'ÉVALUATION IA (Style Carte Blanche Épurée & Rétroaction) -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs flex flex-col justify-between space-y-4">
             <div>
-              <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <i data-lucide="target" class="w-5 h-5 text-[#0062ff]"></i>
-                  Assigner les Objectifs & Quotas au Commercial IA
-                </h3>
-                <span class="text-[11px] font-semibold text-slate-400">Directeur Général</span>
-              </div>
-              <p class="text-xs text-slate-500 mb-4">
-                Définissez les nouveaux objectifs opérationnels. L'Agent IA recalibre automatiquement sa vélocité de relance et ses seuils de négociation.
-              </p>
-
-              <form id="form-goals" onsubmit="saveDirectorGoals(event)" class="space-y-4 text-xs">
-                <div>
-                  <label class="block text-slate-700 font-semibold mb-1">Offre ou Service Cible Associé *</label>
-                  <select id="goal-product" onchange="onGoalProductChange()" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-medium focus:border-[#0062ff] focus:outline-none">
-                    <option value="0" data-price="0">Toutes les Offres (Catalogue Global)</option>
-                  </select>
-                  <p id="goal-product-hint" class="text-[11px] text-slate-500 mt-1">L'Agent IA orientera prioritairement ses argumentaires de vente et relances sur cette offre.</p>
-                </div>
-
-                <div>
-                  <label class="block text-slate-700 font-semibold mb-1">Période Cible</label>
-                  <input type="text" id="goal-period" value="Mensuel (Octobre 2026)" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-[#0062ff] focus:outline-none">
-                </div>
-
-                <div>
-                  <label class="block text-slate-700 font-semibold mb-1">Chiffre d'Affaires Cible (FCFA) *</label>
-                  <input type="number" id="goal-revenue" value="1500000" oninput="onGoalProductChange()" required class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-[#0062ff] focus:outline-none">
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-slate-700 font-semibold mb-1">Quota Leads Qualifiés *</label>
-                    <input type="number" id="goal-leads" value="120" required class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-[#0062ff] focus:outline-none">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                    <i data-lucide="award" class="w-5 h-5 text-emerald-600"></i>
                   </div>
                   <div>
-                    <label class="block text-slate-700 font-semibold mb-1">Quota Ventes Fermées *</label>
-                    <input type="number" id="goal-conversions" value="25" required class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:border-[#0062ff] focus:outline-none">
+                    <h3 class="text-base font-black text-slate-900">Bulletin d'Évaluation de l'IA</h3>
+                    <p class="text-[11px] text-slate-400 font-semibold">Audit continu de la pertinence et de l'éthique</p>
                   </div>
                 </div>
-
-                <div class="pt-2">
-                  <button type="submit" class="w-full bg-[#0062ff] hover:bg-[#0052cc] text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 cursor-pointer">
-                    <i data-lucide="send" class="w-4 h-4"></i>
-                    Transmettre les Ordres au Commercial IA
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <!-- Bulletin d'Évaluation de l'IA -->
-          <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between border-b border-slate-200 pb-3 mb-4">
-                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <i data-lucide="award" class="w-5 h-5 text-emerald-600"></i>
-                  Bulletin d'Évaluation de l'IA
-                </h3>
-                <span id="eval-grade-badge" class="text-sm font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-xl">Grade A (92/100)</span>
+                <span id="eval-grade-badge" class="text-xs font-black bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1 rounded-xl shadow-2xs">
+                  Grade A (92/100)
+                </span>
               </div>
 
+              <!-- Critères d'évaluation détaillés -->
               <div class="space-y-2.5 text-xs mb-4" id="eval-criteria-container">
-                <!-- Rempli par JavaScript -->
+                <!-- Rempli dynamiquement par JS -->
               </div>
 
-              <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 mb-3">
-                <span class="text-xs font-bold text-emerald-800 flex items-center gap-1.5 mb-1.5">
-                  <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> Points Forts Détectés
+              <!-- Points Forts -->
+              <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 mb-3">
+                <span class="text-xs font-black text-emerald-800 flex items-center gap-1.5 mb-1.5">
+                  <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                  <span>Points Forts Validés</span>
                 </span>
                 <ul id="eval-strengths-list" class="text-xs text-emerald-900 list-disc list-inside space-y-1 font-medium">
                   <!-- Liste -->
@@ -1052,32 +1212,56 @@
               </div>
             </div>
 
-            <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200">
-              <span class="text-xs font-bold text-amber-800 flex items-center gap-1.5 mb-1.5">
-                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i> Recommandations d'Amélioration
+            <!-- Recommandations d'Amélioration -->
+            <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-100">
+              <span class="text-xs font-black text-amber-800 flex items-center gap-1.5 mb-1.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                <span>Axes d'Optimisation Immédiats</span>
               </span>
               <ul id="eval-improvements-list" class="text-xs text-amber-900 list-disc list-inside space-y-1 font-medium">
                 <!-- Liste -->
               </ul>
             </div>
           </div>
+
+          <!-- HISTORIQUE DES RAPPORTS DU DIRECTEUR -->
+          <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black">
+                    <i data-lucide="archive" class="w-5 h-5 text-[#0062ff]"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-black text-slate-900">Historique des Rapports Directoriaux</h3>
+                    <p class="text-[11px] text-slate-400 font-semibold">Synthèses d'activité hebdomadaires et mensuelles</p>
+                  </div>
+                </div>
+                <button onclick="openReportModal()" class="text-xs font-extrabold text-[#0062ff] hover:underline flex items-center gap-1 cursor-pointer">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>Nouveau</span>
+                </button>
+              </div>
+
+              <!-- Liste des Rapports -->
+              <div id="reports-list-container" class="space-y-3 text-xs">
+                <!-- Rempli par JavaScript -->
+              </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4 text-slate-500"></i>
+                <span class="text-xs text-slate-700 font-bold">Exportation du Dossier PDF Stratégique</span>
+              </div>
+              <button onclick="window.open('/api/export/dossier', '_blank')" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition">
+                Télécharger
+              </button>
+            </div>
+          </div>
+
         </div>
 
-        <!-- 3. RAPPORTS ENREGISTRÉS -->
-        <div class="glass-card rounded-2xl p-6">
-          <div class="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
-            <div>
-              <h3 class="text-base font-bold text-slate-900">Historique des Rapports Transmis au Directeur</h3>
-              <p class="text-xs text-slate-500">Archives des synthèses d'activité hebdomadaires et mensuelles générées par le système.</p>
-            </div>
-            <button onclick="openReportModal()" class="text-xs font-bold text-[#0062ff] hover:underline flex items-center gap-1">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Nouveau Rapport
-            </button>
-          </div>
-          <div id="reports-list-container" class="space-y-3 text-xs">
-            <!-- Rapports -->
-          </div>
-        </div>
       </section>
 
       <!-- ==================== TAB 3 : CALENDRIER COMMERCIAL INTERACTIF (DESIGN CLICKUP PROJECT DASHBOARD) ==================== -->
