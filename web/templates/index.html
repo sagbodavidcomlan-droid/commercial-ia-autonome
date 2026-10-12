@@ -2760,461 +2760,495 @@
         </div>
       </section>
 
-      <!-- ==================== TAB 6 : PARAMÈTRES & MOTEUR IA ==================== -->
+      <!-- ==================== TAB 6 : PARAMÈTRES & MOTEUR IA (DESIGN INVO CREATIVE DASHBOARD) ==================== -->
       <section id="tab-settings" class="tab-pane hidden space-y-6">
-        <div>
-          <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
-            <i data-lucide="sliders-horizontal" class="w-6 h-6 text-purple-600"></i>
-            Paramètres Généraux, Moteur IA & Conformité
-          </h2>
-          <p class="text-xs text-slate-500">Configurez l'intelligence artificielle de pointe qui pilote l'agent, vos comptes réseaux sociaux et le registre légal RGPD.</p>
-        </div>
-
-        <!-- Section 1 : Cerveau IA & Architecture Cognitive -->
-        <div class="glass-card rounded-2xl p-6 space-y-5 border border-purple-200">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center font-bold">
-                <i data-lucide="brain" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h3 class="font-bold text-slate-900 text-base">Sur quelle IA l'agent est-il assis ?</h3>
-                <p class="text-xs text-slate-500">Architecture Cognitive Hybride : Puissance LLM + Garde-Fou Déterministe Zéro-Hallucination</p>
-              </div>
-            </div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Double Étage Actif
-            </span>
-          </div>
-
-          <!-- Description Pédagogique -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div class="p-4 rounded-xl bg-purple-50/50 border border-purple-200 shadow-2xs space-y-1.5">
-              <span class="text-purple-700 font-bold uppercase tracking-wider text-[10px]">Étage 1 : Stratégie & Persuasion Humaine</span>
-              <h4 class="font-bold text-slate-900 text-sm">Modèle de Langage Avancé (LLM)</h4>
-              <p class="text-slate-600 text-[11px] leading-relaxed">
-                Prend en charge la finesse de négociation, l'empathie, l'adaptation au profil psychologique <strong>DISC</strong>, et la reformulation subtile des 5 objections majeures.
-              </p>
-            </div>
-            <div class="p-4 rounded-xl bg-emerald-50/50 border border-emerald-200 shadow-2xs space-y-1.5">
-              <span class="text-emerald-700 font-bold uppercase tracking-wider text-[10px]">Étage 2 : Rigueur Absolue & Vérité Terrain</span>
-              <h4 class="font-bold text-slate-900 text-sm">Moteur Neuro-Symbolique Local</h4>
-              <p class="text-slate-600 text-[11px] leading-relaxed">
-                Connecté en direct à la base SQLite. Il calcule le score <strong>DUR</strong>, vérifie les stocks réels, verrouille les prix officiels et applique le <strong>RGPD</strong> sans aucune dérive.
-              </p>
-            </div>
-          </div>
-
-          <!-- Sélecteur de Modèle IA -->
-          <div class="space-y-3">
-            <label class="block text-slate-800 font-bold text-xs">Sélectionnez le Moteur IA Actif :</label>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-purple-300 hover:border-purple-500 shadow-xs cursor-pointer transition">
-                <input type="radio" name="ai-engine-choice" value="claude-3-5-sonnet" checked class="mt-1 text-purple-600 focus:ring-purple-500">
-                <div>
-                  <div class="font-bold text-slate-900 flex items-center gap-1.5">
-                    Claude 3.5 Sonnet (Anthropic)
-                    <span class="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">Recommandé</span>
-                  </div>
-                  <p class="text-[11px] text-slate-500 mt-0.5">Le plus doué au monde pour la psychologie relationnelle, l'écoute active et la persuasion douce.</p>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-slate-200 hover:border-blue-400 shadow-xs cursor-pointer transition">
-                <input type="radio" name="ai-engine-choice" value="gpt-4o" class="mt-1 text-[#0062ff] focus:ring-blue-500">
-                <div>
-                  <div class="font-bold text-slate-900">GPT-4o (OpenAI)</div>
-                  <p class="text-[11px] text-slate-500 mt-0.5">Scoring ultra-rapide, directivité forte et formulation percutante.</p>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-slate-200 hover:border-sky-400 shadow-xs cursor-pointer transition">
-                <input type="radio" name="ai-engine-choice" value="gemini-2-flash" class="mt-1 text-sky-600 focus:ring-sky-500">
-                <div>
-                  <div class="font-bold text-slate-900">Google Gemini 2.0 / 1.5 Pro</div>
-                  <p class="text-[11px] text-slate-500 mt-0.5">Excellente ingestion de fiches techniques denses et raisonnement multivariable.</p>
-                </div>
-              </label>
-
-              <label class="flex items-start gap-3 p-3.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 shadow-xs cursor-pointer transition">
-                <input type="radio" name="ai-engine-choice" value="hybrid-local" class="mt-1 text-emerald-600 focus:ring-emerald-500">
-                <div>
-                  <div class="font-bold text-slate-900 flex items-center gap-1.5">
-                    Moteur Hybride Local Autonome
-                    <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">Gratuit & Hors-ligne</span>
-                  </div>
-                  <p class="text-[11px] text-slate-500 mt-0.5">Opérationnel immédiatement sans clé API, zéro latence et garantie anti-panne.</p>
-                </div>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Section 2 : Configuration Moteur IA & Clés Secrètes -->
-        <form id="form-settings" onsubmit="saveSettings(event)" class="space-y-6">
-          
-          <!-- FOURNITURE DES CLÉS API IA -->
-          <div class="glass-card rounded-2xl p-6 border border-slate-200 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                  <i data-lucide="key" class="w-5 h-5 text-purple-600"></i>
-                  Clés API des Modèles d'Intelligence Artificielle
-                </h3>
-                <p class="text-xs text-slate-500">Renseignez vos clés API officielles pour débloquer la puissance maximale des LLMs ou utilisez le mode simulation intégré.</p>
-              </div>
-              <span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
-                Cryptage Sécurisé & Stockage Local
+        
+        <!-- En-tête Supérieur Moderne : Salutation & Raccourcis d'Action -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                CONSOLE D'ADMINISTRATION & CERVEAU IA
+              </span>
+              <span class="text-xs text-slate-400 font-bold">&bull;</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Double Étage Actif
               </span>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <!-- Anthropic Claude 3.5 Sonnet -->
-              <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="font-bold text-slate-900 flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">C</span>
-                    Claude 3.5 Sonnet
-                  </div>
-                  <span class="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-bold">Anthropic</span>
-                </div>
-                <div>
-                  <label class="block text-slate-600 font-semibold mb-1 text-[11px]">Clé API Anthropic (sk-ant-...)</label>
-                  <input type="password" id="setting-anthropic-key" placeholder="sk-ant-api03-..." 
-                         class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-purple-500">
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                  <button type="button" onclick="testAiKey('anthropic')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5 shadow-xs transition">
-                    <i data-lucide="check" class="w-3 h-3"></i> Tester la Clé
-                  </button>
-                  <span id="test-status-anthropic" class="text-[10px] text-slate-500 font-medium"></span>
-                </div>
-              </div>
-
-              <!-- OpenAI GPT-4o -->
-              <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="font-bold text-slate-900 flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">O</span>
-                    GPT-4o
-                  </div>
-                  <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">OpenAI</span>
-                </div>
-                <div>
-                  <label class="block text-slate-600 font-semibold mb-1 text-[11px]">Clé API OpenAI (sk-proj-...)</label>
-                  <input type="password" id="setting-openai-key" placeholder="sk-proj-..." 
-                         class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-emerald-500">
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                  <button type="button" onclick="testAiKey('openai')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5 shadow-xs transition">
-                    <i data-lucide="check" class="w-3 h-3"></i> Tester la Clé
-                  </button>
-                  <span id="test-status-openai" class="text-[10px] text-slate-500 font-medium"></span>
-                </div>
-              </div>
-
-              <!-- Google Gemini 2.0 / 1.5 -->
-              <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-3">
-                <div class="flex items-center justify-between">
-                  <div class="font-bold text-slate-900 flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-xs">G</span>
-                    Gemini 2.0 / 1.5
-                  </div>
-                  <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded font-bold">Google</span>
-                </div>
-                <div>
-                  <label class="block text-slate-600 font-semibold mb-1 text-[11px]">Clé API Google Gemini (AIzaSy...)</label>
-                  <input type="password" id="setting-gemini-key" placeholder="AIzaSy..." 
-                         class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-sky-500">
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                  <button type="button" onclick="testAiKey('gemini')" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5 shadow-xs transition">
-                    <i data-lucide="check" class="w-3 h-3"></i> Tester la Clé
-                  </button>
-                  <span id="test-status-gemini" class="text-[10px] text-slate-500 font-medium"></span>
-                </div>
-              </div>
-            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight mt-1">Bonjour, Dave Sagbo ! Paramètres & Configuration</h2>
+            <p class="text-xs text-slate-500 font-medium">Pilotez le moteur d'intelligence artificielle, vos canaux de communication et la sécurité légale de l'agent.</p>
           </div>
 
-          <!-- CONNECTEUR CRM TIERS & WEBHOOKS (HUBSPOT / N8N / MAKE) -->
-          <div class="glass-card rounded-2xl p-6 border border-slate-200 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 class="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                  <i data-lucide="share-2" class="w-5 h-5 text-orange-500"></i>
-                  Synchronisation CRM Tiers (HubSpot) & Webhooks Universels
-                </h3>
-                <p class="text-xs text-slate-500">Poussez automatiquement tous les leads et conversions de l'Agent IA vers HubSpot ou vers vos flux n8n / Make.</p>
-              </div>
-              <div class="flex gap-2">
-                <button type="button" onclick="testHubSpot()" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-xs transition">
-                  <i data-lucide="zap" class="w-3.5 h-3.5"></i> Tester HubSpot
-                </button>
-                <button type="button" onclick="syncAllToCrm()" class="bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition border border-slate-200 shadow-xs">
-                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Synchroniser Tous
-                </button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">HubSpot Private App Token</label>
-                <input type="password" id="setting-hubspot-token" placeholder="pat-na1-..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-orange-500">
-                <span class="text-[10px] text-slate-400 mt-1 block">Créé dans Paramètres > Intégrations > Applications privées</span>
-              </div>
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">HubSpot Portal / Hub ID (Optionnel)</label>
-                <input type="text" id="setting-hubspot-portal-id" placeholder="Ex: 8821943" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none focus:border-orange-500">
-                <span class="text-[10px] text-slate-500 mt-1 block">Identifiant de portail HubSpot CRM</span>
-              </div>
-              <div>
-                <label class="block text-slate-400 mb-1">Webhook Sortant Universel (Make / n8n / Zapier)</label>
-                <input type="url" id="setting-crm-webhook-url" placeholder="https://hook.eu1.make.com/..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-orange-500">
-                <span class="text-[10px] text-slate-500 mt-1 block">Reçoit chaque nouveau prospect qualifié en JSON</span>
-              </div>
-            </div>
-            <div id="hubspot-test-result" class="text-xs"></div>
-          </div>
-
-          <!-- Section 3 : Connexions Réseaux Sociaux & Canaux -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-            <!-- Meta / Facebook Page & Messenger -->
-            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-blue-50 text-[#0062ff] flex items-center justify-center font-bold text-base border border-blue-100">f</div>
-                  <div>
-                    <h3 class="font-bold text-slate-900 text-sm">Meta Facebook Page & Messenger API</h3>
-                    <p class="text-[11px] text-slate-500">Échanges directs, visibilité dans la boîte de réception Facebook & Webhooks</p>
-                  </div>
-                </div>
-                <div id="meta-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                  Non testé
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Jeton d'accès Page Meta (Page Access Token)</label>
-                <div class="flex gap-2">
-                  <input type="password" id="setting-meta-token" placeholder="EAA..." class="flex-1 bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500">
-                  <button type="button" onclick="testFacebookConnection()" class="bg-[#0062ff] hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-xs">
-                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tester
-                  </button>
-                </div>
-              </div>
-
-              <div id="meta-connection-feedback" class="text-[11px] p-2.5 rounded-lg hidden"></div>
-
-              <!-- Paramètres Webhook Meta pour synchronisation bidirectionnelle -->
-              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1.5 text-[11px]">
-                <div class="font-bold text-slate-700 flex items-center gap-1.5">
-                  <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-600"></i> Paramètres Webhook Meta Messenger
-                </div>
-                <p class="text-slate-500 text-[10px]">Pour recevoir les messages de vos prospects directement dans le CRM :</p>
-                <div class="space-y-1 text-slate-700 font-mono text-[10px]">
-                  <div><span class="text-slate-500 font-sans">URL de rappel :</span> <span class="text-indigo-600 font-semibold select-all">https://commercial-ia-autonome.onrender.com/webhook/facebook</span></div>
-                  <div><span class="text-slate-500 font-sans">Jeton de vérification :</span> <span class="text-emerald-600 font-semibold select-all">commercial_ia_verify_2026</span></div>
-                  <div><span class="text-slate-500 font-sans">Abonnement :</span> <span class="text-slate-600">messages, messaging_postbacks</span></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- LinkedIn -->
-            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-bold border border-sky-100">in</div>
-                <div>
-                  <h3 class="font-bold text-slate-900 text-sm">LinkedIn Professional Engine</h3>
-                  <p class="text-[11px] text-slate-500">Prospection B2B réelle (Zéro prospect fictif si déconnecté)</p>
-                </div>
-              </div>
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Jeton d'accès LinkedIn API</label>
-                <input type="password" id="setting-linkedin-token" placeholder="AQV..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none">
-                <span class="text-[10px] text-slate-400 mt-1 block">Laissé vide : aucun faux lead généré dans le CRM.</span>
-              </div>
-            </div>
-
-            <!-- WhatsApp Business (Meta Cloud API) -->
-            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold border border-emerald-100">WA</div>
-                  <div>
-                    <h3 class="font-bold text-slate-900 text-sm">WhatsApp Business (Meta Cloud API)</h3>
-                    <p class="text-[11px] text-slate-500">Canal officiel direct +2290194933458 — Entrants & Sortants 24h/24</p>
-                  </div>
-                </div>
-                <div id="wa-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                  En attente
-                </div>
-              </div>
-
-              <!-- Section Connexion QR Code Direct (Zéro paperasse Meta) -->
-              <div class="mt-4 p-4 rounded-xl bg-emerald-50/50 border border-emerald-200">
-                <div class="flex items-center justify-between mb-2">
-                  <div class="flex items-center gap-2">
-                    <i data-lucide="smartphone" class="w-5 h-5 text-emerald-600"></i>
-                    <div>
-                      <h4 class="font-bold text-slate-900 text-xs">Passerelle WhatsApp Directe (Scan QR Code)</h4>
-                      <p class="text-[10px] text-emerald-700">Connectez le numéro +2290194933458 directement sans restriction Meta</p>
-                    </div>
-                  </div>
-                  <button type="button" onclick="openWhatsAppQrModal()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs">
-                    <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Scanner QR Code
-                  </button>
-                </div>
-                <div id="wa-bridge-info" class="text-[11px] text-slate-600 flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="wa-bridge-dot"></span>
-                  <span id="wa-bridge-text">Statut de la passerelle : Vérification en cours...</span>
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Phone Number ID (Optionnel - Si Meta Cloud API)</label>
-                <input type="text" id="setting-whatsapp-phone-number-id" placeholder="Ex: 104829104829104" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
-                <p class="text-[10px] text-slate-400 mt-1">Trouvable dans Meta Developers > WhatsApp > Configuration de l'API > Identifiant du numéro de téléphone</p>
-              </div>
-
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">WhatsApp Access Token (Meta Cloud API / WATI)</label>
-                <input type="password" id="setting-wati-token" placeholder="EAA..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
-                <p class="text-[10px] text-slate-400 mt-1">Jeton d'accès temporaire ou jeton d'utilisateur système avec permission whatsapp_business_messaging</p>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-slate-700 font-semibold mb-1">WABA ID (Compte WhatsApp Business - Optionnel)</label>
-                  <input type="text" id="setting-whatsapp-waba-id" placeholder="Ex: 109876543210987" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
-                </div>
-                <div>
-                  <label class="block text-slate-700 font-semibold mb-1">Numéro Officiel / Alertes Directeur</label>
-                  <input type="text" id="setting-admin-phone" value="+2290194933458" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none font-mono text-sm">
-                </div>
-              </div>
-
-              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-600 space-y-1">
-                <div class="flex items-center justify-between">
-                  <span class="text-slate-500 font-sans">URL de rappel Webhook :</span>
-                  <span class="text-emerald-700 font-mono select-all font-semibold">https://commercial-ia-autonome.onrender.com/webhook/whatsapp</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-slate-500 font-sans">Jeton de vérification (Verify Token) :</span>
-                  <span class="text-indigo-700 font-mono select-all font-semibold">commercial_ia_verify_2026</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-slate-500 font-sans">Champ d'abonnement Meta Webhook :</span>
-                  <span class="text-amber-700 font-mono font-semibold">messages</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Passerelles Paiement & Mobile Money -->
-            <div class="glass-card rounded-xl p-5 space-y-3 border border-slate-200">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold border border-purple-100">
-                  <i data-lucide="credit-card" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <h3 class="font-bold text-slate-900 text-sm">Paiements & Mobile Money</h3>
-                  <p class="text-[11px] text-slate-500">Systeme.io, PayTech (MTN, Moov, Wave) ou Stripe</p>
-                </div>
-              </div>
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Lien de paiement / Tunnel de vente</label>
-                <input type="url" id="setting-payment-url" value="https://formations.sagbodavid.com/pack-digital" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 focus:outline-none">
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end">
-            <button type="submit" class="bg-[#0062ff] hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center gap-2">
-              <i data-lucide="save" class="w-4 h-4"></i> Enregistrer Tous les Paramètres
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="loadSettings()" class="px-3.5 py-2 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 transition shadow-2xs flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+              <span>Recharger</span>
+            </button>
+            <button type="button" onclick="document.getElementById('form-settings').requestSubmit()" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-extrabold transition shadow-xs flex items-center gap-2">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span>Enregistrer Tout</span>
             </button>
           </div>
-        </form>
+        </div>
 
-        <!-- Section 3 : Conformité Légale & Registre RGPD -->
-        <div class="glass-card rounded-2xl p-6 space-y-4 border border-slate-200">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-              <i data-lucide="shield-check" class="w-5 h-5 text-emerald-600"></i>
-              Registre de Conformité Légale & Protection des Données (RGPD)
-            </h3>
-            <span class="text-xs text-slate-500">Gestion des opt-outs et droit d'oubli</span>
+        <!-- 1. CARTES THÉMATIQUES SUPÉRIEURES (3 CARTES INSPIRÉES DU DASHBOARD CRÉATIF) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Carte 1 : Cerveau & LLMs -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex items-center gap-4 hover:border-purple-200 transition">
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0 text-xl shadow-2xs">
+              <i data-lucide="brain" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-purple-600">Architecture Cognitive</span>
+              <h4 class="text-sm font-black text-slate-900 tracking-tight mt-0.5">Double Étage Hybride</h4>
+              <p class="text-[11px] text-slate-500 font-medium">LLM Stratégique + Moteur Déterministe Zéro Hallucination.</p>
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="space-y-3">
-              <h4 class="text-xs font-bold text-slate-700">Test de désinscription "STOP"</h4>
-              <p class="text-[11px] text-slate-500">Simulez la réception d'un mot-clé STOP pour vérifier l'arrêt immédiat des relances.</p>
-              <form onsubmit="testOptOut(event)" class="space-y-2.5 text-xs">
-                <input type="text" id="optout-phone" value="+22997123456" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900" placeholder="Numéro WhatsApp">
-                <input type="text" id="optout-message" value="STOP je ne suis pas intéressé" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900" placeholder="Message reçu">
-                <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl shadow-xs transition">
-                  Tester la Désinscription
+          <!-- Carte 2 : Canaux Connectés -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex items-center gap-4 hover:border-emerald-200 transition">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0 text-xl shadow-2xs">
+              <i data-lucide="message-circle" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-emerald-600">Canaux de Prospection</span>
+              <h4 class="text-sm font-black text-slate-900 tracking-tight mt-0.5">WhatsApp, Meta & LinkedIn</h4>
+              <p class="text-[11px] text-slate-500 font-medium">Passerelle WhatsApp directe & Webhooks temps réel.</p>
+            </div>
+          </div>
+
+          <!-- Carte 3 : Sécurité & RGPD -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex items-center gap-4 hover:border-blue-200 transition">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center flex-shrink-0 text-xl shadow-2xs">
+              <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff]">Conformité Légale</span>
+              <h4 class="text-sm font-black text-slate-900 tracking-tight mt-0.5">Registre RGPD & Master Pass</h4>
+              <p class="text-[11px] text-slate-500 font-medium">Protection anti-intrusion et désinscription instantanée.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 2. GRILLE PRINCIPALE (8 COLS GAUCHE : MOTEUR IA & CANAUX / 4 COLS DROITE : SÉCURITÉ & AUDIT) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- COLONNE PRINCIPALE GAUCHE (8 COLS) -->
+          <div class="lg:col-span-8 space-y-6">
+
+            <!-- Section 1 : Sélection du Moteur IA Actif -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">Sélection du Cerveau IA Principal</h3>
+                  <p class="text-xs text-slate-400 font-medium">Choisissez le grand modèle de langage qui anime le style conversationnel de l'agent.</p>
+                </div>
+                <span class="text-xs font-bold bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-100">
+                  Switch Instantané
+                </span>
+              </div>
+
+              <!-- Cartes Choix Radio Modèles IA -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                
+                <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/70 border border-slate-200 hover:border-purple-400 hover:bg-purple-50/30 shadow-2xs cursor-pointer transition">
+                  <input type="radio" name="ai-engine-choice" value="claude-3-5-sonnet" checked class="mt-1 text-purple-600 focus:ring-purple-500">
+                  <div class="space-y-1">
+                    <div class="font-black text-slate-900 flex items-center gap-1.5">
+                      Claude 3.5 Sonnet
+                      <span class="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full font-black">Recommandé</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed font-normal">Finesse psychologique, écoute active et gestion fine des objections complexes.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/70 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/30 shadow-2xs cursor-pointer transition">
+                  <input type="radio" name="ai-engine-choice" value="gpt-4o" class="mt-1 text-[#0062ff] focus:ring-blue-500">
+                  <div class="space-y-1">
+                    <div class="font-black text-slate-900 flex items-center gap-1.5">
+                      GPT-4o (OpenAI)
+                      <span class="text-[9px] bg-blue-100 text-[#0062ff] px-1.5 py-0.5 rounded-full font-black">Rapide</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed font-normal">Scoring immédiat, concision et directivité dans les réponses courtes.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/70 border border-slate-200 hover:border-sky-400 hover:bg-sky-50/30 shadow-2xs cursor-pointer transition">
+                  <input type="radio" name="ai-engine-choice" value="gemini-2-flash" class="mt-1 text-sky-600 focus:ring-sky-500">
+                  <div class="space-y-1">
+                    <div class="font-black text-slate-900 flex items-center gap-1.5">
+                      Google Gemini 2.0 / 1.5
+                      <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded-full font-black">Multivariable</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed font-normal">Ingestion de catalogues techniques lourds et structuration logique.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-3 p-4 rounded-2xl bg-slate-50/70 border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/30 shadow-2xs cursor-pointer transition">
+                  <input type="radio" name="ai-engine-choice" value="hybrid-local" class="mt-1 text-emerald-600 focus:ring-emerald-500">
+                  <div class="space-y-1">
+                    <div class="font-black text-slate-900 flex items-center gap-1.5">
+                      Moteur Hybride Local
+                      <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-black">Zéro Clé API</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed font-normal">Opérationnel immédiatement sans clé API, zéro latence et garantie anti-panne.</p>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+
+            <!-- Formulaire Principal de Sauvegarde des Paramètres -->
+            <form id="form-settings" onsubmit="saveSettings(event)" class="space-y-6">
+              
+              <!-- Section 2 : Clés API Officielles -->
+              <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 class="text-base font-black text-slate-900 tracking-tight">Clés API des Modèles d'Intelligence Artificielle</h3>
+                    <p class="text-xs text-slate-400 font-medium">Stockage sécurisé chiffré. Vos clés ne quittent jamais votre serveur.</p>
+                  </div>
+                  <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Chiffrement AES</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  
+                  <!-- Anthropic -->
+                  <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="font-black text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xs">C</span>
+                        Claude 3.5
+                      </div>
+                      <span class="text-[9px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full font-bold">Anthropic</span>
+                    </div>
+                    <div>
+                      <label class="block text-slate-600 font-bold mb-1 text-[11px]">Clé API Anthropic</label>
+                      <input type="password" id="setting-anthropic-key" placeholder="sk-ant-api03-..." 
+                             class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                      <button type="button" onclick="testAiKey('anthropic')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-3 py-1.5 rounded-xl text-[10px] flex items-center gap-1.5 shadow-2xs transition">
+                        <i data-lucide="check" class="w-3 h-3"></i> Tester
+                      </button>
+                      <span id="test-status-anthropic" class="text-[10px] text-slate-500 font-medium"></span>
+                    </div>
+                  </div>
+
+                  <!-- OpenAI -->
+                  <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="font-black text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-xs">O</span>
+                        GPT-4o
+                      </div>
+                      <span class="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold">OpenAI</span>
+                    </div>
+                    <div>
+                      <label class="block text-slate-600 font-bold mb-1 text-[11px]">Clé API OpenAI</label>
+                      <input type="password" id="setting-openai-key" placeholder="sk-proj-..." 
+                             class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                      <button type="button" onclick="testAiKey('openai')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-[10px] flex items-center gap-1.5 shadow-2xs transition">
+                        <i data-lucide="check" class="w-3 h-3"></i> Tester
+                      </button>
+                      <span id="test-status-openai" class="text-[10px] text-slate-500 font-medium"></span>
+                    </div>
+                  </div>
+
+                  <!-- Google Gemini -->
+                  <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="font-black text-slate-900 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-black text-xs">G</span>
+                        Gemini 2.0
+                      </div>
+                      <span class="text-[9px] bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded-full font-bold">Google</span>
+                    </div>
+                    <div>
+                      <label class="block text-slate-600 font-bold mb-1 text-[11px]">Clé API Google Gemini</label>
+                      <input type="password" id="setting-gemini-key" placeholder="AIzaSy..." 
+                             class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 font-mono text-[11px] focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div class="flex items-center justify-between pt-1">
+                      <button type="button" onclick="testAiKey('gemini')" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-3 py-1.5 rounded-xl text-[10px] flex items-center gap-1.5 shadow-2xs transition">
+                        <i data-lucide="check" class="w-3 h-3"></i> Tester
+                      </button>
+                      <span id="test-status-gemini" class="text-[10px] text-slate-500 font-medium"></span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Section 3 : Connexions Réseaux Sociaux & Canaux (WhatsApp, Meta, LinkedIn) -->
+              <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 class="text-base font-black text-slate-900 tracking-tight">Canaux de Prospection & Messagerie</h3>
+                    <p class="text-xs text-slate-400 font-medium">Connectez vos comptes officiels pour automatiser les échanges entrants et sortants.</p>
+                  </div>
+                  <span class="text-xs font-bold bg-blue-50 text-[#0062ff] px-3 py-1 rounded-full border border-blue-100">
+                    3 Réseaux
+                  </span>
+                </div>
+
+                <div class="space-y-4 text-xs">
+                  
+                  <!-- WhatsApp Business & Pont QR Code -->
+                  <div class="p-5 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                          <i data-lucide="message-circle" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                          <h4 class="font-black text-slate-900 text-sm">Passerelle WhatsApp Directe (+229 01 94 93 34 58)</h4>
+                          <p class="text-[11px] text-emerald-800">Scan QR Code instantané ou connexion Meta Cloud API.</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span id="wa-status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white text-emerald-700 border border-emerald-300">
+                          Vérification...
+                        </span>
+                        <button type="button" onclick="openWhatsAppQrModal()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-2xs transition">
+                          <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Scanner QR
+                        </button>
+                      </div>
+                    </div>
+
+                    <div id="wa-bridge-info" class="text-[11px] text-slate-600 flex items-center gap-2 pt-1 border-t border-emerald-200/50">
+                      <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="wa-bridge-dot"></span>
+                      <span id="wa-bridge-text">Statut de la passerelle : Vérification en cours...</span>
+                    </div>
+
+                    <!-- Champs Cloud API optionnels -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                      <div>
+                        <label class="block text-slate-700 font-bold mb-1 text-[11px]">Phone Number ID (Meta Cloud)</label>
+                        <input type="text" id="setting-whatsapp-phone-number-id" placeholder="Ex: 104829104829104" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs">
+                      </div>
+                      <div>
+                        <label class="block text-slate-700 font-bold mb-1 text-[11px]">WhatsApp Access Token (Cloud API)</label>
+                        <input type="password" id="setting-wati-token" placeholder="EAA..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs">
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Meta Facebook Page & Messenger -->
+                  <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black text-sm border border-blue-200">f</div>
+                        <div>
+                          <h4 class="font-black text-slate-900 text-sm">Meta Facebook Page & Messenger API</h4>
+                          <p class="text-[11px] text-slate-500">Synchronisation bidirectionnelle avec la messagerie de votre Page.</p>
+                        </div>
+                      </div>
+                      <div id="meta-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                        Non testé
+                      </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                      <input type="password" id="setting-meta-token" placeholder="Page Access Token (EAA...)" class="flex-1 bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500">
+                      <button type="button" onclick="testFacebookConnection()" class="bg-[#0062ff] hover:bg-blue-600 text-white font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-2xs">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Tester
+                      </button>
+                    </div>
+                    <div id="meta-connection-feedback" class="text-[11px] p-2.5 rounded-xl hidden"></div>
+                  </div>
+
+                  <!-- LinkedIn & Paiement -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                      <div class="flex items-center gap-2">
+                        <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-700 font-black flex items-center justify-center text-xs">in</span>
+                        <h4 class="font-black text-slate-900 text-xs">LinkedIn API Token</h4>
+                      </div>
+                      <input type="password" id="setting-linkedin-token" placeholder="AQV..." class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 font-mono text-xs">
+                      <span class="text-[10px] text-slate-400 block">Laissé vide : aucun faux lead généré.</span>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-2">
+                      <div class="flex items-center gap-2">
+                        <i data-lucide="credit-card" class="w-4 h-4 text-purple-600"></i>
+                        <h4 class="font-black text-slate-900 text-xs">Lien Paiement / Tunnel de Vente</h4>
+                      </div>
+                      <input type="url" id="setting-payment-url" value="https://formations.sagbodavid.com/pack-digital" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 text-xs">
+                      <span class="text-[10px] text-slate-400 block">Envoyé lors du closing WhatsApp.</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Section 4 : Synchronisation CRM Tiers (HubSpot & Webhooks) -->
+              <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div>
+                    <h3 class="text-base font-black text-slate-900 tracking-tight">HubSpot CRM & Webhooks Universels</h3>
+                    <p class="text-xs text-slate-400 font-medium">Export automatique de chaque prospect converti vers Make, n8n ou HubSpot.</p>
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="button" onclick="testHubSpot()" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition">
+                      <i data-lucide="zap" class="w-3.5 h-3.5"></i> Tester
+                    </button>
+                    <button type="button" onclick="syncAllToCrm()" class="bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-slate-200 transition shadow-2xs">
+                      <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync Tout
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">HubSpot Token</label>
+                    <input type="password" id="setting-hubspot-token" placeholder="pat-na1-..." class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 font-mono text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">HubSpot Portal ID</label>
+                    <input type="text" id="setting-hubspot-portal-id" placeholder="8821943" class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">Webhook Sortant (Make / n8n)</label>
+                    <input type="url" id="setting-crm-webhook-url" placeholder="https://hook.eu1.make.com/..." class="w-full bg-white border border-slate-300 rounded-xl p-2 text-slate-900 text-xs">
+                  </div>
+                </div>
+                <div id="hubspot-test-result" class="text-xs"></div>
+              </div>
+
+              <!-- Bouton d'Enregistrement Principal -->
+              <div class="flex justify-end pt-2">
+                <button type="submit" class="bg-[#0062ff] hover:bg-blue-600 text-white font-black py-3 px-8 rounded-2xl transition shadow-xs flex items-center gap-2">
+                  <i data-lucide="save" class="w-4 h-4"></i>
+                  <span>Enregistrer l'Ensemble des Paramètres</span>
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+
+          <!-- COLONNE LATÉRALE DROITE (4 COLS) : SÉCURITÉ MASTER PASS & RGPD -->
+          <div class="lg:col-span-4 space-y-6">
+
+            <!-- 1. Carte Stylisée Master Pass Administrateur -->
+            <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 shadow-md space-y-4 border border-slate-800">
+              <div class="flex items-center justify-between pb-3 border-b border-white/10">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                  </div>
+                  <h4 class="text-sm font-black tracking-tight">Master Pass Direction</h4>
+                </div>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Actif
+                </span>
+              </div>
+
+              <p class="text-xs text-slate-300 leading-relaxed font-medium">
+                Protège l'accès exclusif au CRM, aux données financières et aux clés API secrètes.
+              </p>
+
+              <form onsubmit="handleChangeMasterPass(event)" class="space-y-3 pt-1 text-xs">
+                <div>
+                  <label class="block text-slate-300 font-bold mb-1">Pass Actuel</label>
+                  <div class="relative">
+                    <input type="password" id="change-pass-current" required placeholder="Pass actuel..." class="w-full bg-white/10 border border-white/20 rounded-xl p-2.5 text-white pr-9 font-mono placeholder-slate-400 focus:outline-none focus:border-[#0062ff]">
+                    <button type="button" onclick="togglePassVisibility('change-pass-current', 'btn-toggle-cur')" id="btn-toggle-cur" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-slate-300 font-bold mb-1">Nouveau Pass (Min. 6 car.)</label>
+                  <div class="relative">
+                    <input type="password" id="change-pass-new" required minlength="6" placeholder="Nouveau code fort..." class="w-full bg-white/10 border border-white/20 rounded-xl p-2.5 text-white pr-9 font-mono placeholder-slate-400 focus:outline-none focus:border-[#0062ff]">
+                    <button type="button" onclick="togglePassVisibility('change-pass-new', 'btn-toggle-new')" id="btn-toggle-new" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div id="change-pass-result" class="hidden text-xs py-1"></div>
+
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs transition shadow-xs flex items-center justify-center gap-2">
+                  <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                  <span>Mettre à Jour le Pass</span>
                 </button>
               </form>
-              <div id="optout-result" class="text-[11px] text-slate-600 mt-2"></div>
             </div>
 
-            <div class="md:col-span-2 space-y-3">
-              <h4 class="text-xs font-bold text-slate-700">Journal d'Audit des Actions Légales</h4>
-              <div id="compliance-registry-container" class="space-y-2 text-xs max-h-56 overflow-y-auto">
-                <!-- Rempli par JavaScript -->
+            <!-- 2. Registre de Conformité Légale & Test STOP RGPD -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                  <h4 class="text-sm font-black text-slate-900 tracking-tight">Registre RGPD & Opt-Out</h4>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase">Conforme</span>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Section 4 : Sécurité & Master Pass Administrateur -->
-        <div class="glass-card rounded-2xl p-6 space-y-4 border border-slate-200">
-          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-                <i data-lucide="shield-check" class="w-5 h-5 text-[#0062ff]"></i>
-                Protection Anti-Intrusion & Modification du Master Pass
-              </h3>
-              <p class="text-xs text-slate-500">Seul le détenteur de ce code peut accéder au CRM, aux données financières et aux clés API.</p>
-            </div>
-            <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Protection Active
-            </span>
-          </div>
-
-          <form onsubmit="handleChangeMasterPass(event)" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Master Pass Actuel</label>
-                <div class="relative">
-                  <input type="password" id="change-pass-current" required placeholder="Saisir le pass actuel..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 pr-10 font-mono">
-                  <button type="button" onclick="togglePassVisibility('change-pass-current', 'btn-toggle-cur')" id="btn-toggle-cur" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    <i data-lucide="eye" class="w-4 h-4"></i>
+              <!-- Test STOP -->
+              <div class="space-y-2">
+                <span class="text-xs font-bold text-slate-800 block">Test de désinscription "STOP"</span>
+                <p class="text-[11px] text-slate-500">Vérifie l'arrêt immédiat et automatisé de toutes les relances.</p>
+                
+                <form onsubmit="testOptOut(event)" class="space-y-2 text-xs">
+                  <input type="text" id="optout-phone" value="+22997123456" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-900 font-mono" placeholder="Numéro WhatsApp">
+                  <input type="text" id="optout-message" value="STOP je ne suis pas intéressé" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 text-slate-900" placeholder="Message reçu">
+                  <button type="submit" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-extrabold py-2 rounded-xl border border-rose-200 transition">
+                    Tester la Désinscription
                   </button>
+                </form>
+                <div id="optout-result" class="text-[11px] text-slate-600 mt-1"></div>
+              </div>
+
+              <!-- Journal d'Audit RGPD -->
+              <div class="pt-3 border-t border-slate-100 space-y-2">
+                <span class="text-xs font-bold text-slate-800 block">Journal d'Audit des Actions Légales</span>
+                <div id="compliance-registry-container" class="space-y-2 text-xs max-h-48 overflow-y-auto pr-1">
+                  <!-- Rempli dynamiquement en JS -->
                 </div>
               </div>
-              <div>
-                <label class="block text-slate-700 font-semibold mb-1">Nouveau Master Pass (Min. 6 caractères)</label>
-                <div class="relative">
-                  <input type="password" id="change-pass-new" required minlength="6" placeholder="Nouveau mot de passe fort..." class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-slate-900 pr-10 font-mono">
-                  <button type="button" onclick="togglePassVisibility('change-pass-new', 'btn-toggle-new')" id="btn-toggle-new" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    <i data-lucide="eye" class="w-4 h-4"></i>
-                  </button>
-                </div>
+
+            </div>
+
+            <!-- 3. Centre d'Assistance & Documentation -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-3">
+              <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Aide & Documentation</h4>
+              
+              <div class="space-y-2">
+                <a href="#tab-audit" onclick="switchTab('audit')" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition">
+                  <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="scale" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-slate-900 truncate">Registre Médico-Légal</div>
+                    <div class="text-[10px] text-slate-400 truncate">Consulter l'historique des décisions IA</div>
+                  </div>
+                </a>
+
+                <a href="#tab-swarm" onclick="switchTab('swarm')" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition">
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="cpu" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-slate-900 truncate">Essaim Multi-Agents</div>
+                    <div class="text-[10px] text-slate-400 truncate">Superviser les quotas de sécurité anti-ban</div>
+                  </div>
+                </a>
               </div>
             </div>
 
-            <div class="flex items-center justify-between pt-1">
-              <div id="change-pass-result" class="hidden text-xs"></div>
-              <button type="submit" class="bg-[#0062ff] hover:bg-blue-700 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 text-xs">
-                <i data-lucide="key" class="w-4 h-4"></i> Mettre à Jour le Master Pass
-              </button>
-            </div>
-          </form>
+          </div>
+
         </div>
+
       </section>
 
       <!-- ==================== TAB : CATALOGUE PRODUITS & SERVICES ==================== -->
