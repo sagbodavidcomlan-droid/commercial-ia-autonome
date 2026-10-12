@@ -6499,7 +6499,10 @@ function renderCarouselPreview(result) {
   const totalSlides = slides.length;
 
   const slidesHtml = slides.map((slide, sIdx) => {
+    // Si la slide contient du svg_code, on l'utilise directement, sinon on le génère ou on utilise l'URL
+    const svgCode = slide.svg_code || "";
     const svgUrl = getSlideSvgUrl(slide, sIdx, totalSlides);
+
     return `
     <div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-lg transition-all duration-300">
       
@@ -6513,8 +6516,8 @@ function renderCarouselPreview(result) {
       </div>
 
       <!-- Aperçu Graphique Réel du Visuel Vectoriel (Aspect Ratio 4:5) -->
-      <div class="relative w-full aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer" onclick="openSlideModal(${sIdx})">
-        <iframe src="${svgUrl}" class="w-full h-full border-0 pointer-events-none transform scale-100 origin-top-left" loading="lazy" scrolling="no"></iframe>
+      <div class="relative w-full aspect-[4/5] bg-slate-950 overflow-hidden flex items-center justify-center cursor-pointer select-none" id="slide-preview-box-${sIdx}">
+        ${svgCode ? `<div class="w-full h-full [&>svg]:w-full [&>svg]:h-full pointer-events-none">${svgCode}</div>` : `<img src="${svgUrl}" class="w-full h-full object-contain pointer-events-none" alt="Slide ${sIdx + 1}">`}
         
         <!-- Hover Overlay avec loupe -->
         <div class="absolute inset-0 bg-[#0062ff]/10 opacity-0 group-hover:opacity-100 backdrop-blur-[1px] transition-all flex items-center justify-center">
@@ -6562,7 +6565,10 @@ function renderCarouselPreview(result) {
           <p class="text-[11px] text-slate-500">Design continu seamless, arches géométriques, contrastes alternés et footer de contact.</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="downloadCarouselAsPdf()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Télécharger PDF Document
+          </button>
           <button onclick="downloadAllSlidesInFormat('png')" class="px-3.5 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
             <i data-lucide="image" class="w-3.5 h-3.5"></i> Tout en PNG HD
           </button>
@@ -6686,26 +6692,67 @@ function renderOmnichannelPreview(pack) {
   if (window.lucide) lucide.createIcons();
 }
 
-async function convertSvgUrlToRaster(svgUrl, format = 'png', width = 1080, height = 1350) {
+async function convertSvgStringToRaster(svgString, format = 'png', width = 1080, height = 1350) {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#0B0F19";
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-      const quality = format === "jpeg" ? 0.92 : 1.0;
-      const dataUrl = canvas.toDataURL(mime, quality);
-      resolve(dataUrl);
-    };
-    img.onerror = (e) => reject(e);
-    img.src = svgUrl;
+    try {
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#0A1128";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          URL.revokeObjectURL(blobUrl);
+          const mime = (format === "jpeg" || format === "jpg") ? "image/jpeg" : "image/png";
+          const quality = (format === "jpeg" || format === "jpg") ? 0.95 : 1.0;
+          const dataUrl = canvas.toDataURL(mime, quality);
+          resolve(dataUrl);
+        } catch (canvasErr) {
+          URL.revokeObjectURL(blobUrl);
+          reject(canvasErr);
+        }
+      };
+      img.onerror = (e) => {
+        URL.revokeObjectURL(blobUrl);
+        reject(e);
+      };
+      img.src = blobUrl;
+    } catch (err) {
+      reject(err);
+    }
   });
+}
+
+async function convertSvgUrlToRaster(svgUrl, format = 'png', width = 1080, height = 1350) {
+  try {
+    const res = await fetch(svgUrl);
+    const svgText = await res.text();
+    return await convertSvgStringToRaster(svgText, format, width, height);
+  } catch (e) {
+    // Fallback Image direct
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#0A1128";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        const mime = (format === "jpeg" || format === "jpg") ? "image/jpeg" : "image/png";
+        resolve(canvas.toDataURL(mime, 0.95));
+      };
+      img.onerror = (err) => reject(err);
+      img.src = svgUrl;
+    });
+  }
 }
 
 async function downloadSingleSlideFormat(slideIndex, format = 'svg') {
@@ -6722,42 +6769,46 @@ async function downloadSingleSlideFormat(slideIndex, format = 'svg') {
     return;
   }
 
-  const query = new URLSearchParams({
-    title: slide.title || "",
-    subtitle: slide.subtitle || "",
-    badge: slide.badge || "MÉTHODE",
-    cta_hint: slide.cta_hint || "",
-    trigger_keyword: slide.trigger_keyword || "",
-    index: slideIndex + 1,
-    total: slides.length
-  });
-
-  const downloadUrl = `/api/creative/slide-svg?${query.toString()}`;
+  const svgCode = slide.svg_code;
+  const downloadUrl = getSlideSvgUrl(slide, slideIndex, slides.length);
 
   if (format === 'svg') {
+    let svgToDownload = svgCode;
+    if (!svgToDownload) {
+      const res = await fetch(downloadUrl);
+      svgToDownload = await res.text();
+    }
+    const blob = new Blob([svgToDownload], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = `slide_${slideIndex + 1}.svg`;
+    a.href = url;
+    a.download = `slide_${slideIndex + 1}_dave_sagbo.svg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     showToast(`Slide #${slideIndex + 1} téléchargée en SVG !`, "success");
     return;
   }
 
-  showToast(`Conversion de la slide #${slideIndex + 1} en ${format.toUpperCase()}...`, "info");
+  showToast(`Export de la slide #${slideIndex + 1} en ${format.toUpperCase()} HD...`, "info");
   try {
-    const rasterDataUrl = await convertSvgUrlToRaster(downloadUrl, format);
+    let rasterDataUrl;
+    if (svgCode) {
+      rasterDataUrl = await convertSvgStringToRaster(svgCode, format, 1080, 1350);
+    } else {
+      rasterDataUrl = await convertSvgUrlToRaster(downloadUrl, format, 1080, 1350);
+    }
     const a = document.createElement("a");
     a.href = rasterDataUrl;
-    a.download = `slide_${slideIndex + 1}.${format === 'jpeg' ? 'jpg' : 'png'}`;
+    a.download = `slide_${slideIndex + 1}_dave_sagbo.${(format === 'jpeg' || format === 'jpg') ? 'jpg' : 'png'}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    showToast(`Slide #${slideIndex + 1} téléchargée en ${format.toUpperCase()} !`, "success");
+    showToast(`Slide #${slideIndex + 1} téléchargée en ${format.toUpperCase()} HD !`, "success");
   } catch (err) {
     console.error("Erreur conversion raster :", err);
-    alert(`Impossible d'exporter en ${format.toUpperCase()}. Téléchargement SVG de secours.`);
+    alert(`Impossible d'exporter en ${format.toUpperCase()}. Téléchargement SVG vectoriel direct.`);
     window.open(downloadUrl, "_blank");
   }
 }
@@ -6780,11 +6831,72 @@ function downloadAllSlidesInFormat(format = 'png') {
       downloadSingleSlideFormat(idx, format);
     }, idx * 400);
   });
-  showToast(`Export de toutes les slides en ${format.toUpperCase()} en cours...`, "info");
+  showToast(`Export de toutes les slides en ${format.toUpperCase()} HD en cours...`, "info");
 }
 
 function downloadAllSlidesSvg() {
   downloadAllSlidesInFormat('svg');
+}
+
+// ------------------------------------------------------------------------------
+// EXPORT CARROUSEL MULTI-PAGES EN DOCUMENT PDF (LINKEDIN CAROUSEL PRO)
+// ------------------------------------------------------------------------------
+async function downloadCarouselAsPdf() {
+  let slides = [];
+  if (currentCreativeResult && currentCreativeResult.slides) {
+    slides = currentCreativeResult.slides;
+  } else if (currentCreativeResult && currentCreativeResult.pack && currentCreativeResult.pack.carousel) {
+    slides = currentCreativeResult.pack.carousel.slides;
+  }
+
+  if (!slides.length) {
+    alert("Aucune diapositive à exporter en PDF.");
+    return;
+  }
+
+  showToast("Génération du document PDF LinkedIn en cours...", "info");
+
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      alert("Bibliothèque jsPDF indisponible. Téléchargez les images en PNG ou SVG.");
+      return;
+    }
+
+    // Format 4:5 vertical (1080x1350 pt ou standard portrait)
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [1080, 1350]
+    });
+
+    for (let i = 0; i < slides.length; i++) {
+      const slide = slides[i];
+      let rasterData;
+      if (slide.svg_code) {
+        rasterData = await convertSvgStringToRaster(slide.svg_code, 'jpeg', 1080, 1350);
+      } else {
+        const url = getSlideSvgUrl(slide, i, slides.length);
+        rasterData = await convertSvgUrlToRaster(url, 'jpeg', 1080, 1350);
+      }
+
+      if (i > 0) {
+        doc.addPage([1080, 1350], "portrait");
+      }
+      doc.addImage(rasterData, "JPEG", 0, 0, 1080, 1350);
+    }
+
+    const safeTitle = (currentCreativeResult.title || "carrousel_dave_sagbo")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/gi, "_")
+      .slice(0, 35);
+
+    doc.save(`${safeTitle}.pdf`);
+    showToast("Carrousel complet exporté en PDF haute qualité !", "success");
+  } catch (err) {
+    console.error("Erreur génération PDF :", err);
+    alert("Erreur lors de la création du PDF : " + err.message);
+  }
 }
 
 // ------------------------------------------------------------------------------

@@ -223,11 +223,14 @@ Structure JSON attendue :
 
         ai_res = self._call_gemini_json(user_prompt, sys_prompt)
         if ai_res and "slides" in ai_res and len(ai_res["slides"]) >= 5:
-            # Assurer les clés
+            # Assurer les clés et injecter le SVG pré-généré
+            total_slides = len(ai_res["slides"])
             for idx, s in enumerate(ai_res["slides"]):
                 s["slide_number"] = idx + 1
                 if "theme" not in s:
                     s["theme"] = "LIGHT" if (idx % 2 == 1) else "DARK"
+                s["svg_code"] = self.render_slide_svg(s, slide_index=idx + 1, total_slides=total_slides)
+
             return {
                 "title": ai_res.get("title", f"Carrousel : {topic_clean}"),
                 "channel": channel.upper(),
@@ -314,6 +317,11 @@ Structure JSON attendue :
                 "trigger_keyword": "SYSTÈME"
             }
         ]
+
+        # Injection du SVG pré-généré dans le fallback
+        total_slides = len(slides)
+        for idx, s in enumerate(slides):
+            s["svg_code"] = self.render_slide_svg(s, slide_index=idx + 1, total_slides=total_slides)
 
         caption = f"La plupart des entreprises ne manquent pas de contacts, elles manquent de méthode de conversion sur le sujet : {topic_clean}.\n\nDans ce carrousel, je vous détaille étape par étape comment transformer des interactions hésitantes en accords fermes, sans insistance et sans brader votre tarif.\n\n👉 Commentez 'SYSTÈME' ci-dessous pour recevoir la grille de qualification directe en MP."
 

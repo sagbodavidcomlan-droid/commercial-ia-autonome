@@ -161,8 +161,11 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             return
 
         # 5. CONTRÔLE D'ACCÈS STRICT SUR TOUTES LES ROUTES API PRIVÉES
+        # Exceptions autorisées : Téléchargements et affichages graphiques vectoriels du studio
         if path.startswith("/api/"):
-            if not self.is_authenticated():
+            if path in ("/api/creative/slide-svg", "/api/creative/post-visual-svg"):
+                pass  # Permet le rendu vectoriel direct dans les iframes et tags <img>
+            elif not self.is_authenticated():
                 self.send_json_response({"error": "Session invalide ou expirée. Veuillez saisir le Master Pass.", "authenticated": False}, status=401)
                 return
 
