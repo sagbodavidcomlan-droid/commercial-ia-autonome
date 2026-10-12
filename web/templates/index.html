@@ -4013,101 +4013,147 @@
         </div>
       </section>
 
-      <!-- TAB STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DESIGN SETO AI STUDIO x INVO CHARTE) -->
+      <!-- TAB STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DESIGN SETO AI STUDIO x INVO PREMIUM) -->
       <section id="tab-creative" class="tab-pane hidden space-y-6">
-        
-        <!-- SECTION SUPÉRIEURE SETO : HERO BRANDING, 3 CARTES DE CAPACITÉS IA & CHAT HISTORY / CALENDRIER -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-xs space-y-6 relative overflow-hidden">
+
+        <!-- 1. HERO STUDIO SETO : ÉTOILE HOLOGRAPHIQUE & PROMPT DOCK FLOTTANT -->
+        <div class="relative rounded-3xl bg-white border border-slate-200/80 p-8 sm:p-12 shadow-xs overflow-hidden">
           
-          <!-- Étoile / Emblème Lumineux au Centre Supérieur (Style SETO) -->
-          <div class="flex flex-col items-center justify-center text-center space-y-2">
-            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-500/10 via-[#0062ff]/15 to-purple-500/15 flex items-center justify-center p-3 relative shadow-inner">
-              <div class="w-8 h-8 rounded-full bg-[#0062ff] flex items-center justify-center text-white shadow-sm shadow-blue-500/30">
-                <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
+          <!-- Lueur de fond diffuse et raffinée -->
+          <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-br from-blue-400/10 via-[#0062ff]/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <!-- Top Pill Tabs (Style SETO : Chat, My Project, Brand Voice, Templates, Tools) -->
+          <div class="flex items-center justify-between gap-4 pb-8 border-b border-slate-100 flex-wrap relative z-10">
+            <div class="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
+              <button type="button" class="px-4 py-1.5 rounded-xl text-xs font-black bg-[#0062ff] text-white shadow-xs">Studio Créatif</button>
+              <button type="button" onclick="loadBrandBible()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Brand Bible</button>
+              <button type="button" onclick="loadCreativeCalendar()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Calendrier</button>
+              <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Canaux & Options</button>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-blue-50 text-[#0062ff] border border-blue-200/80">
+                <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-pulse"></span>
+                Invo Brand Intelligence Active
+              </span>
+            </div>
+          </div>
+
+          <!-- Étoile Holographique SETO au Centre & Salutation -->
+          <div class="flex flex-col items-center justify-center text-center space-y-4 pt-6 pb-4 relative z-10">
+            
+            <!-- Emblème 4 Branches Iridescent SETO -->
+            <div class="relative group cursor-pointer" onclick="document.getElementById('creative-topic').focus();">
+              <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500/20 via-indigo-500/15 to-purple-500/20 flex items-center justify-center backdrop-blur-md border border-white/60 shadow-lg shadow-blue-500/10 group-hover:scale-105 transition-transform duration-300">
+                <svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm">
+                  <path d="M50 0 C50 35, 65 50, 100 50 C65 50, 50 65, 50 100 C50 65, 35 50, 0 50 C35 50, 50 35, 50 0 Z" fill="url(#seto-star-grad)" />
+                  <defs>
+                    <linearGradient id="seto-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#0062ff" />
+                      <stop offset="50%" stop-color="#6366f1" />
+                      <stop offset="100%" stop-color="#ec4899" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </div>
             </div>
-            
-            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Studio Créatif IA & Direction Artistique
-            </h1>
-            <p class="text-xs sm:text-sm text-slate-500 font-medium max-w-lg">
-              Quelle création à haute conversion souhaitez-vous concevoir aujourd'hui pour votre marque ?
-            </p>
+
+            <div class="space-y-1.5">
+              <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                Bonjour, Dave Sagbo !
+              </h1>
+              <p class="text-sm text-slate-500 font-medium max-w-md mx-auto">
+                Quelle création à haute conversion souhaitez-vous concevoir aujourd'hui pour votre marque ?
+              </p>
+            </div>
+
           </div>
 
-          <!-- 3 CARTES D'ACTION RAPIDE (REPRODUCTION EXACTE DU DESIGN SETO) -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          <!-- 3 CARTES D'ACTION RAPIDE SETO ÉPURÉES -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto my-6 relative z-10">
             
             <!-- Carte 1 : Pack Omnicanal 360° -->
-            <button onclick="document.getElementById('creative-format-type').value='PACK_OMNICHANNEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-3xl bg-slate-50/80 hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 text-left transition group shadow-2xs cursor-pointer">
-              <div class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-105 transition">
-                <i data-lucide="star" class="w-5 h-5 fill-amber-400 text-amber-500"></i>
+            <div onclick="document.getElementById('creative-format-type').value='PACK_OMNICHANNEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black group-hover:scale-105 transition">
+                  <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i>
+                </div>
+                <span class="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Recommandé</span>
               </div>
-              <h4 class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Pack Omnicanal 360°</h4>
-              <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Carrousel + Storyboard Vidéo + Post d'autorité + Ads générés en 1 clic.</p>
-            </button>
+              <div>
+                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Pack Omnicanal 360°</h4>
+                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Carrousel + Storyboard Vidéo + Post d'autorité + Ads générés en 1 clic.</p>
+              </div>
+            </div>
 
-            <!-- Carte 2 : Carrousel Visuel Expert -->
-            <button onclick="document.getElementById('creative-format-type').value='CAROUSEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-3xl bg-slate-50/80 hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 text-left transition group shadow-2xs cursor-pointer">
-              <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center mb-3 group-hover:scale-105 transition">
-                <i data-lucide="layers" class="w-5 h-5 text-[#0062ff]"></i>
+            <!-- Carte 2 : Carrousel Graphique -->
+            <div onclick="document.getElementById('creative-format-type').value='CAROUSEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black group-hover:scale-105 transition">
+                  <i data-lucide="layers" class="w-5 h-5 text-[#0062ff]"></i>
+                </div>
+                <span class="text-[10px] font-black uppercase text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-full">8 Slides</span>
               </div>
-              <h4 class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Carrousel Graphique</h4>
-              <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">8 slides SVG ultra-lisibles selon la Brand Bible (LinkedIn & Instagram).</p>
-            </button>
+              <div>
+                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Carrousel Visuel Pro</h4>
+                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Slides SVG ultra-contrastées prêtes pour LinkedIn & Instagram (norme 4:5).</p>
+              </div>
+            </div>
 
-            <!-- Carte 3 : Motion Design & Script Vidéo -->
-            <button onclick="document.getElementById('creative-format-type').value='MOTION_VIDEO'; document.getElementById('creative-topic').focus();" class="p-5 rounded-3xl bg-slate-50/80 hover:bg-blue-50/70 border border-slate-200/80 hover:border-blue-200 text-left transition group shadow-2xs cursor-pointer">
-              <div class="w-9 h-9 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-105 transition">
-                <i data-lucide="video" class="w-5 h-5 text-purple-600"></i>
+            <!-- Carte 3 : Motion Design & Video Script -->
+            <div onclick="document.getElementById('creative-format-type').value='MOTION_VIDEO'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black group-hover:scale-105 transition">
+                  <i data-lucide="video" class="w-5 h-5 text-purple-600"></i>
+                </div>
+                <span class="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">9:16 Viral</span>
               </div>
-              <h4 class="text-xs font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Storyboard Motion 9:16</h4>
-              <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Scripts courts et rythmés pour Reels, TikTok & Statuts WhatsApp.</p>
-            </button>
+              <div>
+                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Storyboard Motion</h4>
+                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Scripts rythmés avec timecodes, SFX et zooms pour TikTok, Reels & WhatsApp.</p>
+              </div>
+            </div>
 
           </div>
 
-          <!-- CHAMP DE DIALOGUE / COMMANDE CRÉATIVE UNIVERSEL (STYLE SETO + CHAMP UNIVERSEL INVO) -->
-          <div class="max-w-3xl mx-auto w-full">
-            <div class="rounded-3xl border border-slate-200 bg-white p-3 shadow-xs hover:border-[#0062ff]/60 focus-within:border-[#0062ff] focus-within:ring-2 focus-within:ring-[#0062ff]/10 transition-all space-y-2.5">
+          <!-- CHAMP DE COMMANDE CRÉATIF SETO FLOTTANT -->
+          <div class="max-w-3xl mx-auto w-full relative z-10">
+            <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-3 shadow-sm hover:border-[#0062ff]/60 focus-within:border-[#0062ff] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#0062ff]/10 transition-all space-y-3">
               
-              <div class="flex items-center gap-2 px-1">
-                <span class="text-[#0062ff] text-xs font-black">✦</span>
+              <div class="flex items-center gap-3 px-2 pt-1">
+                <span class="text-[#0062ff] text-base font-black">✦</span>
                 <input 
                   type="text" 
                   id="creative-topic" 
                   value="Automatiser ses relances WhatsApp et tripler ses ventes"
-                  placeholder="Décrivez le sujet, le problème prospect ou l'offre commerciale à sublimer..."
-                  class="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none font-medium"
+                  placeholder="Décrivez votre idée, offre, problème client ou angle psychologique..."
+                  class="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-semibold"
                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); triggerGenerateCreative(); }"
                 >
               </div>
 
-              <!-- Barre d'outils inférieure SETO (Options, Brand Bible, Attach + Bouton Envoyer Cercle) -->
-              <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+              <!-- Toolbar Inférieure SETO -->
+              <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 flex-wrap">
                 
                 <div class="flex items-center gap-1.5 overflow-x-auto">
-                  <button type="button" onclick="loadBrandBible()" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
-                    <i data-lucide="book-open" class="w-3 h-3 text-slate-400"></i>
+                  <button type="button" onclick="loadBrandBible()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-400"></i>
                     <span>Brand Bible</span>
                   </button>
-                  <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
-                    <i data-lucide="sliders-horizontal" class="w-3 h-3 text-slate-400"></i>
+                  <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
+                    <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-400"></i>
                     <span>Options Canaux</span>
                   </button>
-                  <button type="button" onclick="loadCreativeCalendar()" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
-                    <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+                  <button type="button" onclick="loadCreativeCalendar()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
                     <span>Planning TimeFrame</span>
                   </button>
                 </div>
 
                 <div class="flex items-center gap-2 ml-auto">
-                  <button type="button" onclick="triggerGenerateCreative()" id="btn-generate-creative" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95 cursor-pointer">
-                    <i data-lucide="wand-2" class="w-3.5 h-3.5 text-white"></i>
-                    <span>Générer</span>
-                  </button>
-                  <button type="button" onclick="triggerGenerateCreative()" class="w-9 h-9 rounded-full bg-slate-900 hover:bg-[#0062ff] text-white flex items-center justify-center transition shadow-xs active:scale-95 cursor-pointer" title="Lancer la génération">
-                    <i data-lucide="arrow-up" class="w-4 h-4 text-white stroke-[2.5]"></i>
+                  <button type="button" onclick="triggerGenerateCreative()" id="btn-generate-creative" class="px-5 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 active:scale-95 text-white font-extrabold text-xs flex items-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
+                    <i data-lucide="wand-2" class="w-4 h-4 text-white"></i>
+                    <span>Générer avec la Brand Bible</span>
                   </button>
                 </div>
 
@@ -4117,10 +4163,10 @@
           </div>
 
           <!-- TIROIR D'OPTIONS DE DIFFUSION (Format, Réseau, Offre Associée) -->
-          <div id="creative-settings-drawer" class="max-w-3xl mx-auto w-full bg-slate-50/90 rounded-2xl p-4 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div id="creative-settings-drawer" class="max-w-3xl mx-auto w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mt-4 relative z-10">
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Format</label>
-              <select id="creative-format-type" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Format Cible</label>
+              <select id="creative-format-type" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
                 <option value="PACK_OMNICHANNEL">🌟 Pack Omnicanal 360°</option>
                 <option value="CAROUSEL">Carrousel Graphique (8 slides)</option>
                 <option value="MOTION_VIDEO">Storyboard Motion (30-45s)</option>
@@ -4128,8 +4174,8 @@
               </select>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Canal</label>
-              <select id="creative-channel" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Canal Principal</label>
+              <select id="creative-channel" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
                 <option value="LINKEDIN">LinkedIn (Décideurs B2B)</option>
                 <option value="INSTAGRAM">Instagram (Carrousel / Reels)</option>
                 <option value="TIKTOK">TikTok (Vidéo rythmée)</option>
@@ -4138,8 +4184,8 @@
               </select>
             </div>
             <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Offre Catalogue</label>
-              <select id="creative-catalog-item" onchange="onCreativeCatalogItemChange()" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
+              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Offre Catalogue Liée</label>
+              <select id="creative-catalog-item" onchange="onCreativeCatalogItemChange()" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
                 <option value="">-- Sujet Libre --</option>
               </select>
             </div>
@@ -4147,16 +4193,16 @@
 
         </div>
 
-        <!-- ESPACE DE RENDU & PRÉVISUALISATION GRAPHIQUE EN DIRECT -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-xs space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black">
+        <!-- 2. ESPACE DE PRÉVISUALISATION & RENDU GRAPHIQUE HAUTE DÉFINITION -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black">
                 <i data-lucide="layout" class="w-5 h-5 text-[#0062ff]"></i>
               </div>
               <div>
                 <h3 class="text-base font-black text-slate-900" id="creative-preview-title">Aperçu du Rendu Graphique & Motion</h3>
-                <p class="text-[11px] text-slate-400 font-semibold">Généré selon les codes de la Brand Bible Invo</p>
+                <p class="text-[11px] text-slate-400 font-semibold">Direction Artistique Invo Haute Définition</p>
               </div>
             </div>
             <span id="creative-format-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
@@ -4166,13 +4212,13 @@
 
           <!-- Zone de Rendu Dynamique -->
           <div id="creative-render-container" class="min-h-[380px] flex items-center justify-center bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl p-6">
-            <div class="text-center space-y-2 max-w-sm">
+            <div class="text-center space-y-3 max-w-sm">
               <div class="w-14 h-14 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center mx-auto mb-2">
                 <i data-lucide="palette" class="w-7 h-7 text-[#0062ff]"></i>
               </div>
               <h4 class="text-sm font-bold text-slate-800">Aucune création générée pour l'instant</h4>
               <p class="text-xs text-slate-500 leading-relaxed">
-                Cliquez sur <strong>« Générer »</strong> ci-dessus pour composer instantanément votre pack omnicanal, votre carrousel SVG ou votre storyboard vidéo.
+                Cliquez sur <strong>« Générer avec la Brand Bible »</strong> ci-dessus pour composer instantanément votre pack omnicanal, votre carrousel SVG ou votre storyboard vidéo.
               </p>
             </div>
           </div>
@@ -4189,43 +4235,43 @@
           </div>
         </div>
 
-        <!-- Section Calendrier Éditorial & Planning TimeFrame -->
-        <div class="bg-[#999AE8] rounded-3xl p-6 sm:p-8 text-slate-800 shadow-xl space-y-6 select-none transition-all">
+        <!-- 3. SECTION CALENDRIER ÉDITORIAL TIMEFRAME (HARMONISÉ INVO WHITE BRANDING) -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6 select-none transition-all">
           
           <!-- Top Bar TimeFrame -->
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/20 pb-5">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
             <div>
               <div class="flex items-center gap-2">
-                <span class="text-xs font-black uppercase tracking-wider text-white/80">TimeFrame &bull; Dave Sagbo</span>
+                <span class="text-xs font-black uppercase tracking-wider text-[#0062ff]">TimeFrame &bull; Dave Sagbo</span>
               </div>
-              <h3 class="text-2xl font-black text-white tracking-tight">Mon Calendrier Éditorial</h3>
-              <p class="text-xs text-white/80 font-medium">Planification stratégique multicanale & cadence de diffusion IA.</p>
+              <h3 class="text-2xl font-black text-slate-900 tracking-tight">Mon Calendrier Éditorial</h3>
+              <p class="text-xs text-slate-500 font-medium">Planification stratégique multicanale & cadence de diffusion IA.</p>
             </div>
 
             <!-- Contrôles Vues & Métriques -->
             <div class="flex flex-wrap items-center gap-3">
               <!-- Switch Vue Jour / Semaine / Mois -->
-              <div class="flex items-center bg-white/20 p-1 rounded-2xl backdrop-blur-md">
-                <button onclick="setCalendarViewMode('daily')" id="cal-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Jour</button>
-                <button onclick="setCalendarViewMode('weekly')" id="cal-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0B0F19] text-white shadow-sm">Semaine</button>
-                <button onclick="setCalendarViewMode('monthly')" id="cal-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-white/80 hover:text-white">Mois</button>
+              <div class="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                <button onclick="setCalendarViewMode('daily')" id="cal-mode-daily" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">Jour</button>
+                <button onclick="setCalendarViewMode('weekly')" id="cal-mode-weekly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-[#0062ff] text-white shadow-xs">Semaine</button>
+                <button onclick="setCalendarViewMode('monthly')" id="cal-mode-monthly" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all text-slate-600 hover:text-slate-900">Mois</button>
               </div>
 
-              <!-- Métriques en-tête style maquette -->
-              <div class="hidden xl:flex items-center gap-4 px-4 py-2 bg-white/15 rounded-2xl backdrop-blur-md text-white border border-white/10">
+              <!-- Métriques en-tête -->
+              <div class="hidden xl:flex items-center gap-4 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-200 text-slate-700">
                 <div>
-                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Posts Prêts</span>
-                  <strong class="text-sm font-black" id="timeframe-ready-count">0 posts</strong>
+                  <span class="text-[9px] uppercase tracking-wider text-slate-400 block font-bold">Posts Prêts</span>
+                  <strong class="text-sm font-black text-slate-900" id="timeframe-ready-count">0 posts</strong>
                 </div>
-                <div class="w-px h-6 bg-white/20"></div>
+                <div class="w-px h-6 bg-slate-200"></div>
                 <div>
-                  <span class="text-[9px] uppercase tracking-wider text-white/70 block">Cadence IA</span>
-                  <strong class="text-sm font-black text-amber-300">100% Auto</strong>
+                  <span class="text-[9px] uppercase tracking-wider text-slate-400 block font-bold">Cadence IA</span>
+                  <strong class="text-sm font-black text-[#0062ff]">100% Auto</strong>
                 </div>
               </div>
 
               <!-- Bouton Ajouter Publication -->
-              <button onclick="quickScheduleFromTimeframe()" class="px-4 py-2 rounded-2xl bg-[#0B0F19] hover:bg-slate-900 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all">
+              <button onclick="quickScheduleFromTimeframe()" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center gap-2 shadow-xs transition-all cursor-pointer">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>Planifier un Post</span>
               </button>
@@ -4239,17 +4285,17 @@
             <div class="lg:col-span-4 space-y-4">
               
               <!-- Carte 1 : Mini Calendrier Mensuel avec dates actives -->
-              <div class="bg-[#8B8CD9] p-5 rounded-2xl text-white shadow-sm space-y-3 border border-white/10">
+              <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
                 <div class="flex items-center justify-between">
-                  <span id="timeframe-mini-month-label" class="text-xs font-extrabold uppercase tracking-wide">Octobre 2026</span>
+                  <span id="timeframe-mini-month-label" class="text-xs font-extrabold uppercase tracking-wide text-slate-900">Octobre 2026</span>
                   <div class="flex items-center gap-1">
-                    <button onclick="navigateTimeframeMonth(-1)" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition">&lt;</button>
-                    <button onclick="navigateTimeframeMonth(1)" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-xs transition">&gt;</button>
+                    <button onclick="navigateTimeframeMonth(-1)" class="w-6 h-6 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 transition">&lt;</button>
+                    <button onclick="navigateTimeframeMonth(1)" class="w-6 h-6 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600 transition">&gt;</button>
                   </div>
                 </div>
 
                 <!-- Grille des Jours -->
-                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-white/70 pt-1">
+                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 pt-1">
                   <div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div>
                 </div>
                 <div id="timeframe-mini-calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium pt-1">
@@ -4258,21 +4304,21 @@
               </div>
 
               <!-- Carte 2 : Piliers Éditoriaux Actifs -->
-              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2.5 border border-white/40">
-                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+              <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2.5">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-900">
                   <span>Piliers de Contenu</span>
-                  <span class="text-[10px] text-slate-500 font-bold uppercase">Brand Bible</span>
+                  <span class="text-[10px] text-[#0062ff] font-bold uppercase">Brand Bible</span>
                 </div>
                 <div class="space-y-1.5 text-xs text-slate-700">
-                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white transition">
                     <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
                     <span class="font-semibold text-[11px]">Systèmes & Automatisation WhatsApp</span>
                   </label>
-                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white transition">
                     <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
                     <span class="font-semibold text-[11px]">Méthode de Closing DUR & Objections</span>
                   </label>
-                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-slate-100 transition">
+                  <label class="flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-white transition">
                     <input type="checkbox" checked class="rounded text-[#0062ff] focus:ring-0">
                     <span class="font-semibold text-[11px]">Études de cas réelles & ROI PME</span>
                   </label>
@@ -4280,10 +4326,10 @@
               </div>
 
               <!-- Carte 3 : Canaux Actifs -->
-              <div class="bg-white/90 p-4 rounded-2xl shadow-sm space-y-2 border border-white/40">
-                <div class="flex items-center justify-between text-xs font-extrabold text-slate-800">
+              <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
+                <div class="flex items-center justify-between text-xs font-extrabold text-slate-900">
                   <span>Canaux de Distribution</span>
-                  <span class="text-[10px] text-blue-600 font-bold">4 Actifs</span>
+                  <span class="text-[10px] text-[#0062ff] font-bold">4 Actifs</span>
                 </div>
                 <div class="flex flex-wrap gap-1.5">
                   <span class="px-2.5 py-1 rounded-xl bg-blue-50 text-[#0062ff] text-[10px] font-bold border border-blue-100">LinkedIn</span>
@@ -4296,24 +4342,24 @@
             </div>
 
             <!-- Colonne Droite : Grille Hebdomadaire & Cartes Planifiées (Timeline Style TimeFrame) -->
-            <div class="lg:col-span-8 bg-white/95 rounded-2xl p-5 shadow-sm border border-white/40 space-y-4 flex flex-col justify-between">
+            <div class="lg:col-span-8 bg-slate-50/50 rounded-2xl p-5 border border-slate-200 space-y-4 flex flex-col justify-between">
               
               <div>
                 <!-- En-tête Navigation Temporelle Droite -->
-                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-3">
                   <div class="flex items-center gap-2">
                     <span id="timeframe-current-range-label" class="text-xs sm:text-sm font-extrabold text-slate-900">Semaine en cours</span>
-                    <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold">Fuseau GMT+1</span>
+                    <span class="px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] text-[10px] font-bold">Fuseau GMT+1</span>
                   </div>
                   <div class="flex items-center gap-1.5">
-                    <button onclick="navigateTimeframePeriod(-1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&lt;</button>
-                    <button onclick="resetTimeframeToday()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition">Aujourd'hui</button>
-                    <button onclick="navigateTimeframePeriod(1)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&gt;</button>
+                    <button onclick="navigateTimeframePeriod(-1)" class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&lt;</button>
+                    <button onclick="resetTimeframeToday()" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold transition">Aujourd'hui</button>
+                    <button onclick="navigateTimeframePeriod(1)" class="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center text-xs font-bold transition">&gt;</button>
                   </div>
                 </div>
 
                 <!-- Jours de la Semaine Colonnes (Lundi à Dimanche) -->
-                <div id="timeframe-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-3 pb-2 border-b border-slate-100">
+                <div id="timeframe-week-columns-header" class="grid grid-cols-7 gap-2 text-center pt-3 pb-2 border-b border-slate-200">
                   <!-- Injecté en JS avec le jour actuel en surbrillance -->
                 </div>
 
@@ -4324,11 +4370,11 @@
               </div>
 
               <!-- Bascule vers la vue Tableau compact pour audit rapide -->
-              <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div class="pt-3 border-t border-slate-200 flex items-center justify-between">
                 <span class="text-[11px] text-slate-500 font-medium">
                   Synchronisé avec votre base SQLite <strong class="text-slate-800">social_content_calendar</strong>
                 </span>
-                <button onclick="toggleCalendarTableView()" id="btn-toggle-cal-table" class="text-xs text-blue-600 hover:underline font-bold flex items-center gap-1">
+                <button onclick="toggleCalendarTableView()" id="btn-toggle-cal-table" class="text-xs text-[#0062ff] hover:underline font-bold flex items-center gap-1 cursor-pointer">
                   <i data-lucide="table" class="w-3.5 h-3.5"></i>
                   <span>Afficher la vue tableur</span>
                 </button>
@@ -4339,10 +4385,10 @@
           </div>
 
           <!-- Vue Tableur Repliable (Optionnelle) -->
-          <div id="timeframe-raw-table-wrapper" class="hidden bg-white/95 rounded-2xl p-5 shadow-sm border border-white/40 space-y-3">
+          <div id="timeframe-raw-table-wrapper" class="hidden bg-white rounded-2xl p-5 border border-slate-200 space-y-3">
             <div class="flex items-center justify-between">
               <h4 class="text-xs font-extrabold text-slate-900 uppercase">Registre brut des publications planifiées</h4>
-              <button onclick="toggleCalendarTableView()" class="text-xs text-slate-400 hover:text-slate-600 font-bold">Fermer &times;</button>
+              <button onclick="toggleCalendarTableView()" class="text-xs text-slate-400 hover:text-slate-600 font-bold cursor-pointer">Fermer &times;</button>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs text-slate-600">
