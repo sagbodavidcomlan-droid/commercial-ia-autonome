@@ -340,6 +340,47 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+function toggleSidebarCollapse() {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    toggleMobileSidebar();
+    return;
+  }
+  const sidebar = document.getElementById("main-sidebar");
+  if (!sidebar) return;
+
+  const isCollapsed = sidebar.classList.contains("collapsed");
+  if (isCollapsed) {
+    sidebar.classList.remove("collapsed");
+    document.body.classList.remove("sidebar-collapsed");
+    localStorage.setItem("invo_sidebar_collapsed", "false");
+  } else {
+    sidebar.classList.add("collapsed");
+    document.body.classList.add("sidebar-collapsed");
+    localStorage.setItem("invo_sidebar_collapsed", "true");
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+// Initialiser l'état sauvegardé au chargement
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.innerWidth > 768 && localStorage.getItem("invo_sidebar_collapsed") === "true") {
+    const sidebar = document.getElementById("main-sidebar");
+    if (sidebar) {
+      sidebar.classList.add("collapsed");
+      document.body.classList.add("sidebar-collapsed");
+    }
+  }
+});
+
+// Raccourci clavier universel : Ctrl + B ou Cmd + B pour basculer le menu latéral
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+    e.preventDefault();
+    toggleSidebarCollapse();
+  }
+});
+
 function toggleMobileSidebar() {
   const sidebar = document.getElementById("main-sidebar");
   const backdrop = document.getElementById("sidebar-backdrop");

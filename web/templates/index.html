@@ -102,30 +102,31 @@
       border-color: #e2e8f0 !important;
       color: #0f172a !important;
     }
-    /* High-contrast text colors: rehaussement drastique des gris faibles */
-    main .text-slate-400 {
-      color: #475569 !important; /* Devient un Slate 600 très lisible au lieu de gris invisible */
+    /* High-contrast text colors: rehaussement drastique et universel des gris */
+    .text-slate-400, .text-gray-400 {
+      color: #334155 !important; /* Slate 700 net : fin totale des textes gris invisibles */
       font-weight: 500;
     }
-    main .text-slate-500 {
-      color: #334155 !important; /* Devient un Slate 700 net et contrasté */
+    .text-slate-500, .text-gray-500 {
+      color: #1e293b !important; /* Slate 800 dense et contrasté */
       font-weight: 500;
     }
-    main .text-slate-300 {
-      color: #1e293b !important; /* Devient un Slate 800 foncé */
+    .text-slate-300, .text-gray-300 {
+      color: #0f172a !important; /* Slate 900 profond */
     }
-    main .text-gray-400 {
-      color: #475569 !important;
+    .text-slate-600, .text-gray-600 {
+      color: #0f172a !important;
     }
-    main .text-gray-500 {
-      color: #334155 !important;
+    /* Les tout petits textes (10px et 11px) doivent être particulièrement nets */
+    .text-\[10px\], .text-\[11px\], .text-xs {
+      color: #334155;
     }
     main .text-white:not(.invo-preserve-white):not(.nav-btn.active):not(.nav-btn.active *):not(.bg-\[\#0062ff\] *):not(.bg-blue-600 *):not(.bg-emerald-600 *):not(.bg-purple-600 *):not(.bg-indigo-600 *):not(.bg-rose-600 *):not(.bg-amber-600 *):not(.bg-teal-600 *):not(.bg-gradient-to-br *):not(button.bg-emerald-600 *):not(button.bg-\[\#0062ff\] *):not(button.bg-purple-600 *):not(button.bg-indigo-600 *) {
       color: #0f172a !important;
     }
     /* Borders */
     main .border-slate-800, main .border-slate-700 {
-      border-color: #e2e8f0 !important;
+      border-color: #cbd5e1 !important;
     }
     /* Buttons that had dark backgrounds */
     button.bg-slate-900:not(.invo-preserve-dark),
@@ -324,11 +325,11 @@
 
   <!-- TOP BAR FIXE (FASTY STYLE) -->
   <header class="topbar">
-    <!-- Left: Mobile Hamburger & Search Bar -->
+    <!-- Left: Hamburger Toggle (Desktop & Mobile) & Search Bar -->
     <div class="flex items-center gap-3 flex-1 max-w-xl">
-      <!-- Mobile Hamburger Toggle -->
-      <button onclick="toggleMobileSidebar()" class="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors focus:outline-none" aria-label="Menu de Navigation">
-        <i data-lucide="menu" class="w-5 h-5"></i>
+      <!-- Universal Sidebar Toggle (Développer / Réduire le menu latéral) -->
+      <button onclick="toggleSidebarCollapse()" id="btn-sidebar-toggle" class="p-2 rounded-xl text-slate-600 hover:text-[#0062ff] hover:bg-slate-100 flex items-center justify-center transition-all focus:outline-none cursor-pointer border border-transparent hover:border-slate-200" title="Développer / Réduire le menu latéral (Ctrl + B)">
+        <i data-lucide="panel-left" class="w-5 h-5"></i>
       </button>
 
       <!-- Logo on Mobile Header -->
@@ -408,14 +409,20 @@
 
     <!-- LEFT SIDEBAR NAVIGATION (240px FIXE FASTY) -->
     <aside id="main-sidebar" class="sidebar">
-      <!-- Logo Invo. + Mobile Close -->
-      <div class="sidebar-logo">
-        <div class="sidebar-logo-icon">
-          <i data-lucide="sparkles" class="w-4 h-4"></i>
+      <!-- Logo Invo. + Desktop Collapse & Mobile Close -->
+      <div class="sidebar-logo justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="sidebar-logo-icon">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+          </div>
+          <span>Invo<span class="text-[#0062ff]">.</span></span>
         </div>
-        <span>Invo<span class="text-[#0062ff]">.</span></span>
+        <!-- Desktop Collapse Button -->
+        <button onclick="toggleSidebarCollapse()" class="hidden md:flex text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors" title="Réduire le menu (Ctrl + B)">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
         <!-- Mobile close button -->
-        <button onclick="toggleMobileSidebar()" class="md:hidden ml-auto text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100" title="Fermer le menu">
+        <button onclick="toggleMobileSidebar()" class="md:hidden text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100" title="Fermer le menu">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
