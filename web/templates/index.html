@@ -419,9 +419,13 @@
           <span class="mac-dot mac-dot-yellow"></span>
           <span class="mac-dot mac-dot-green"></span>
         </div>
-        <!-- Desktop Collapse Chevron Toggle -->
+        <!-- Desktop Collapse Toggle (Chevron en mode développé / Logo Invo en mode réduit) -->
         <button onclick="toggleSidebarCollapse()" class="vitaliy-collapse-btn hidden md:flex" title="Développer / Réduire le menu (Ctrl + B)">
-          <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+          <i data-lucide="chevron-left" class="vitaliy-collapse-icon-chevron w-3.5 h-3.5 text-slate-400"></i>
+          <div class="vitaliy-collapse-invo-logo">
+            <span class="vitaliy-invo-letter">i</span>
+            <span class="vitaliy-invo-dot"></span>
+          </div>
         </button>
         <!-- Mobile Close Button -->
         <button onclick="toggleMobileSidebar()" class="vitaliy-collapse-btn md:hidden" title="Fermer le menu">

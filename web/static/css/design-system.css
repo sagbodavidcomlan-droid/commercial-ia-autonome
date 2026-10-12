@@ -208,11 +208,41 @@ body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .vitaliy-collapse-btn:hover {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+.vitaliy-collapse-invo-logo {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.vitaliy-invo-letter {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  margin-top: -1px;
+}
+
+.vitaliy-invo-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #38bdf8;
+  position: absolute;
+  top: 8px;
+  right: 9px;
 }
 
 /* User Profile Card */
@@ -536,7 +566,27 @@ body {
 }
 
 .sidebar-vitaliy.collapsed .vitaliy-collapse-btn {
-  transform: rotate(180deg);
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0062ff 0%, #1d4ed8 100%);
+  border: 1px solid rgba(0, 98, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 98, 255, 0.28);
+  transform: none !important;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-collapse-btn:hover {
+  background: linear-gradient(135deg, #0052cc 0%, #1e40af 100%);
+  transform: scale(1.04) !important;
+  box-shadow: 0 6px 16px rgba(0, 98, 255, 0.38);
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-collapse-btn .vitaliy-collapse-icon-chevron {
+  display: none !important;
+}
+
+.sidebar-vitaliy.collapsed .vitaliy-collapse-btn .vitaliy-collapse-invo-logo {
+  display: flex !important;
 }
 
 .sidebar-vitaliy.collapsed .vitaliy-user-card {
