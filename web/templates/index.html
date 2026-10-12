@@ -187,7 +187,7 @@
       background-color: #ffffff !important;
       color: #0f172a !important;
     }
-    /* Preserved White Text on Accent Buttons / Cards */
+    /* Preserved White Text on Accent Buttons / Cards with genuinely dark backgrounds */
     .nav-btn.active, .nav-btn.active *,
     .invo-preserve-white, .invo-preserve-white *,
     .bg-\[\#0062ff\], .bg-\[\#0062ff\] *,
@@ -195,8 +195,10 @@
     .bg-emerald-600, .bg-emerald-600 *,
     .bg-purple-600, .bg-purple-600 *,
     .bg-indigo-600, .bg-indigo-600 *,
-    .bg-slate-900.text-white, .bg-slate-900.text-white *,
-    .bg-gradient-to-br, .bg-gradient-to-br h3, .bg-gradient-to-br p, .bg-gradient-to-br span {
+    .bg-rose-500, .bg-rose-500 *,
+    .bg-rose-600, .bg-rose-600 *,
+    .invo-preserve-dark.text-white, .invo-preserve-dark.text-white *,
+    .bg-gradient-to-br.text-white, .bg-gradient-to-br.text-white h3, .bg-gradient-to-br.text-white p, .bg-gradient-to-br.text-white span {
       color: #ffffff !important;
     }
     .bg-gradient-to-br button.bg-white,
@@ -2342,14 +2344,14 @@
                 </div>
               </div>
 
-              <!-- Pilule 3 : Carte Vendeur Actif (Jobgio Featured Pill : Noir / Bleu Nuit) -->
-              <div class="bg-slate-900 text-white p-4 rounded-2xl shadow-md flex flex-col items-center text-center space-y-2 relative overflow-hidden group">
-                <div class="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center group-hover:scale-105 transition">
-                  <i data-lucide="zap" class="w-5 h-5 text-blue-400"></i>
+              <!-- Pilule 3 : Dossiers Actifs -->
+              <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition flex flex-col items-center text-center space-y-2 group relative">
+                <div class="w-10 h-10 rounded-full bg-blue-50 text-[#0062ff] flex items-center justify-center group-hover:scale-105 transition">
+                  <i data-lucide="zap" class="w-5 h-5 text-[#0062ff]"></i>
                 </div>
                 <div>
-                  <strong class="text-xl font-black text-white block" id="audit-kpi-active-deals">38</strong>
-                  <span class="text-[10px] font-bold text-blue-200 uppercase tracking-tight block">Dossiers Actifs</span>
+                  <strong class="text-xl font-black text-slate-900 block" id="audit-kpi-active-deals">38</strong>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tight block">Dossiers Actifs</span>
                 </div>
                 <div class="w-4 h-4 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[9px] absolute top-2 right-2 font-black">↗</div>
               </div>
