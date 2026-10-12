@@ -1930,40 +1930,55 @@
               <!-- Rempli par JavaScript -->
             </div>
 
-            <!-- Zone de Saisie & Actions Rapides Dave Sagbo -->
-            <div class="p-3 sm:p-4 bg-white border-t border-slate-200 space-y-2.5">
+            <!-- Zone de Saisie & Actions Rapides Dave Sagbo (DESIGN DU CHAMP DE DIALOGUE MODERNE) -->
+            <div class="p-4 sm:p-5 bg-white border-t border-slate-100 space-y-3">
               <!-- Indicateur de produit lié au Catalogue -->
-              <div id="conv-linked-product-bar" class="text-[11px] text-slate-600 bg-slate-100/80 px-2.5 py-1.5 rounded-lg flex items-center justify-between border border-slate-200 gap-2">
-                <span class="truncate"><i data-lucide="package" class="w-3 h-3 inline text-slate-500 mr-1"></i>Offre Catalogue : <strong id="conv-product-name" class="text-slate-900">...</strong></span>
+              <div id="conv-linked-product-bar" class="text-[11px] text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl flex items-center justify-between border border-slate-200/80 gap-2">
+                <span class="truncate"><i data-lucide="package" class="w-3.5 h-3.5 inline text-[#0062ff] mr-1"></i>Offre Catalogue : <strong id="conv-product-name" class="text-slate-900">...</strong></span>
                 <span id="conv-product-link" class="text-[#0062ff] font-semibold text-[10px] truncate max-w-[280px]">...</span>
               </div>
 
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-1.5">
-                  <button onclick="generateAiConversationReply()" class="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1 transition" title="Générer une réponse de vente percutante et chaleureuse signée Dave Sagbo">
-                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Réponse Dave Sagbo
-                  </button>
-                  <button onclick="insertCheckoutLinkInConversation()" class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition" title="Insérer le lien exact de paiement/commande configuré dans le Catalogue">
-                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Insérer Lien Catalogue
-                  </button>
-                </div>
-                <span class="text-[11px] text-slate-400 font-medium" id="conv-active-channel-label">Canal : Messenger</span>
-              </div>
-
-              <div class="flex items-end gap-2">
+              <!-- CHAMP DE DIALOGUE MODERNE (CADRE ROUNDED-3XL STYLE RÉFÉRENCE) -->
+              <div class="rounded-3xl border border-slate-200 bg-white p-3 shadow-xs hover:border-[#0062ff]/60 focus-within:border-[#0062ff] focus-within:ring-2 focus-within:ring-[#0062ff]/10 transition-all space-y-2">
+                
                 <textarea 
                   id="conv-input-message" 
                   rows="2"
                   placeholder="Écrire un message à ce prospect sur ce canal..."
-                  class="flex-1 p-2.5 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-[#0062ff]/20 focus:border-[#0062ff] text-slate-800 resize-none transition"
+                  class="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed p-1"
+                  onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); sendLeadConversationMessage(); }"
                 ></textarea>
-                <button 
-                  onclick="sendLeadConversationMessage()" 
-                  id="btn-conv-send"
-                  class="px-4 py-2.5 rounded-xl bg-[#0062ff] hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition h-[42px] shrink-0"
-                >
-                  <i data-lucide="send" class="w-3.5 h-3.5"></i> Envoyer
-                </button>
+
+                <!-- Barre d'outils inférieure : Outils Prompts & Boutons d'Action -->
+                <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                  
+                  <div class="flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" onclick="generateAiConversationReply()" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0062ff] border border-blue-200 text-[11px] font-bold flex items-center gap-1 transition" title="Générer une réponse de vente percutante et chaleureuse signée Dave Sagbo">
+                      <i data-lucide="sparkles" class="w-3 h-3 text-[#0062ff]"></i>
+                      <span>Réponse IA Dave Sagbo</span>
+                    </button>
+                    <button type="button" onclick="insertCheckoutLinkInConversation()" class="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-bold flex items-center gap-1 transition" title="Insérer le lien exact de paiement/commande configuré dans le Catalogue">
+                      <i data-lucide="external-link" class="w-3 h-3 text-emerald-600"></i>
+                      <span>Lien Catalogue</span>
+                    </button>
+                    <span class="text-[10px] text-slate-400 font-medium pl-1 hidden sm:inline" id="conv-active-channel-label">Canal : WhatsApp</span>
+                  </div>
+
+                  <div class="flex items-center gap-2 ml-auto">
+                    <!-- Bouton Cercle d'Envoi (Style Référence) -->
+                    <button 
+                      type="button"
+                      onclick="sendLeadConversationMessage()" 
+                      id="btn-conv-send"
+                      class="w-9 h-9 rounded-full bg-slate-900 hover:bg-[#0062ff] text-white flex items-center justify-center transition shadow-xs active:scale-95 cursor-pointer shrink-0"
+                      title="Envoyer le message"
+                    >
+                      <i data-lucide="arrow-up" class="w-4 h-4 text-white stroke-[2.5]"></i>
+                    </button>
+                  </div>
+
+                </div>
+
               </div>
             </div>
           </div>
@@ -3298,215 +3313,331 @@
 
       </section>
 
-      <!-- ==================== TAB 7 : SIMULATEUR DE DIALOGUE & RAISONNEMENT COGNITIF ==================== -->
-      <section id="tab-simulator" class="tab-pane hidden space-y-4">
-        <!-- Top Toolbar: Configuration Avancée de la Cible (Prospect) -->
-        <div class="glass-card rounded-2xl p-4 space-y-3 border-teal-500/30">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-            <div>
-              <span class="text-[10px] font-bold text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="target" class="w-3.5 h-3.5 text-teal-400"></i>
-                Définition & Paramétrage de la Cible Prospect
+      <!-- ==================== TAB 7 : CONVERSATIONS & SIMULATEUR DE DIALOGUE (DESIGN CARD CHAT MODERNE) ==================== -->
+      <section id="tab-simulator" class="tab-pane hidden space-y-5">
+        
+        <!-- En-tête Supérieur Moderne : Pilules d'Onglets Style Référence + Info Statut -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-100 shadow-xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                PORTAIL CONVERSATIONS IA & SIMULATEUR COMMERCIAL
               </span>
-              <div class="flex flex-wrap items-center gap-2 mt-0.5">
-                <h2 class="text-base font-black text-white flex items-center gap-2">
-                  Cockpit de Simulation Commerciale & Négociation Temps Réel
-                </h2>
-                <span class="px-2.5 py-0.5 rounded-lg bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-bold flex items-center gap-1.5">
-                  <i data-lucide="brain" class="w-3 h-3 text-purple-400"></i>
-                  Moteur IA : Claude 3.5 Sonnet + Moteur Hybride
-                </span>
-              </div>
+              <span class="text-xs text-slate-400 font-bold">&bull;</span>
+              <span class="text-xs text-slate-500 font-semibold">Moteur Hybride Actif</span>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2">
+              <i data-lucide="messages-square" class="w-6 h-6 text-[#0062ff]"></i>
+              <span>Portail de Dialogue & Négociation Cognitive</span>
+            </h2>
+            <p class="text-xs text-slate-500 font-medium">Testez les réponses de l'agent en temps réel sur tous vos canaux (WhatsApp, Messenger, LinkedIn, Email).</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Pilules de Navigation Style Référence (Chat, Cible, Objections, Offre) -->
+            <div class="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200">
+              <button class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-slate-900 text-white shadow-2xs">Chat Direct</button>
+              <button onclick="document.getElementById('sim-target-details-drawer')?.classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Paramètres Cible</button>
+              <button onclick="startTargetSimulation()" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Amorcer Accroche</button>
+            </div>
+
+            <!-- Bouton Effacer / Réinitialiser avec icône poubelle (Style Référence) -->
+            <button onclick="resetSimulatorChat()" class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer" title="Effacer l'historique de discussion">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Effacer Chat</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Panneau de Configuration Rapide de la Cible (Épuré & Rétractable) -->
+        <div id="sim-target-details-drawer" class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-[#0062ff]"></span>
+              <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Cible Prospect Active & Offre Associée</h3>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="startTargetSimulation()" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md shadow-teal-600/20 transition-all">
-                <i data-lucide="play" class="w-3.5 h-3.5"></i> Amorcer l'Accroche IA
+              <span class="text-[11px] font-bold text-slate-400">Préréglages :</span>
+              <button onclick="applyPersonaPreset('etudiant')" class="persona-btn px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold hover:bg-amber-100 transition">
+                Étudiant sans budget
               </button>
-              <button onclick="resetSimulatorChat()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-lg flex items-center gap-1">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Réinitialiser
+              <button onclick="applyPersonaPreset('pme')" class="persona-btn px-2.5 py-1 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-semibold hover:bg-blue-100 transition">
+                Directeur PME (Site Web)
+              </button>
+              <button onclick="applyPersonaPreset('mefiant')" class="persona-btn px-2.5 py-1 rounded-xl bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-semibold hover:bg-slate-100 transition">
+                Peur d'arnaque
+              </button>
+              <button onclick="applyPersonaPreset('acheteur')" class="persona-btn px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold hover:bg-emerald-100 transition">
+                Acheteur prêt (Closing)
               </button>
             </div>
           </div>
 
-          <!-- Formulaire de Définition de la Cible -->
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
             <div>
-              <label class="block text-slate-400 font-semibold mb-1 text-[11px]">Nom / Profil de la Cible *</label>
-              <input type="text" id="sim-target-name" value="Dr. Mensah (Clinique Privée)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:border-teal-500 focus:outline-none" placeholder="Ex: Dr. Mensah">
+              <label class="block text-slate-500 font-bold mb-1 text-[11px]">Nom / Profil de la Cible</label>
+              <input type="text" id="sim-target-name" value="Dr. Mensah (Clinique Privée)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-semibold focus:border-[#0062ff] focus:bg-white focus:outline-none transition" placeholder="Ex: Dr. Mensah">
             </div>
             <div>
-              <label class="block text-slate-400 font-semibold mb-1 text-[11px]">Canal d'Acquisition</label>
-              <select id="sim-target-channel" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white focus:outline-none">
-                <option value="WhatsApp Inbound" selected>WhatsApp Inbound (Message direct)</option>
-                <option value="Facebook Ads Library">Facebook Ads Library (Commentaire Ad)</option>
-                <option value="LinkedIn">LinkedIn (Message Privé / InMail)</option>
-                <option value="TikTok & Instagram">TikTok & Instagram (DM / Lead Form)</option>
-                <option value="Recommandation Client">Bouche-à-oreille / Recommandation</option>
+              <label class="block text-slate-500 font-bold mb-1 text-[11px]">Canal d'Acquisition</label>
+              <select id="sim-target-channel" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-semibold focus:border-[#0062ff] focus:bg-white focus:outline-none transition">
+                <option value="WhatsApp Inbound" selected>WhatsApp Inbound</option>
+                <option value="Facebook Ads Library">Facebook Ads Library</option>
+                <option value="LinkedIn">LinkedIn (InMail)</option>
+                <option value="TikTok & Instagram">Instagram / TikTok DM</option>
+                <option value="Recommandation Client">Recommandation</option>
               </select>
             </div>
             <div>
-              <label class="block text-slate-700 font-semibold mb-1 text-[11px]">Température du Lead</label>
-              <select id="sim-target-temp" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:outline-none">
-                <option value="Froid">Froid (Découverte / Curieux)</option>
-                <option value="Tiède" selected>Tiède (Comparatif / Hésitant)</option>
-                <option value="Chaud">Chaud (Prêt à acheter / Décisionnaire)</option>
+              <label class="block text-slate-500 font-bold mb-1 text-[11px]">Température du Lead</label>
+              <select id="sim-target-temp" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-semibold focus:border-[#0062ff] focus:bg-white focus:outline-none transition">
+                <option value="Froid">Froid (Découverte)</option>
+                <option value="Tiède" selected>Tiède (Comparatif)</option>
+                <option value="Chaud">Chaud (Closing)</option>
               </select>
             </div>
             <div>
-              <label class="block text-slate-700 font-semibold mb-1 text-[11px]">Offre / Produit Visé</label>
-              <select id="sim-product-select" onchange="onSimulatorProductChange()" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:outline-none">
-                <!-- Rempli dynamiquement par JS -->
+              <label class="block text-slate-500 font-bold mb-1 text-[11px]">Offre du Catalogue</label>
+              <select id="sim-product-select" onchange="onSimulatorProductChange()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-semibold focus:border-[#0062ff] focus:bg-white focus:outline-none transition">
+                <!-- Rempli par JS -->
               </select>
             </div>
             <div>
-              <label class="block text-slate-700 font-semibold mb-1 text-[11px]">Douleur / Attente Clé</label>
-              <input type="text" id="sim-target-pain" value="Besoin de visibilité pour acquérir des clients" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:border-[#0062ff] focus:outline-none" placeholder="Ex: Manque de temps, budget...">
+              <label class="block text-slate-500 font-bold mb-1 text-[11px]">Douleur / Attente Clé</label>
+              <input type="text" id="sim-target-pain" value="Besoin de visibilité pour acquérir des clients" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 font-semibold focus:border-[#0062ff] focus:bg-white focus:outline-none transition" placeholder="Ex: Budget limité...">
             </div>
-          </div>
-
-          <!-- Quick Persona Selection Pills (Pré-remplissage en 1 clic) -->
-          <div class="flex items-center gap-2 overflow-x-auto text-xs pt-1 border-t border-slate-100">
-            <span class="text-slate-500 text-[11px] font-bold whitespace-nowrap">Scénarios préconfigurés :</span>
-            <button onclick="applyPersonaPreset('etudiant')" class="persona-btn px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold hover:bg-amber-100 whitespace-nowrap shadow-2xs">
-              Étudiant sans budget
-            </button>
-            <button onclick="applyPersonaPreset('pme')" class="persona-btn px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-[11px] font-semibold hover:bg-blue-100 whitespace-nowrap shadow-2xs">
-              Directeur PME (Site Web)
-            </button>
-            <button onclick="applyPersonaPreset('mefiant')" class="persona-btn px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-semibold hover:bg-slate-100 whitespace-nowrap shadow-2xs">
-              Peur d'arnaque
-            </button>
-            <button onclick="applyPersonaPreset('agressif')" class="persona-btn px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 text-[11px] font-semibold hover:bg-rose-100 whitespace-nowrap shadow-2xs">
-              Négociateur agressif
-            </button>
-            <button onclick="applyPersonaPreset('acheteur')" class="persona-btn px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-semibold hover:bg-emerald-100 whitespace-nowrap shadow-2xs">
-              Acheteur prêt (Closing)
-            </button>
           </div>
         </div>
 
-        <!-- Dual Cockpit Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[580px]">
-          <!-- LEFT : WhatsApp Interactive Chat (7 cols) -->
-          <div class="lg:col-span-7 glass-card rounded-2xl flex flex-col overflow-hidden border border-slate-200 shadow-xs">
-            <!-- Chat Header -->
-            <div class="p-3.5 bg-white border-b border-slate-200 flex items-center justify-between">
+        <!-- Cockpit Principal : Zone Chat (Gauche) + Analyse Cognitive (Droite) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[620px]">
+          
+          <!-- GAUCHE : Super Chat Style Référence (7 cols) -->
+          <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-100 shadow-xs flex flex-col overflow-hidden relative">
+            
+            <!-- Chat Top Header (Super Chat style) -->
+            <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white z-10">
               <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs shadow-xs">
-                  <i data-lucide="message-square" class="w-4 h-4"></i>
+                <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black text-sm shadow-xs border border-blue-100">
+                  <i data-lucide="sparkles" class="w-5 h-5 text-[#0062ff]"></i>
                 </div>
                 <div>
-                  <div class="font-bold text-slate-900 text-xs flex items-center gap-2">
-                    Prospect WhatsApp
-                    <span id="sim-persona-badge" class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-semibold border border-slate-200">Étudiant sans budget</span>
-                  </div>
+                  <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                    <span>Super Chat IA Commercial</span>
+                    <span id="sim-persona-badge" class="text-[10px] bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold border border-slate-200">Armel Mensah</span>
+                  </h3>
                   <div class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    IA Commerciale en ligne 24/7
+                    <span>Assistant Commercial Invo en ligne &bull; Réponse instantanée</span>
                   </div>
                 </div>
               </div>
-              <button onclick="resetSimulatorChat()" class="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition" title="Réinitialiser l'échange">
-                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+
+              <!-- Options du Chat (Clear, Actions) -->
+              <div class="flex items-center gap-1.5">
+                <button onclick="resetSimulatorChat()" class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition" title="Effacer l'échange">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+                <button onclick="startTargetSimulation()" class="px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#0062ff] font-bold text-xs flex items-center gap-1.5 transition border border-blue-100">
+                  <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                  <span>Relancer</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Fil des Messages Déroulant (Style Carte Référence) -->
+            <div id="sim-messages-container" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50/50">
+              <!-- Rempli par JavaScript avec avatars et cartes styled -->
+            </div>
+
+            <!-- Indicateur de Réflexion / Frappe -->
+            <div id="sim-typing-indicator" class="hidden px-5 py-2 text-xs text-slate-600 font-medium flex items-center gap-2 bg-blue-50/70 border-t border-blue-100">
+              <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-ping"></span>
+              <span>L'Agent IA analyse le profil psychologique et formule l'argumentaire...</span>
+            </div>
+
+            <!-- Bouton Flottant Optionnel "Regenerate Response" (Style Référence) -->
+            <div class="flex justify-center -mb-3 z-10">
+              <button onclick="startTargetSimulation()" class="px-4 py-1.5 rounded-full bg-white hover:bg-slate-50 text-slate-800 text-[11px] font-bold shadow-md border border-slate-200 flex items-center gap-1.5 transition active:scale-95">
+                <i data-lucide="rotate-cw" class="w-3 h-3 text-[#0062ff]"></i>
+                <span>Régénérer l'Accroche Commerciale</span>
               </button>
             </div>
 
-            <!-- Messages Area -->
-            <div id="sim-messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f8fafc]">
-              <!-- Rempli par JavaScript -->
+            <!-- CHAMP DE DIALOGUE MODERNE (REPRODUCTION STRICTE DU DESIGN DE RÉFÉRENCE) -->
+            <div class="p-4 sm:p-5 bg-white border-t border-slate-100">
+              <form onsubmit="handleSimulatorSubmit(event)" class="rounded-3xl border border-slate-200 bg-white p-3 shadow-xs hover:border-[#0062ff]/60 focus-within:border-[#0062ff] focus-within:ring-2 focus-within:ring-[#0062ff]/10 transition-all space-y-2.5">
+                
+                <!-- Zone d'écriture textuelle principale -->
+                <textarea 
+                  id="sim-input-text" 
+                  rows="2"
+                  placeholder="Posez une question, simulez une objection ou répondez comme un prospect..."
+                  class="w-full bg-transparent text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none resize-none leading-relaxed p-1"
+                  onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); handleSimulatorSubmit(event); }"
+                ></textarea>
+
+                <!-- Barre d'outils inférieure : Suggestions / Actions + Bouton Améliorer + Bouton Envoyer -->
+                <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                  
+                  <!-- Pilules d'assistance à gauche (Style "Browse Prompts", "Brand Voice") -->
+                  <div class="flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" onclick="document.getElementById('sim-input-text').value='C\\'est trop cher pour moi, est-ce négociable ?'" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
+                      <i data-lucide="file-text" class="w-3 h-3 text-slate-400"></i>
+                      <span>Objection Prix</span>
+                    </button>
+                    <button type="button" onclick="document.getElementById('sim-input-text').value='Avez-vous une garantie ou des preuves de résultat ?'" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
+                      <i data-lucide="shield-check" class="w-3 h-3 text-slate-400"></i>
+                      <span>Garantie</span>
+                    </button>
+                    <button type="button" onclick="document.getElementById('sim-input-text').value='Je suis prêt, comment procéder au paiement maintenant ?'" class="px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-[11px] font-bold border border-slate-200 flex items-center gap-1 transition">
+                      <i data-lucide="check-circle" class="w-3 h-3 text-emerald-500"></i>
+                      <span>Closing</span>
+                    </button>
+                  </div>
+
+                  <!-- Boutons d'Action à droite : "Improve" (IA) + Bouton Flèche d'Envoi -->
+                  <div class="flex items-center gap-2 ml-auto">
+                    <button type="button" onclick="const t = document.getElementById('sim-input-text'); if(t.value) t.value += ' Pouvez-vous détailler vos facilités de paiement ?';" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1 transition" title="Enrichir la formulation">
+                      <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#0062ff]"></i>
+                      <span class="hidden sm:inline">Améliorer</span>
+                    </button>
+
+                    <!-- Bouton Cercle Noir / Bleu Royal avec Flèche (Style Référence) -->
+                    <button type="submit" class="w-9 h-9 rounded-full bg-slate-900 hover:bg-[#0062ff] text-white flex items-center justify-center transition shadow-xs active:scale-95 cursor-pointer" title="Envoyer le message">
+                      <i data-lucide="arrow-up" class="w-4 h-4 text-white stroke-[2.5]"></i>
+                    </button>
+                  </div>
+
+                </div>
+              </form>
             </div>
 
-            <!-- Typing indicator -->
-            <div id="sim-typing-indicator" class="hidden px-4 py-1.5 text-[11px] text-slate-600 italic flex items-center gap-2 bg-slate-100 border-t border-slate-200">
-              <span class="w-2 h-2 rounded-full bg-teal-500 animate-ping"></span>
-              L'Agent IA analyse les signaux et rédige...
-            </div>
-
-            <!-- Chat Input -->
-            <form onsubmit="handleSimulatorSubmit(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
-              <input type="text" id="sim-input-text" placeholder="Répondez comme un prospect..." class="flex-1 bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#0062ff]">
-              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs">
-                <i data-lucide="send" class="w-4 h-4"></i> Envoyer
-              </button>
-            </form>
           </div>
 
-          <!-- RIGHT : Live AI Cognitive Mind & Analytics (5 cols) -->
-          <div class="lg:col-span-5 flex flex-col gap-3 overflow-y-auto">
-            <!-- DUR Score Gauge -->
-            <div class="glass-card rounded-2xl p-4 space-y-3 border border-slate-200">
+          <!-- DROITE : Historique & Raisonnement Cognitif (4 cols) -->
+          <div class="lg:col-span-4 flex flex-col gap-4 overflow-y-auto">
+            
+            <!-- Carte 1 : Historique / Scénarios de Test Rápid (Style History Chat de la Référence) -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <i data-lucide="activity" class="w-4 h-4 text-[#0062ff]"></i>
-                  Score DUR Actuel (Douleur, Urgence, Ressources)
+                <h4 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="history" class="w-4 h-4 text-[#0062ff]"></i>
+                  <span>Scénarios & Historique</span>
+                </h4>
+                <span class="text-[10px] font-mono text-slate-400 font-bold">5 types</span>
+              </div>
+
+              <div class="space-y-2">
+                <button onclick="applyPersonaPreset('etudiant'); handleSimulatorSubmit(event);" class="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition text-xs group">
+                  <div class="flex items-center gap-2 font-bold text-slate-800 group-hover:text-[#0062ff]">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0062ff] shrink-0"></i>
+                    <span class="truncate">« C'est trop cher pour moi, je suis étudiant »</span>
+                  </div>
+                </button>
+
+                <button onclick="applyPersonaPreset('pme'); handleSimulatorSubmit(event);" class="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition text-xs group">
+                  <div class="flex items-center gap-2 font-bold text-slate-800 group-hover:text-[#0062ff]">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0062ff] shrink-0"></i>
+                    <span class="truncate">« Informations sur création site web »</span>
+                  </div>
+                </button>
+
+                <button onclick="applyPersonaPreset('mefiant'); handleSimulatorSubmit(event);" class="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition text-xs group">
+                  <div class="flex items-center gap-2 font-bold text-slate-800 group-hover:text-[#0062ff]">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0062ff] shrink-0"></i>
+                    <span class="truncate">« Comment savoir si ce n'est pas une arnaque ? »</span>
+                  </div>
+                </button>
+
+                <button onclick="applyPersonaPreset('acheteur'); handleSimulatorSubmit(event);" class="w-full text-left p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-100 hover:border-blue-200 transition text-xs group">
+                  <div class="flex items-center gap-2 font-bold text-slate-800 group-hover:text-[#0062ff]">
+                    <i data-lucide="message-square" class="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0062ff] shrink-0"></i>
+                    <span class="truncate">« Je valide l'offre ! Envoyez-moi le lien »</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Carte 2 : Carte Pro / Taux de Closing (Style Bannière Verte de la Référence transformée en Invo) -->
+            <div class="rounded-3xl p-5 bg-gradient-to-br from-[#0062ff] to-blue-700 text-white shadow-md relative overflow-hidden space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center font-black">
+                  <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+                </div>
+                <span class="text-xs font-black uppercase tracking-wider bg-white/20 px-2.5 py-0.5 rounded-full">
+                  Closing IA
                 </span>
-                <span id="sim-dur-badge" class="text-xs font-black text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">65/100</span>
               </div>
-              <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div id="sim-dur-bar" class="bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: 65%;"></div>
-              </div>
-              <div class="grid grid-cols-3 gap-2 text-[10px] text-center text-slate-600 pt-1">
-                <div class="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  Douleur : <strong id="sim-dur-d" class="text-slate-900 font-bold block text-xs">18/25</strong>
-                </div>
-                <div class="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  Urgence : <strong id="sim-dur-u" class="text-slate-900 font-bold block text-xs">16/25</strong>
-                </div>
-                <div class="bg-slate-50 p-2 rounded-xl border border-slate-200">
-                  Ressources : <strong id="sim-dur-r" class="text-slate-900 font-bold block text-xs">15/25</strong>
-                </div>
-              </div>
-            </div>
 
-            <!-- Profile DISC & Objection Strategy -->
-            <div class="glass-card rounded-2xl p-4 space-y-3 border border-slate-200">
               <div>
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Profil Psychologique DISC Détecté</div>
-                <div id="sim-disc-text" class="text-xs font-bold text-slate-900 mt-0.5 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  S (Stable & Prudent)
+                <span class="text-[11px] text-blue-100 font-bold block">Probabilité de Conversion</span>
+                <div class="text-3xl font-black tracking-tight mt-0.5 flex items-baseline gap-1" id="sim-closing-prob">
+                  <span>82%</span>
+                  <span class="text-xs font-semibold text-blue-200">closing estimé</span>
                 </div>
               </div>
-              <div class="border-t border-slate-100 pt-2.5">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Objection Identifiée</div>
-                <div id="sim-objection-text" class="text-xs text-rose-600 font-bold mt-0.5">
-                  Objection Prix & Solvabilité
-                </div>
-              </div>
-              <div class="border-t border-slate-100 pt-2.5">
-                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Stratégie de Persuasion Déployée</div>
-                <p id="sim-strategy-text" class="text-[11px] text-slate-700 leading-relaxed mt-0.5">
-                  Recadrage sur le Retour sur Investissement (ROI) & Facilités de paiement
-                </p>
-              </div>
+
+              <p class="text-xs text-blue-100 leading-relaxed font-medium" id="sim-closing-status">
+                Phase actuelle : Qualification des besoins et levée des objections solvabilité.
+              </p>
+
+              <button onclick="applyPersonaPreset('acheteur'); startTargetSimulation();" class="w-full py-2.5 rounded-2xl bg-slate-900 hover:bg-black text-white font-extrabold text-xs transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>Tester Clôture Immédiate</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
             </div>
 
-            <!-- Active Catalog Reference & Guarantee -->
-            <div class="glass-card rounded-2xl p-4 space-y-2.5 border border-slate-200">
+            <!-- Carte 3 : Analyse DUR & Cerveau Cognitif -->
+            <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Fiche Technique Mobilisée</span>
-                <span id="sim-catalog-type" class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-semibold">Service</span>
+                <span class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="activity" class="w-4 h-4 text-[#0062ff]"></i>
+                  <span>Score DUR Actuel</span>
+                </span>
+                <span id="sim-dur-badge" class="text-xs font-black text-[#0062ff] bg-blue-50 px-2.5 py-0.5 rounded-xl border border-blue-200">65/100</span>
               </div>
-              <div class="text-xs font-bold text-slate-900" id="sim-catalog-nom">Pack Graphisme Pro & Canva pour Étudiants</div>
-              <div class="text-[11px] text-slate-600 flex items-center justify-between">
-                <span>Prix : <strong id="sim-catalog-price" class="text-slate-900 font-bold">15 000 FCFA</strong></span>
-                <span>Stock/Places : <strong id="sim-catalog-stock" class="text-slate-900 font-bold">Disponible</strong></span>
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div id="sim-dur-bar" class="bg-[#0062ff] h-2 rounded-full transition-all duration-500" style="width: 65%;"></div>
               </div>
-              <div class="text-[10px] text-slate-600 p-2 bg-slate-50 rounded-xl border border-slate-200">
-                Garantie : <span id="sim-catalog-guarantee" class="text-slate-800 font-medium">Satisfait ou remboursé sous 7 jours sans condition.</span>
+              <div class="grid grid-cols-3 gap-2 text-[10px] text-center pt-1">
+                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 font-bold block text-[9px]">DOULEUR</span>
+                  <strong id="sim-dur-d" class="text-slate-900 font-black text-xs">18/25</strong>
+                </div>
+                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 font-bold block text-[9px]">URGENCE</span>
+                  <strong id="sim-dur-u" class="text-slate-900 font-black text-xs">16/25</strong>
+                </div>
+                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <span class="text-slate-400 font-bold block text-[9px]">RESSOURCES</span>
+                  <strong id="sim-dur-r" class="text-slate-900 font-black text-xs">15/25</strong>
+                </div>
               </div>
+
+              <!-- Profil DISC & Stratégie Déployée -->
+              <div class="pt-2 border-t border-slate-100 space-y-2 text-xs">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Profil DISC Détecté</span>
+                  <div id="sim-disc-text" class="font-bold text-slate-900 mt-0.5 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>S (Stable & Prudent)</span>
+                  </div>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stratégie Active</span>
+                  <p id="sim-strategy-text" class="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">
+                    Recadrage sur le Retour sur Investissement (ROI) & Facilités de paiement.
+                  </p>
+                </div>
+              </div>
+
             </div>
 
-            <!-- Closing Status Box -->
-            <div id="sim-closing-box" class="glass-card rounded-xl p-3 border border-emerald-200 bg-emerald-50 text-xs text-emerald-800 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <i data-lucide="shield-alert" id="sim-closing-icon" class="w-4 h-4 text-amber-600"></i>
-                <span id="sim-closing-status" class="font-bold">Phase : Qualification active</span>
-              </div>
-              <span id="sim-closing-prob" class="font-mono text-[11px] bg-white px-2 py-0.5 rounded-md text-emerald-800 border border-emerald-200 font-bold">65% closing</span>
-            </div>
           </div>
+
         </div>
+
       </section>
 
       <!-- ==================== TAB 8 : PAIEMENTS & MOBILE MONEY ==================== -->

@@ -2713,41 +2713,44 @@ function renderConversationMessages(messages, leadName) {
 
     if (isLead) {
       return dateDivider + `
-        <div class="flex items-start gap-2.5 max-w-[85%]">
-          <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs">
+        <div class="flex items-start gap-3 max-w-[85%]">
+          <div class="w-8 h-8 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs border border-slate-200">
             ${initials}
           </div>
-          <div class="space-y-1">
-            <div class="p-3 rounded-2xl rounded-tl-xs bg-white text-slate-800 text-xs border border-slate-200 shadow-xs leading-relaxed whitespace-pre-wrap">
+          <div class="space-y-1.5 flex-1">
+            <div class="p-4 rounded-3xl rounded-tl-sm bg-white text-slate-800 text-xs border border-slate-200/90 shadow-xs leading-relaxed whitespace-pre-wrap font-medium">
               ${escapeHtml(m.message)}
             </div>
-            <div class="text-[10px] text-slate-400 pl-1 font-medium flex items-center gap-1">
+            <div class="text-[10px] text-slate-400 pl-2 font-medium flex items-center gap-2">
               <span>${escapeHtml(timeOnly)}</span>
-              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 font-semibold">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">
                 <i data-lucide="${canalIcon}" class="w-2.5 h-2.5"></i>
                 <span class="text-[9px]">${canalLabel}</span>
               </span>
+              <button onclick="navigator.clipboard.writeText(this.closest('.space-y-1.5').querySelector('.bg-white').innerText); showToast('Message copié !', 'success');" class="hover:text-slate-600 text-[10px] font-semibold flex items-center gap-1 transition">
+                <i data-lucide="copy" class="w-2.5 h-2.5"></i> Copier
+              </button>
             </div>
           </div>
         </div>
       `;
     } else {
       return dateDivider + `
-        <div class="flex items-start gap-2.5 max-w-[85%] ml-auto flex-row-reverse">
-          <div class="w-7 h-7 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs ring-2 ring-blue-100">
+        <div class="flex items-start gap-3 max-w-[85%] ml-auto flex-row-reverse">
+          <div class="w-8 h-8 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center text-[10px] font-black shrink-0 shadow-xs border border-blue-200">
             DS
           </div>
-          <div class="space-y-1 text-right">
-            <div class="p-3 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-md shadow-blue-500/10 leading-relaxed text-left whitespace-pre-wrap">
+          <div class="space-y-1.5 text-right flex-1">
+            <div class="p-4 rounded-3xl rounded-tr-sm bg-[#0062ff] text-white text-xs shadow-md shadow-blue-500/10 leading-relaxed text-left whitespace-pre-wrap font-medium">
               ${escapeHtml(m.message)}
             </div>
-            <div class="text-[10px] text-slate-400 pr-1 font-medium flex items-center justify-end gap-1">
+            <div class="text-[10px] text-slate-400 pr-2 font-medium flex items-center justify-end gap-2">
               <span>${escapeHtml(timeOnly)}</span>
-              <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-semibold">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] font-semibold">
                 <i data-lucide="${canalIcon}" class="w-2.5 h-2.5"></i>
                 <span class="text-[9px]">${canalLabel}</span>
               </span>
-              <span class="text-blue-600 font-bold">Dave Sagbo</span>
+              <span class="text-[#0062ff] font-bold">Dave Sagbo</span>
               <i data-lucide="check-check" class="w-3 h-3 text-[#0062ff]"></i>
             </div>
           </div>
@@ -5355,19 +5358,32 @@ function startTargetSimulation() {
   const prodNom = activeSimulatorProduct ? activeSimulatorProduct.nom : "notre solution";
 
   container.innerHTML = `
-    <div class="flex items-start gap-2.5">
-      <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">IA</div>
-      <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-4 text-xs text-slate-800 max-w-lg shadow-2xs leading-relaxed whitespace-pre-wrap font-medium">
+    <!-- Bulle IA Style Référence -->
+    <div class="flex items-start gap-3 max-w-2xl">
+      <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] border border-blue-100 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+        <i data-lucide="sparkles" class="w-4 h-4 text-[#0062ff]"></i>
+      </div>
+      <div class="space-y-2 flex-1">
+        <div class="bg-white border border-slate-200/90 rounded-3xl rounded-tl-sm p-4 sm:p-5 text-xs text-slate-800 shadow-xs leading-relaxed whitespace-pre-wrap font-medium">
 Bonjour ${targetName} ! Ravi de faire votre connaissance.
 
 J'ai bien noté votre prise de contact via ${targetChannel} concernant *${prodNom}*.
 Je sais que la priorité pour vous est : "${targetPain}".
 
 Dites-moi, quelles sont vos questions ou vos hésitations pour qu'on avance ensemble ?
+        </div>
+        <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold">
+          <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').querySelector('.bg-white').innerText); showToast('Copié !', 'success');" class="hover:text-slate-700 flex items-center gap-1 transition">
+            <i data-lucide="copy" class="w-3 h-3"></i> Copier
+          </button>
+          <span>&bull;</span>
+          <span class="text-blue-600 font-bold">Accroche Directe</span>
+        </div>
       </div>
     </div>
   `;
   container.scrollTop = container.scrollHeight;
+  lucide.createIcons();
   showToast("Simulation amorcée pour la cible active !", "success");
 }
 
@@ -5379,11 +5395,23 @@ function initSimulator() {
   const targetName = document.getElementById("sim-target-name")?.value.trim() || "Dr. Mensah";
 
   container.innerHTML = `
-    <div class="flex items-start gap-2.5">
-      <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">IA</div>
-      <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-4 text-xs text-slate-800 max-w-lg shadow-2xs leading-relaxed font-medium">
-Bonjour ${targetName} ! Je suis votre commercial IA d'élite.
+    <!-- Bulle IA Initiale Style Référence -->
+    <div class="flex items-start gap-3 max-w-2xl">
+      <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] border border-blue-100 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+        <i data-lucide="sparkles" class="w-4 h-4 text-[#0062ff]"></i>
+      </div>
+      <div class="space-y-2 flex-1">
+        <div class="bg-white border border-slate-200/90 rounded-3xl rounded-tl-sm p-4 sm:p-5 text-xs text-slate-800 shadow-xs leading-relaxed font-medium">
+Bonjour ${targetName} ! Je suis votre commercial IA d'élite sous pavillon Invo.
 Posez-moi n'importe quelle question sur nos services, formulez une objection ou demandez des détails pour observer mon raisonnement en direct !
+        </div>
+        <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold">
+          <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').querySelector('.bg-white').innerText); showToast('Copié !', 'success');" class="hover:text-slate-700 flex items-center gap-1 transition">
+            <i data-lucide="copy" class="w-3 h-3"></i> Copier
+          </button>
+          <span>&bull;</span>
+          <span class="text-emerald-600 font-bold">Agent en ligne 24/7</span>
+        </div>
       </div>
     </div>
   `;
@@ -5391,10 +5419,11 @@ Posez-moi n'importe quelle question sur nos services, formulez une objection ou 
   if (activeCatalogItems && activeCatalogItems.length > 0) {
     populateSimulatorProducts(activeCatalogItems);
   }
+  lucide.createIcons();
 }
 
 async function handleSimulatorSubmit(e) {
-  e.preventDefault();
+  if (e && e.preventDefault) e.preventDefault();
   const input = document.getElementById("sim-input-text");
   const msg = input.value.trim();
   if (!msg) return;
@@ -5411,16 +5440,22 @@ async function handleSimulatorSubmit(e) {
   const selectProd = document.getElementById("sim-product-select");
   const prodId = selectProd && selectProd.value ? parseInt(selectProd.value, 10) : null;
 
-  // Bulle prospect
+  // Bulle prospect Style Référence (Message arrondi avec avatar rond)
   container.innerHTML += `
-    <div class="flex items-start justify-end gap-2.5">
-      <div class="bg-[#0062ff] text-white rounded-2xl rounded-tr-xs p-3.5 text-xs max-w-md shadow-2xs leading-relaxed font-medium">
-        ${msg}
+    <div class="flex items-start justify-end gap-3 max-w-xl ml-auto">
+      <div class="space-y-1 text-right">
+        <div class="bg-[#0062ff] text-white rounded-3xl rounded-tr-sm p-4 text-xs shadow-md shadow-blue-500/10 leading-relaxed font-semibold text-left">
+          ${escapeHtml(msg)}
+        </div>
+        <div class="text-[10px] text-slate-400 pr-2 font-medium">Prospect &bull; Maintenant</div>
       </div>
-      <div class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">P</div>
+      <div class="w-9 h-9 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+        <i data-lucide="user" class="w-4 h-4 text-white"></i>
+      </div>
     </div>
   `;
   container.scrollTop = container.scrollHeight;
+  lucide.createIcons();
 
   // Indicateur frappe
   if (typing) typing.classList.remove("hidden");
@@ -5454,16 +5489,30 @@ async function handleSimulatorSubmit(e) {
     // Enregistrer la réponse dans l'historique
     simulatorHistory.push({ role: "assistant", content: replyText });
 
-    // Bulle Agent IA
+    // Bulle Agent IA Style Référence (Carte blanche épurée, copy, badges)
     container.innerHTML += `
-      <div class="flex items-start gap-2.5">
-        <div class="w-8 h-8 rounded-full bg-blue-100 text-[#0062ff] border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">IA</div>
-        <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-xs p-4 text-xs text-slate-800 max-w-md shadow-2xs whitespace-pre-wrap leading-relaxed font-medium">
-${replyText}
+      <div class="flex items-start gap-3 max-w-2xl">
+        <div class="w-9 h-9 rounded-2xl bg-blue-50 text-[#0062ff] border border-blue-100 flex items-center justify-center font-black text-xs shrink-0 shadow-xs">
+          <i data-lucide="sparkles" class="w-4 h-4 text-[#0062ff]"></i>
+        </div>
+        <div class="space-y-2 flex-1">
+          <div class="bg-white border border-slate-200/90 rounded-3xl rounded-tl-sm p-4 sm:p-5 text-xs text-slate-800 shadow-xs whitespace-pre-wrap leading-relaxed font-medium">
+${escapeHtml(replyText)}
+          </div>
+          <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold">
+            <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').querySelector('.bg-white').innerText); showToast('Copié !', 'success');" class="hover:text-slate-700 flex items-center gap-1 transition">
+              <i data-lucide="copy" class="w-3 h-3"></i> Copier
+            </button>
+            <span>&bull;</span>
+            <button onclick="document.getElementById('sim-input-text').value='Pouvez-vous préciser ce point ?'; document.getElementById('sim-input-text').focus();" class="hover:text-[#0062ff] flex items-center gap-1 transition">
+              <i data-lucide="help-circle" class="w-3 h-3"></i> Approfondir
+            </button>
+          </div>
         </div>
       </div>
     `;
     container.scrollTop = container.scrollHeight;
+    lucide.createIcons();
 
     // Actualiser le Cerveau & Raisonnement Cognitif
     const cog = data.cognitive_trace || {};
