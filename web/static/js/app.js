@@ -468,6 +468,16 @@ function showTab(tabId) {
   }
 }
 
+// Alias de navigation universel pour éviter tout bouton orphelin
+function switchTab(tabId) {
+  showTab(tabId);
+}
+
+// Ouvre la modale explicative complète de l'essaim multi-agents
+function openSwarmGuideModal() {
+  showModal("modal-swarm-guide");
+}
+
 // --- CHARGEMENT DU TABLEAU DE BORD ---
 async function loadDashboardData() {
   try {
@@ -4172,7 +4182,7 @@ async function loadSwarmStatus() {
         accentBar: "bg-[#0062ff]",
         tag: "Supervision & Monte Carlo",
         btnText: "Voir Prévisions",
-        btnAction: "switchTab('forecasting')"
+        btnAction: "showTab('director')"
       },
       "agent_prospector": {
         icon: "search",
@@ -4184,7 +4194,7 @@ async function loadSwarmStatus() {
         accentBar: "bg-sky-500",
         tag: "OSINT Facebook & LinkedIn",
         btnText: "Inspecter Leads",
-        btnAction: "switchTab('crm')"
+        btnAction: "showTab('crm')"
       },
       "agent_analyst": {
         icon: "brain",
@@ -4196,7 +4206,7 @@ async function loadSwarmStatus() {
         accentBar: "bg-purple-500",
         tag: "Scoring DUR & DISC",
         btnText: "Voir l'Audit",
-        btnAction: "switchTab('audit')"
+        btnAction: "showTab('audit')"
       },
       "agent_closer": {
         icon: "message-square-code",
@@ -4208,7 +4218,7 @@ async function loadSwarmStatus() {
         accentBar: "bg-emerald-500",
         tag: "Négociation & Closing",
         btnText: "Flux WhatsApp",
-        btnAction: "switchTab('history')"
+        btnAction: "showTab('history')"
       },
       "agent_customer_success": {
         icon: "award",
@@ -4220,7 +4230,7 @@ async function loadSwarmStatus() {
         accentBar: "bg-amber-500",
         tag: "Fidélisation & Suivi J+7",
         btnText: "Catalogue Packs",
-        btnAction: "switchTab('catalog')"
+        btnAction: "showTab('catalog')"
       }
     };
 
@@ -4236,7 +4246,7 @@ async function loadSwarmStatus() {
           accentBar: "bg-[#0062ff]",
           tag: "Agent Collaboratif",
           btnText: "Consulter",
-          btnAction: "switchTab('history')"
+          btnAction: "showTab('history')"
         };
 
         const pctProgress = Math.min(100, Math.max(25, (ag.actions_aujourdhui || 10) * 2));
