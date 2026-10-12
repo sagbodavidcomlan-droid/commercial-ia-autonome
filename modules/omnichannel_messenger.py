@@ -222,7 +222,8 @@ class OmnichannelMessenger:
         prenom = nom.split()[0]
         poste = lead.get("poste") or "Professionnel"
         interet = lead.get("centre_interet") or lead.get("notes") or "le développement de vos activités"
-        declencheur = lead.get("declencheur_prospection") or lead.get("observation_source") or f"Intérêt identifié pour {interet}"
+        offre = lead.get("offre_matchee") or ""
+        declencheur = lead.get("declencheur_prospection") or lead.get("observation_source") or (f"Intérêt ou besoin relié à {offre}" if offre else f"Intérêt identifié pour {interet}")
         observation = lead.get("observation_source") or lead.get("notes") or f"Activité de {poste}"
         canal_nom = SUPPORTED_CHANNELS.get(channel.upper(), {}).get("label", channel)
 
@@ -233,7 +234,7 @@ class OmnichannelMessenger:
             f"CONTEXTE ET DÉCLENCHEUR RÉEL DE CETTE PROSPECTION :\n"
             f"- Le déclencheur précis (ce que tu as vu, lu ou remarqué qui te pousse à le contacter) : « {declencheur} »\n"
             f"- Observation sur sa situation actuelle : « {observation} »\n"
-            f"- Thématique clé : « {interet} »\n\n"
+            f"- Thématique ou solution clé en lien avec ses besoins : « {offre or interet} »\n\n"
             f"CONSIGNES STRICTES D'UNICITÉ & DE RELATION CLIENT (NON NÉGOCIABLES) :\n"
             f"1. UNICITÉ RADICALE : ZÉRO TEMPLATE. Ne réutilise aucune formule toute faite, aucun message type ou générique. Le message doit être écrit sur-mesure comme si tu venais de découvrir son profil ou sa publication à l'instant.\n"
             f"2. ANCRAGE IMMÉDIAT DANS LE DÉCLENCHEUR : Fais directement référence au point précis qui a motivé ta prise de contact (le déclencheur mentionné ci-dessus).\n"

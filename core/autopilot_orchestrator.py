@@ -84,28 +84,26 @@ class AutopilotOrchestrator:
 
         if not leads_to_process:
             # AUCUN LEAD EN ATTENTE DANS LE CRM :
-            # Le Digital Business Developer passe à l'action pour traquer l'audience active
-            # (commentateurs réels sous annonces/posts des concurrents de notre niche)
-            self.log("PATROUILLE", "Aucun prospect en attente dans le CRM. Déclenchement de la traque d'audience concurrente...")
+            # La Machine à Cash Multi-Offres passe à l'action pour traquer sur tout le catalogue
+            self.log("PATROUILLE", "Aucun prospect en attente dans le CRM. Déclenchement de la Machine à Cash Multi-Offres & Multi-Canaux...")
             try:
-                from modules.facebook_ads_collector import FacebookAdsCollector
-                bd_agent = FacebookAdsCollector()
-                intercepted = bd_agent.hunt_competitor_audience(
-                    max_competitors=2,
-                    auto_ingest_crm=True
-                )
-                if intercepted:
-                    self.log("INTERCEPTION", f"🎯 {len(intercepted)} prospect(s) réel(s) intercepté(s) sous les publications concurrentes et injecté(s) au CRM.", status="SUCCESS")
-                    # Re-sélectionner les leads fraîchement interceptés
+                from core.multi_offer_hunter import MultiOfferHunter
+                hunter = MultiOfferHunter()
+                hunt_res = hunter.hunt_for_all_offers(country=active_cfg.get("cible", {}).get("pays", ["BJ"])[0])
+                total_acq = hunt_res.get("total_leads_acquired", 0)
+                if total_acq > 0:
+                    self.log("INTERCEPTION", f"🎯 {total_acq} prospect(s) qualifié(s) capté(s) sur le catalogue et injecté(s) au CRM.", status="SUCCESS")
                     cursor.execute("""
                         SELECT id, nom_lead, nom_complet, telephone, whatsapp, source_canal, source_contact,
-                               poste, centre_interet, notes, facebook_psid, score_dur, profil_disc
+                               poste, centre_interet, notes, facebook_psid, score_dur, profil_disc, offre_matchee
                         FROM crm_leads
-                        WHERE id IN ({seq})
-                    """.format(seq=','.join(str(l['crm_lead_id']) for l in intercepted if l.get('crm_lead_id'))))
+                        WHERE statut_lead IN ('Nouveau', 'Chaud')
+                        ORDER BY id DESC
+                        LIMIT ?
+                    """, (batch_size,))
                     leads_to_process = cursor.fetchall()
             except Exception as e:
-                self.log("ERREUR_TRAQUE", f"Échec de la patrouille de traque : {e}", status="WARN")
+                self.log("ERREUR_TRAQUE", f"Échec de la patrouille multi-offres : {e}", status="WARN")
 
         if leads_to_process:
             self.log("COLLECTE", f"{len(leads_to_process)} lead(s) réel(s) identifié(s) dans le CRM pour traitement autonome.")
