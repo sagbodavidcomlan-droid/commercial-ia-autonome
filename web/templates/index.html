@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full bg-[#f4f7fe] text-slate-800">
+<html lang="fr" class="h-full bg-[#eff2f7] text-slate-900">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,10 +10,10 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Invo.">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
-  <!-- Google Fonts: Poppins -->
+  <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
   <!-- Design System Invo CSS -->
   <link rel="stylesheet" href="/static/css/design-system.css">
   <!-- Tailwind CSS CDN -->
@@ -23,13 +23,20 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Poppins', 'sans-serif'],
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
           },
           colors: {
             invo: {
               DEFAULT: '#0062ff',
               hover: '#004edb',
               light: 'rgba(0, 98, 255, 0.08)',
+              subtle: '#eff6ff',
+            },
+            canvas: '#eff2f7',
+            ink: {
+              DEFAULT: '#0f172a',
+              secondary: '#334155',
+              muted: '#64748b',
             }
           }
         }
@@ -42,15 +49,15 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    * { font-family: 'Poppins', var(--font-sans), sans-serif !important; }
+    * { font-family: 'Plus Jakarta Sans', var(--font-sans), sans-serif !important; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-track { background: #eff2f7; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .glass-card {
       background: #ffffff !important;
-      border-radius: 20px !important;
+      border-radius: 24px !important;
       border: 1px solid #e2e8f0 !important;
-      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04) !important;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05) !important;
       color: #0f172a !important;
     }
     /* Comprehensive Readability & Input Styling */
@@ -78,9 +85,10 @@
       align-items: center;
       gap: 4px;
     }
-    /* Global Light Theme Typography & Maximum Contrast */
+    /* Global Light Theme Typography & Maximum Contrast (Fin de l'illisible) */
     main h1, main h2, main h3, main h4, main h5, main h6 {
       color: #0f172a !important;
+      font-weight: 700;
     }
     main label {
       color: #1e293b !important;
@@ -94,14 +102,22 @@
       border-color: #e2e8f0 !important;
       color: #0f172a !important;
     }
-    /* High-contrast text colors */
+    /* High-contrast text colors: rehaussement drastique des gris faibles */
     main .text-slate-400 {
-      color: #64748b !important;
+      color: #475569 !important; /* Devient un Slate 600 très lisible au lieu de gris invisible */
+      font-weight: 500;
     }
     main .text-slate-500 {
-      color: #475569 !important;
+      color: #334155 !important; /* Devient un Slate 700 net et contrasté */
+      font-weight: 500;
     }
     main .text-slate-300 {
+      color: #1e293b !important; /* Devient un Slate 800 foncé */
+    }
+    main .text-gray-400 {
+      color: #475569 !important;
+    }
+    main .text-gray-500 {
       color: #334155 !important;
     }
     main .text-white:not(.invo-preserve-white):not(.nav-btn.active):not(.nav-btn.active *):not(.bg-\[\#0062ff\] *):not(.bg-blue-600 *):not(.bg-emerald-600 *):not(.bg-purple-600 *):not(.bg-indigo-600 *):not(.bg-rose-600 *):not(.bg-amber-600 *):not(.bg-teal-600 *):not(.bg-gradient-to-br *):not(button.bg-emerald-600 *):not(button.bg-\[\#0062ff\] *):not(button.bg-purple-600 *):not(button.bg-indigo-600 *) {
@@ -230,7 +246,7 @@
     }
   </style>
 </head>
-<body class="h-full flex flex-col font-sans antialiased overflow-hidden bg-[#f4f7fe] text-slate-800 app-locked">
+<body class="h-full flex flex-col font-sans antialiased overflow-hidden bg-[#eff2f7] text-slate-900 app-locked">
 
   <!-- SVG BRAND ICONS SPRITE (SIMPLE ICONS SVG) -->
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
