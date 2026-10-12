@@ -1304,7 +1304,8 @@ class AISalesAgent:
 
     def handle_distress_signal(self, signal_type: str, lead_id: int, lead: Dict[str, Any], conversation_history: list = None) -> str:
         """
-        Gère les signaux de rupture avec une réponse humaine, empathique et directe.
+        Gère les signaux de rupture (suspicion de bot, irritation, incompréhension)
+        de façon 100% vivante, humaine et contextuelle sans template rigide répétitif.
         """
         if signal_type == 'reflection':
             return self.handle_reflection_signal(lead_id, lead, conversation_history)
@@ -1312,23 +1313,60 @@ class AISalesAgent:
         prenom = lead.get('prenom', '') if lead else ''
         prenom_str = f" {prenom}" if prenom else ""
 
-        responses = {
-            'confusion': (
-                f"Pardonnez-moi{prenom_str}, je me suis mal exprimé. Reprenons simplement : "
-                f"qu'est-ce qui vous a amené à nous contacter ?"
-            ),
-            'bot_suspicion': (
-                f"Non, vous échangez directement avec moi, Dave Sagbo. Je suis là pour comprendre "
-                f"votre situation et voir si on peut vous aider. Qu'est-ce qui vous a amené ici ?"
-            ),
-            'irritation': (
-                f"Je vous entends{prenom_str}. Repartons de zéro — dites-moi simplement ce que vous cherchez, en quelques mots."
-            ),
-            'loop_detected': (
-                f"Je crois qu'il y a eu un problème de ma part{prenom_str}. Ignorons ce qui précède. "
-                f"Qu'est-ce qui vous amène ?"
+        # Demander à Gemini de générer une réaction humaine, naturelle et spontanée
+        prompt_directive = ""
+        if signal_type == 'bot_suspicion':
+            prompt_directive = (
+                "Le prospect vous suspecte d'être un robot ou trouve vos réponses trop automatisées. "
+                "RÉAGISSEZ AVEC UN NATUREL DÉCONCERTANT : Souriez avec autodérision, soyez direct, chaleureux et très simple. "
+                "Ne récitez JAMAIS de formule préparée comme 'Non, vous échangez directement avec moi, Dave Sagbo...'. "
+                "Dites simplement que vous êtes bien là derrière votre écran, reconnaissez que vos messages précédents ont pu sembler mécaniques ou trop formels, "
+                "et demandez-lui en une phrase directe de quoi il s'agit pour échanger simplement d'humain à humain."
             )
-        }
+        elif signal_type == 'confusion':
+            prompt_directive = (
+                "Le prospect ne comprend pas ou trouve vos explications confuses. "
+                "Faites preuve d'humilité et de clarté totale : reconnaissez simplement que vous êtes allé trop vite ou que votre phrase a coupé. "
+                "Expliquez en 1 ou 2 phrases concrètes et imagées ce que vous faites (acquisition de nouveaux clients pour les entreprises) "
+                "et posez une question simple."
+            )
+        elif signal_type == 'irritation':
+            prompt_directive = (
+                "Le prospect est irrité par la tournure de l'échange. "
+                "Désamorcez calmement sans vous justifier lourdement. Montrez une écoute réelle et sincère, "
+                "et invitez-le simplement à vous dire son besoin actuel sans détour."
+            )
+        else:
+            prompt_directive = "Reconnaissez le couac technique avec légèreté et reprenez la main naturellement."
+
+        system_prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            f"=== DIRECTIVE CRITIQUE D'URGENCE RELATIONNELLE ===\n"
+            f"{prompt_directive}\n"
+            f"Consigne absolue : 2 à 3 lignes maximum, vouvoiement obligatoire, ZÉRO répétition d'une phrase passée."
+        )
+
+        reply = self.call_gemini_with_full_context(
+            lead_id=lead_id,
+            system_prompt=system_prompt,
+            new_user_message=conversation_history[-1].get("message", "") if conversation_history else "",
+            history=conversation_history
+        )
+
+        if reply and len(reply.strip()) > 10:
+            return reply.strip()
+
+        # Fallback dynamique si Gemini est momentanément injoignable
+        if signal_type == 'bot_suspicion':
+            variations = [
+                f"Haha je comprends votre doute{prenom_str} ! Mes derniers messages étaient un peu trop formels. Je suis bien Dave, derrière mon clavier. De quoi avez-vous besoin concrètement ?",
+                f"C'est vrai que la réponse précédente faisait très automatique, désolé pour ça{prenom_str}. C'est bien moi en direct. Quel est votre sujet du moment ?",
+                f"Je vous rassure, je suis bien en chair et en os{prenom_str} ! J'ai rédigé un peu vite. Dites-moi simplement ce qui vous préoccupe pour votre activité ?"
+            ]
+            import random
+            return random.choice(variations)
+        elif signal_type == 'confusion':
+            return f"Pardonnez-moi{prenom_str}, je suis allé un peu vite en besogne. En deux mots : on aide les entreprises à trouver et closer plus de clients réguliers. Vous vendez quel type de service vous ?"
 
         # Réinitialiser le compteur de diagnostic en base
         if lead_id:
@@ -1452,7 +1490,10 @@ class AISalesAgent:
                     "contents": gemini_contents,
                     "generationConfig": {
                         "temperature": 0.7,
-                        "maxOutputTokens": 450
+                        "maxOutputTokens": 1500,
+                        "thinkingConfig": {
+                            "thinkingBudget": 0
+                        }
                     }
                 }
                 req = urllib.request.Request(
@@ -1460,7 +1501,7 @@ class AISalesAgent:
                     data=json.dumps(payload).encode("utf-8"),
                     headers={"Content-Type": "application/json"}
                 )
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with urllib.request.urlopen(req, timeout=8) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     cand = data.get("candidates", [{}])[0]
                     parts = cand.get("content", {}).get("parts", [])
@@ -1601,8 +1642,12 @@ class AISalesAgent:
                 system_prompt += (
                     "- INTERDICTION STRICTE de dire Bonjour ou Bonsoir.\n"
                     "- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
-                    "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum.\n"
-                    "- INTERDICTION STRICTE de répéter la même question ou phrase déjà envoyée plus haut dans la conversation.\n"
+                    "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum avec une parfaite clarté.\n"
+                    "- Lis l'INTÉGRALITÉ des échanges précédents pour rester 100% cohérent avec ce qui a été dit.\n"
+                    "- ZÉRO PHRASE TRONQUÉE : Termine TOUJOURS complètement tes phrases par un point ou un point d'interrogation.\n"
+                    "- INTERDICTION STRICTE de répéter la même question ou formule déjà envoyée plus haut dans la conversation.\n"
+                    "- COMPORTEMENT HUMAIN EXPERT : Sois chaleureux, pragmatique et à l'écoute comme un vrai directeur commercial.\n"
+                    "- DÉCOUVERTE DU PROSPECT : Si le prospect ne s'est pas présenté ou si tu n'as pas son nom/téléphone, intéresse-toi naturellement à son activité ou invite-le simplement à se présenter ('Au fait, vous travaillez dans quel domaine ?').\n"
                 )
 
             reply_text = self.call_gemini_with_full_context(

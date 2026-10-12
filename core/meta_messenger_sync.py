@@ -226,6 +226,7 @@ def verify_meta_token(token: Optional[str] = None) -> Dict[str, Any]:
 def get_facebook_profile(psid: str, token: Optional[str] = None) -> Dict[str, Any]:
     """
     Récupère le profil public d'un utilisateur Facebook (PSID) ayant envoyé un message à la Page.
+    Tente l'API PSID directe puis bascule sur les participants de la conversation de la Page.
     """
     if not token:
         creds = get_stored_meta_credentials()
@@ -234,17 +235,40 @@ def get_facebook_profile(psid: str, token: Optional[str] = None) -> Dict[str, An
     if not token or not psid:
         return {}
 
+    # 1. Tentative directe sur le PSID
     try:
         url = f"{GRAPH_BASE_URL}/{psid}"
         params = {
-            "fields": "first_name,last_name,profile_pic,locale",
+            "fields": "first_name,last_name,name,profile_pic,locale",
             "access_token": token.strip()
         }
-        res_code, data = _make_http_request(url, params=params, timeout=8)
-        if res_code == 200:
+        res_code, data = _make_http_request(url, params=params, timeout=5)
+        if res_code == 200 and data.get("first_name"):
             return data
     except Exception as e:
-        logger.warning(f"Erreur récupération profil Facebook pour PSID {psid} : {e}")
+        logger.warning(f"Note récupération directe profil PSID {psid} : {e}")
+
+    # 2. Récupération robuste via la liste des conversations de la Page
+    try:
+        creds = get_stored_meta_credentials()
+        page_id = creds.get("meta_page_id")
+        if page_id:
+            conv_url = f"{GRAPH_BASE_URL}/{page_id}/conversations"
+            res_code, conv_data = _make_http_request(conv_url, params={"access_token": token.strip(), "fields": "senders,participants"}, timeout=6)
+            if res_code == 200:
+                for c in conv_data.get("data", []):
+                    for s in c.get("senders", {}).get("data", []) + c.get("participants", {}).get("data", []):
+                        if str(s.get("id")) == str(psid) and s.get("name"):
+                            full_name = s.get("name", "").strip()
+                            parts = full_name.split()
+                            return {
+                                "name": full_name,
+                                "first_name": parts[0] if parts else "",
+                                "last_name": " ".join(parts[1:]) if len(parts) > 1 else "",
+                                "id": psid
+                            }
+    except Exception as e_conv:
+        logger.warning(f"Note extraction nom via conversations Page : {e_conv}")
 
     return {}
 
@@ -544,6 +568,17 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 if not lead_row["facebook_psid"]:
                     upd_fields.append("facebook_psid = ?")
                     upd_params.append(sender_psid)
+
+                # Si le nom actuel est générique (Contact Messenger ou Prospect), tenter de récupérer le vrai nom Facebook
+                if "Contact" in (lead_row["prenom"] or "") or "Messenger" in lead_name or not lead_row["nom"]:
+                    profile = get_facebook_profile(sender_psid)
+                    real_first = profile.get("first_name", "")
+                    real_last = profile.get("last_name", "")
+                    real_full = f"{real_first} {real_last}".strip()
+                    if real_full and "Contact" not in real_first:
+                        lead_name = real_full
+                        upd_fields.extend(["prenom = ?", "nom = ?", "nom_complet = ?", "nom_lead = ?"])
+                        upd_params.extend([real_first, real_last, real_full, real_full])
 
                 upd_params.append(lead_id)
                 cursor.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
