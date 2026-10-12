@@ -4625,12 +4625,15 @@ async function loadCatalog(type = "tous") {
 
 function filterCatalog(type) {
   document.querySelectorAll(".catalog-filter-btn").forEach(btn => {
-    btn.classList.remove("bg-indigo-600", "text-white");
-    btn.classList.add("text-slate-400");
+    btn.classList.remove("bg-[#0062ff]", "text-white", "shadow-2xs");
+    btn.classList.add("text-slate-600");
   });
-  if (event && event.target) {
-    event.target.classList.add("bg-indigo-600", "text-white");
-    event.target.classList.remove("text-slate-400");
+  if (window.event && window.event.target) {
+    const target = window.event.target.closest("button");
+    if (target) {
+      target.classList.remove("text-slate-600");
+      target.classList.add("bg-[#0062ff]", "text-white", "shadow-2xs");
+    }
   }
   loadCatalog(type);
 }
@@ -4688,124 +4691,204 @@ function renderCatalogGrid(items) {
   if (!container) return;
   activeCatalogItems = items || [];
 
+  const countBadge = document.getElementById("catalog-count-badge");
+  if (countBadge) {
+    const count = items ? items.length : 0;
+    countBadge.innerText = `${count} offre${count > 1 ? 's' : ''} active${count > 1 ? 's' : ''}`;
+  }
+
   if (!items || items.length === 0) {
     container.innerHTML = `
-      <div class="col-span-full p-8 text-center glass-card rounded-2xl">
-        <i data-lucide="package-open" class="w-10 h-10 text-slate-400 mx-auto mb-2"></i>
-        <p class="text-sm font-bold text-slate-800">Aucune offre dans cette catégorie.</p>
-        <p class="text-xs text-slate-500 mt-1">Cliquez sur "+ Ajouter Offre" pour créer un produit ou un service.</p>
+      <div class="col-span-full p-12 text-center bg-white rounded-3xl border border-slate-100 shadow-xs">
+        <div class="w-14 h-14 bg-blue-50 text-[#0062ff] rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="package-open" class="w-7 h-7"></i>
+        </div>
+        <p class="text-base font-bold text-slate-800">Aucune offre dans cette catégorie.</p>
+        <p class="text-xs text-slate-500 mt-1">Cliquez sur "+ Ajouter une Offre" pour créer un produit physique ou une prestation de service.</p>
       </div>
     `;
     lucide.createIcons();
     return;
   }
 
-  container.innerHTML = items.map(item => {
+  container.innerHTML = items.map((item, idx) => {
     const isService = item.type === "service";
-    const typeBadge = isService
-      ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200/80 px-2 py-0.5 rounded-full text-[10px] font-bold">Service / Formation</span>`
-      : `<span class="bg-amber-50 text-amber-700 border border-amber-200/80 px-2 py-0.5 rounded-full text-[10px] font-bold">Produit Physique</span>`;
-
     const hasExternalUrl = Boolean(item.url_externe && String(item.url_externe).trim());
     const normalizedUrl = hasExternalUrl ? normalizeUrl(item.url_externe) : "";
     const targetSalesUrl = hasExternalUrl ? normalizedUrl : `/vente/${item.id}`;
 
-    const externalBadge = hasExternalUrl
-      ? `<span class="bg-blue-50 text-[#0062ff] border border-blue-200/80 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1"><i data-lucide="globe" class="w-3 h-3"></i> Boutique Externe</span>`
-      : "";
+    // Pastels & Icons for banner [1]
+    const bannerGradients = [
+      "from-blue-50 via-sky-50 to-indigo-100/70 text-[#0062ff]",
+      "from-violet-50 via-purple-50 to-indigo-50 text-indigo-600",
+      "from-cyan-50 via-blue-50 to-sky-100/70 text-sky-600",
+      "from-emerald-50 via-teal-50 to-cyan-50 text-emerald-600",
+      "from-amber-50 via-orange-50 to-rose-50 text-amber-600"
+    ];
+    const bannerGrad = bannerGradients[idx % bannerGradients.length];
+    const bannerIcon = isService ? "sparkles" : (idx % 2 === 0 ? "box" : "shopping-bag");
 
+    // Stock & Availability Pill [Top-Right]
     let statusBadge = "";
     if (isService) {
-      statusBadge = `<span class="text-emerald-600 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">${item.disponibilite_service || 'Disponible'} (${item.places_max_semaine || 10} pl/sem)</span>`;
+      statusBadge = `<span class="bg-white/95 backdrop-blur-xs text-indigo-700 font-extrabold text-[11px] px-2.5 py-1 rounded-xl shadow-xs border border-indigo-100/80 flex items-center gap-1">
+        <i data-lucide="calendar" class="w-3 h-3 text-indigo-500"></i> ${item.disponibilite_service || 'Disponible'} (${item.places_max_semaine || 10} pl/sem)
+      </span>`;
     } else {
       const stock = item.stock_quantite || 0;
       const threshold = item.seuil_alerte_stock || 3;
       if (stock === 0) {
-        statusBadge = `<span class="text-rose-600 font-bold text-[11px] bg-rose-50 border border-rose-200/60 px-2 py-0.5 rounded-full">Rupture de Stock</span>`;
+        statusBadge = `<span class="bg-rose-50 text-rose-700 font-extrabold text-[11px] px-2.5 py-1 rounded-xl shadow-xs border border-rose-200 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Rupture
+        </span>`;
       } else if (stock <= threshold) {
-        statusBadge = `<span class="text-amber-600 font-bold text-[11px] bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-full">Stock Faible (${stock})</span>`;
+        statusBadge = `<span class="bg-amber-50 text-amber-800 font-extrabold text-[11px] px-2.5 py-1 rounded-xl shadow-xs border border-amber-200 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Stock bas (${stock})
+        </span>`;
       } else {
-        statusBadge = `<span class="text-emerald-600 font-bold text-[11px] bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-full">${stock} en stock</span>`;
+        statusBadge = `<span class="bg-white/95 backdrop-blur-xs text-emerald-700 font-extrabold text-[11px] px-2.5 py-1 rounded-xl shadow-xs border border-emerald-100 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ${stock} en stock
+        </span>`;
       }
     }
 
     const tech = item.fiche_technique || {};
+    const desc = tech.description_courte || (isService ? "Prestation de service sur mesure avec accompagnement dédié." : "Produit certifié prêt à la livraison avec garantie qualité.");
 
     return `
-      <div class="glass-card rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:shadow-md transition-all">
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between gap-1 flex-wrap">
-            <div class="flex items-center gap-1.5">
-              ${typeBadge}
-              ${externalBadge}
+      <div class="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between group">
+        
+        <div class="space-y-4">
+          <!-- [1] Top Visual Card Zone (Pastel Rounded Area with Floating Badges) -->
+          <div class="w-full h-40 rounded-2xl bg-gradient-to-br ${bannerGrad} relative overflow-hidden flex items-center justify-center p-4 border border-slate-100/60 shadow-inner">
+            <!-- Decorative background elements -->
+            <div class="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white/40 blur-sm pointer-events-none"></div>
+            <div class="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/40 blur-sm pointer-events-none"></div>
+
+            <!-- Category Pill (Top-Left) -->
+            <div class="absolute top-3 left-3">
+              <span class="bg-white/95 backdrop-blur-xs text-slate-800 font-extrabold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-xl shadow-xs border border-slate-100 flex items-center gap-1">
+                <i data-lucide="${isService ? 'layers' : 'package'}" class="w-3 h-3 text-[#0062ff]"></i>
+                ${isService ? 'Service' : 'Produit'}
+              </span>
             </div>
-            <span class="text-[10px] text-slate-400 font-mono font-semibold">${item.sku || 'REF-STD'}</span>
+
+            <!-- Stock / Status Badge (Top-Right) -->
+            <div class="absolute top-3 right-3">
+              ${statusBadge}
+            </div>
+
+            <!-- Central Product/Service Visual Illustration -->
+            <div class="flex flex-col items-center justify-center text-center z-10 transition-transform duration-300 group-hover:scale-105">
+              <div class="w-16 h-16 rounded-2xl bg-white/80 backdrop-blur-xs shadow-sm flex items-center justify-center mb-1 border border-white">
+                <i data-lucide="${bannerIcon}" class="w-8 h-8"></i>
+              </div>
+              <span class="text-[10px] font-mono font-bold tracking-widest text-slate-500 bg-white/60 px-2 py-0.5 rounded-full">
+                ${item.sku || 'REF-OFFRE'}
+              </span>
+            </div>
           </div>
 
-          <h3 class="text-sm font-bold text-slate-900 leading-snug">${item.nom}</h3>
+          <!-- [2] Heading: Clear Offer Title -->
+          <div>
+            <div class="flex items-center gap-1.5 mb-1">
+              ${hasExternalUrl ? `
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                  <i data-lucide="globe" class="w-2.5 h-2.5"></i> Boutique Externe
+                </span>
+              ` : `
+                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100">
+                  <i data-lucide="zap" class="w-2.5 h-2.5 text-amber-500"></i> Tunnel Intégré
+                </span>
+              `}
+            </div>
+            <h3 class="text-base font-black text-slate-900 leading-snug line-clamp-1 group-hover:text-[#0062ff] transition-colors" title="${item.nom}">
+              ${item.nom}
+            </h3>
+          </div>
+
+          <!-- [3] Description & Price Details in local currency (FCFA) -->
           <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-            ${tech.description_courte || 'Offre commerciale optimisée pour la conversion directe.'}
+            ${desc}
           </p>
 
-          <div class="pt-2 border-t border-slate-100 flex items-baseline justify-between">
+          <div class="pt-3 border-t border-slate-100 flex items-baseline justify-between">
             <div>
-              <span class="text-lg font-black text-slate-900">${(item.prix_vente || 0).toLocaleString()}</span>
-              <span class="text-xs text-emerald-600 font-semibold ml-0.5">${item.devise || 'FCFA'}</span>
+              <span class="text-xs text-slate-400 font-bold block uppercase tracking-wider text-[9px]">Tarif Unitaire</span>
+              <div class="flex items-baseline gap-1 mt-0.5">
+                <span class="text-2xl font-black text-slate-900 tracking-tight">${(item.prix_vente || 0).toLocaleString()}</span>
+                <span class="text-xs font-bold text-[#0062ff]">${item.devise || 'FCFA'}</span>
+              </div>
             </div>
-            <div>${statusBadge}</div>
+
+            ${!isService ? `
+              <!-- Stock adjustment pills (+ / -) -->
+              <div class="flex items-center bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <button onclick="adjustStock(${item.id}, -1)" title="Diminuer stock (-1)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded-lg text-slate-700 font-black text-xs flex items-center justify-center shadow-xs transition">-</button>
+                <span class="px-2 text-xs font-black text-slate-800" title="Quantité en stock">${item.stock_quantite || 0}</span>
+                <button onclick="adjustStock(${item.id}, 1)" title="Ajouter stock (+1)" class="w-6 h-6 bg-white hover:bg-slate-200 rounded-lg text-slate-700 font-black text-xs flex items-center justify-center shadow-xs transition">+</button>
+              </div>
+            ` : `
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 font-bold block">Capacité</span>
+                <span class="text-xs font-black text-indigo-700">${item.places_max_semaine || 10} / semaine</span>
+              </div>
+            `}
           </div>
+
+          <!-- Direct Shop Link info strip -->
+          ${hasExternalUrl ? `
+            <div class="px-3 py-2 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-1.5 overflow-hidden">
+                <i data-lucide="globe" class="w-3.5 h-3.5 text-[#0062ff] shrink-0"></i>
+                <a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-[#0062ff] font-bold hover:underline truncate text-[11px]" title="${item.url_externe}">
+                  ${item.url_externe}
+                </a>
+              </div>
+              <button onclick="quickEditExternalUrl(${item.id})" title="Changer l'URL de votre boutique" class="text-[10px] bg-white text-[#0062ff] hover:bg-[#0062ff] hover:text-white font-bold px-2 py-0.5 rounded-lg border border-blue-200 transition shadow-2xs">
+                Changer
+              </button>
+            </div>
+          ` : `
+            <div class="px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span class="flex items-center gap-1.5 text-[11px]"><i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-slate-400"></i> Tunnel Invo par défaut</span>
+              <button onclick="quickEditExternalUrl(${item.id})" class="text-[10px] font-bold text-[#0062ff] hover:underline">
+                + Lier boutique
+              </button>
+            </div>
+          `}
         </div>
 
-        <!-- Section Affichage Direct & Modification Rapide du Lien Boutique -->
-        ${hasExternalUrl ? `
-          <div class="px-3 py-2 bg-blue-50/80 border border-blue-200 rounded-xl flex items-center justify-between gap-2 text-xs">
-            <div class="flex items-center gap-1.5 overflow-hidden">
-              <i data-lucide="globe" class="w-3.5 h-3.5 text-[#0062ff] flex-shrink-0"></i>
-              <a href="${normalizedUrl}" target="_blank" rel="noopener noreferrer" class="text-[#0062ff] font-bold hover:underline truncate" title="${item.url_externe}">
-                ${item.url_externe}
-              </a>
+        <!-- [4] Royal Blue Action Button & Secondary Control Bar -->
+        <div class="mt-5 pt-3 border-t border-slate-100 space-y-2">
+          <!-- Primary action button [4] -->
+          <a href="${targetSalesUrl}" target="_blank" rel="noopener noreferrer" class="w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs transition active:scale-[0.98]">
+            <i data-lucide="${hasExternalUrl ? 'external-link' : 'shopping-cart'}" class="w-4 h-4"></i>
+            <span>${hasExternalUrl ? 'Voir sur la Boutique' : 'Ouvrir la Page de Vente'}</span>
+          </a>
+
+          <!-- Secondary management control bar -->
+          <div class="flex items-center justify-between gap-1 pt-1">
+            <div class="flex items-center gap-1">
+              <button onclick="editProduct(${item.id})" title="Modifier la fiche complète" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1 transition">
+                <i data-lucide="edit-3" class="w-3 h-3 text-slate-500"></i>
+                <span>Fiche</span>
+              </button>
+              <button onclick="quickEditExternalUrl(${item.id})" title="Modifier l'URL externe" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1 transition">
+                <i data-lucide="link" class="w-3 h-3 text-slate-500"></i>
+                <span>URL</span>
+              </button>
+              <button onclick="copySalesPageLink(${item.id})" title="Copier le lien direct pour vos prospects" class="px-2 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1 transition">
+                <i data-lucide="copy" class="w-3 h-3 text-slate-500"></i>
+              </button>
             </div>
-            <button onclick="quickEditExternalUrl(${item.id})" title="Changer l'URL de votre boutique" class="text-xs bg-white text-[#0062ff] hover:bg-blue-600 hover:text-white font-bold px-2 py-0.5 rounded-lg border border-blue-200 transition shadow-xs">
-              Changer
-            </button>
-          </div>
-        ` : `
-          <div class="px-3 py-2 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span class="flex items-center gap-1.5"><i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-slate-400"></i> Page de vente Invo par défaut</span>
-            <button onclick="quickEditExternalUrl(${item.id})" class="text-xs font-bold text-[#0062ff] hover:text-blue-700 px-2 py-0.5 rounded hover:bg-blue-50 transition">
-              + Lier ma boutique
-            </button>
-          </div>
-        `}
 
-        <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <div class="flex items-center gap-1.5 flex-1 flex-wrap">
-            <a href="${targetSalesUrl}" target="_blank" rel="noopener noreferrer" class="bg-[#0062ff] hover:bg-blue-600 text-white py-1.5 px-3 rounded-xl font-bold flex items-center gap-1.5 transition shadow-sm">
-              <i data-lucide="${hasExternalUrl ? 'external-link' : 'shopping-bag'}" class="w-3.5 h-3.5"></i>
-              ${hasExternalUrl ? 'Voir Boutique' : 'Page Vente'}
-            </a>
-            <button onclick="quickEditExternalUrl(${item.id})" title="Modifier l'URL de la boutique externe" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 py-1.5 px-2.5 rounded-xl font-bold flex items-center gap-1 transition">
-              <i data-lucide="link" class="w-3.5 h-3.5 text-indigo-600"></i> Modifier URL
-            </button>
-            <button onclick="editProduct(${item.id})" title="Modifier l'offre complète" class="bg-slate-100 hover:bg-slate-200 text-slate-800 py-1.5 px-2.5 rounded-xl font-bold flex items-center gap-1 transition border border-slate-200">
-              <i data-lucide="edit-3" class="w-3.5 h-3.5 text-slate-600"></i> Fiche
-            </button>
-            <button onclick="copySalesPageLink(${item.id})" title="Copier le lien direct pour vos prospects" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-2 rounded-xl font-semibold flex items-center gap-1 transition border border-slate-200">
-              <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-500"></i> Copier
-            </button>
-          </div>
-
-          <div class="flex items-center gap-1">
-            ${!isService ? `
-              <button onclick="adjustStock(${item.id}, -1)" title="Diminuer stock (-1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold border border-slate-200 flex items-center justify-center">-</button>
-              <button onclick="adjustStock(${item.id}, 1)" title="Ajouter stock (+1)" class="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold border border-slate-200 flex items-center justify-center">+</button>
-            ` : ''}
-
-            <button onclick="deleteProduct(${item.id})" title="Supprimer l'item" class="text-slate-400 hover:text-rose-500 p-1.5 transition">
+            <button onclick="deleteProduct(${item.id})" title="Supprimer cette offre" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
+
       </div>
     `;
   }).join("");
