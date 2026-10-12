@@ -182,14 +182,22 @@ def get_pending_conversations() -> List[Dict[str, Any]]:
               SELECT MAX(id) FROM crm_lead_messages 
               WHERE lead_id = l.id
           )
-          -- Ce dernier message provient du prospect
+          -- Ce dernier message provient du prospect et n'a pas encore été traité
           AND UPPER(m.sender) IN ('USER', 'LEAD', 'PROSPECT', 'CLIENT')
+          AND COALESCE(m.processed, 0) != 1
           -- Aucune réponse de l'agent après ce message
           AND NOT EXISTS (
               SELECT 1 FROM crm_lead_messages 
               WHERE lead_id = l.id 
                 AND UPPER(sender) = 'AGENT'
                 AND id > m.id
+          )
+          -- Cooldown de 30 secondes : l'agent ne doit pas avoir répondu il y a moins de 30 secondes
+          AND NOT EXISTS (
+              SELECT 1 FROM crm_lead_messages
+              WHERE lead_id = l.id
+                AND UPPER(sender) = 'AGENT'
+                AND timestamp > datetime('now', '-30 seconds')
           )
         ORDER BY priorite ASC, minutes_en_attente DESC
         """
@@ -604,6 +612,20 @@ def process_pending_conversation(conv: Dict[str, Any]) -> bool:
 
         # 8. Mettre à jour les métadonnées et le CRM
         update_lead_after_response(lead_id, message_agent, lead)
+
+        # 8b. Marquer le message du prospect comme traité
+        try:
+            conn_proc = get_connection()
+            c_proc = conn_proc.cursor()
+            c_proc.execute("""
+                UPDATE crm_lead_messages
+                SET processed = 1
+                WHERE lead_id = ? AND UPPER(sender) IN ('USER', 'LEAD', 'PROSPECT', 'CLIENT')
+            """, (lead_id,))
+            conn_proc.commit()
+            conn_proc.close()
+        except Exception as e_mark:
+            logger.warning(f"Note marquage processed poller lead #{lead_id} : {e_mark}")
 
         duration_ms = int((time.time() - start_time) * 1000)
 

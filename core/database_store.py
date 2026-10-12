@@ -593,9 +593,20 @@ def init_db():
         message TEXT NOT NULL,
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
         status TEXT DEFAULT 'DELIVERED',
-        metadata_json TEXT
+        metadata_json TEXT,
+        processed INTEGER DEFAULT 0
     )
     """)
+
+    # Migration non-bloquante de la colonne processed sur crm_lead_messages
+    try:
+        cursor.execute("PRAGMA table_info(crm_lead_messages)")
+        msg_cols = [c[1] for c in cursor.fetchall()]
+        if "processed" not in msg_cols:
+            cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN processed INTEGER DEFAULT 0")
+    except Exception as e_proc:
+        logger.warning(f"Note migration processed sur crm_lead_messages : {e_proc}")
+
 
     # 11. Table des verrous de traitement anti-doublon pour le Poller 24/7
     cursor.execute("""

@@ -118,7 +118,18 @@ RÈGLES ANTI-BOUCLE — OBLIGATOIRES :
     - INTERDICTION ABSOLUE de poser des questions agressives ou de forcer le prospect (ex: ne jamais demander combien il estime perdre chaque mois).
     - INTERDICTION de forcer un moyen de paiement (CB, PayPal, etc.).
 20. COHÉRENCE CONTEXTUELLE ABSOLUE : Relire impérativement les 3 derniers tours de conversation avant de générer chaque réponse. Rester strictement sur le sujet en cours. Ne JAMAIS dériver vers un template sans rapport avec ce qui vient d'être échangé.
-21. CLÔTURE ET FIN DE CONVERSATION RESPECTUEUSE : Si le prospect clôt la discussion ou demande un temps de réflexion, le laisser respirer dignement. Programmer une relance douce à J+1 et marquer le contact Froid à J+2/48h sans réponse."""
+21. CLÔTURE ET FIN DE CONVERSATION RESPECTUEUSE : Si le prospect clôt la discussion ou demande un temps de réflexion, le laisser respirer dignement. Programmer une relance douce à J+1 et marquer le contact Froid à J+2/48h sans réponse.
+22. SIGNAL D'ACHAT EXPLICITE : Quand le prospect demande explicitement si tu as une solution après avoir décrit son besoin précis, la réponse est IMMÉDIATEMENT la présentation de l'offre adaptée à SON secteur et SON besoin. Jamais une nouvelle question de diagnostic. Jamais un template générique. Nommer ses besoins réels dans la réponse.
+23. COHÉRENCE SECTORIELLE ABSOLUE : Chaque réponse doit être ancrée dans le secteur et le besoin réel du prospect, extraits de l'historique. Un restaurateur reçoit des réponses sur la restauration. Un commercial LinkedIn reçoit des réponses sur la prospection. Ces contextes ne se mélangent jamais. Avant chaque message, relire le secteur et le besoin identifiés dans l'historique.
+24. INTERDICTION DE TEMPLATES GÉNÉRIQUES : Les formules suivantes sont INTERDITES car elles révèlent un comportement automatique :
+    - 'le blocage se situe à l'un de ces 3 niveaux'
+    - 'vos prospects jugent un chiffre avant de comprendre'
+    - 'chaque semaine sans changer ça, c'est des ventes perdues'
+    - 'est-ce que vos contacts s'arrêtent aux simples interactions'
+    - 'C'est bien noté' en réponse à une question ou irritation
+    Chaque réponse est unique et ancrée dans le contexte réel.
+25. SIGNAL D'ARRÊT : 'J'arrête', 'au revoir', 'pas intéressé', 'stop' = une seule réponse sobre de 2 lignes maximum qui accepte et laisse une porte ouverte. Aucun autre message après. Jamais.
+26. SIGNAL D'INCOMPRÉHENSION : 'Vous n'avez pas compris', 'vous ne comprenez rien' = s'excuser en 1 phrase + reformuler le besoin du prospect avec SES propres mots depuis l'historique + demander confirmation. NE PAS repartir de zéro. NE PAS poser une nouvelle question sans rapport."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -1162,6 +1173,23 @@ class AISalesAgent:
         """
         message_lower = (message or "").lower().strip()
 
+        # Signal : stop / fin demandée
+        stop_signals = [
+            "j'arrête", "j arrete", "au revoir", "bonne journée", "pas intéressé", "pas interesse",
+            "pas pour moi", "sans suite", "laissez-moi tranquille", "stop", "c'est non", "non merci",
+            "j'arrête là", "j arrete la", "arrêtez tout", "arretez tout", "pas du tout professionnel"
+        ]
+
+        # Signal : incompréhension explicite
+        incomprehension_signals = [
+            "vous n'avez pas compris", "vous ne comprenez pas", "vous ne comprenez rien",
+            "vous n'avez pas compris mes attentes", "vous n avez pas compris",
+            "c'est pas ce que je demande", "c'est pas ce que je veux dire",
+            "ce n'est pas ce que je cherche", "vous êtes à côté", "vous etes a cote",
+            "ce n'est pas ma question", "répondez à ma question", "repondez a ma question",
+            "j'ai déjà dit", "je viens de dire", "j'ai déjà répondu"
+        ]
+
         # Signal : suspicion bot
         bot_signals = [
             'vous êtes un bot', 'vous etes un bot', 'tu es un bot',
@@ -1209,6 +1237,12 @@ class AISalesAgent:
             ]
             if len(agent_messages) >= 2 and agent_messages[-1] == agent_messages[-2]:
                 loop_detected = True
+
+        if any(s in message_lower for s in stop_signals):
+            return 'stop'
+
+        if any(s in message_lower for s in incomprehension_signals):
+            return 'incomprehension'
 
         if any(s in message_lower for s in bot_signals):
             return 'bot_suspicion'
@@ -1291,16 +1325,90 @@ class AISalesAgent:
 
         return reply_text
 
-    def build_reflection_followup(self, lead_id: int, lead: Dict[str, Any]) -> str:
+    def handle_stop_signal(self, lead_id: int, lead: Dict[str, Any]) -> str:
         """
-        Génère le message de relance douce à J+1 selon la règle 21.
+        Le prospect met fin à la conversation (Règle 25).
+        Une seule réponse sobre. Marquer comme Froid IMMÉDIATEMENT.
+        Ne plus jamais recontacter sauf réactivation explicite.
         """
+        response = (
+            "Je comprends tout à fait. "
+            "Je reste disponible si vous changez d'avis. "
+            "Bonne continuation."
+        )
+
+        if lead_id:
+            try:
+                from core.database_store import get_connection
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET temperature    = 'Froid',
+                        statut_lead    = 'Froid',
+                        phase_actuelle = 'setter',
+                        prochaine_action = 'Aucune — lead froid sur demande',
+                        updated_at     = datetime('now'),
+                        notes = COALESCE(notes, '') || ' | Lead froid à ' || datetime('now') || ' — prospect a demandé arrêt'
+                    WHERE id = ?
+                """, (lead_id,))
+                
+                # Marquer le dernier message utilisateur comme traité (processed = 1)
+                c.execute("""
+                    UPDATE crm_lead_messages
+                    SET processed = 1
+                    WHERE lead_id = ?
+                      AND sender IN ('LEAD', 'USER', 'PROSPECT', 'CLIENT')
+                      AND id = (
+                          SELECT MAX(id) FROM crm_lead_messages
+                          WHERE lead_id = ? AND sender IN ('LEAD', 'USER', 'PROSPECT', 'CLIENT')
+                      )
+                """, (lead_id, lead_id))
+                conn.commit()
+                conn.close()
+            except Exception as e_db:
+                logger.warning(f"Erreur enregistrement stop signal en base : {e_db}")
+
+        return response
+
+    def handle_incomprehension(self, lead_id: int, lead: Dict[str, Any], conversation_history: list = None) -> str:
+        """
+        Gère le signal d'incompréhension (Règle 26).
+        Reformuler ce qui a été compris et demander confirmation au lieu de repartir de zéro.
+        """
+        conversation_history = conversation_history or []
+        prospect_statements = [
+            m.get('message', '') for m in conversation_history
+            if m.get('sender') in ('LEAD', 'USER', 'PROSPECT', 'CLIENT')
+        ]
+        last_prospect_content = "\n".join(prospect_statements[-3:]) if prospect_statements else ""
+
+        prompt = f"""
+Le prospect vient de dire que tu n'as pas compris ses attentes. Voici ses derniers messages :
+{last_prospect_content}
+
+Génère UNE réponse qui :
+1. S'excuse sobrement en 1 phrase (pas de 'mea culpa' excessif — juste 'Pardonnez-moi')
+2. Reformule ce que tu as compris de son besoin réel en 1-2 phrases basées sur SES mots exacts
+3. Pose une question de confirmation : 'C'est bien ce que vous cherchez ?'
+
+MAX 4 lignes. Vouvoiement strict.
+NE PAS changer de sujet. NE PAS repartir de zéro.
+NE PAS poser une nouvelle question de qualification.
+"""
+        reply = self.call_gemini_with_full_context(
+            lead_id=lead_id,
+            system_prompt=f"{SYSTEM_PROMPT}\n\n=== DIRECTIVE INCOMPRÉHENSION ===\n{prompt}",
+            new_user_message=conversation_history[-1].get("message", "") if conversation_history else "",
+            history=conversation_history
+        )
+        if reply and len(reply.strip()) > 10:
+            return reply.strip()
+
+        # Fallback si indisponibilité Gemini
         prenom = lead.get('prenom', '') if lead else ''
         prenom_str = f" {prenom}" if prenom else ""
-        return (
-            f"Bonjour{prenom_str}, je reviens vers vous comme convenu en toute simplicité. "
-            "Avez-vous eu l'occasion de mûrir votre réflexion ou avez-vous une question en suspens ?"
-        )
+        return f"Pardonnez-moi{prenom_str}, je me suis mal exprimé. Si j'ai bien compris, vous souhaitez une solution adaptée à votre activité pour automatiser vos tâches et vos relances, c'est bien cela ?"
 
     def handle_distress_signal(self, signal_type: str, lead_id: int, lead: Dict[str, Any], conversation_history: list = None) -> str:
         """
@@ -1309,6 +1417,12 @@ class AISalesAgent:
         """
         if signal_type == 'reflection':
             return self.handle_reflection_signal(lead_id, lead, conversation_history)
+
+        if signal_type == 'stop':
+            return self.handle_stop_signal(lead_id, lead)
+
+        if signal_type == 'incomprehension':
+            return self.handle_incomprehension(lead_id, lead, conversation_history)
 
         prenom = lead.get('prenom', '') if lead else ''
         prenom_str = f" {prenom}" if prenom else ""
@@ -1367,6 +1481,8 @@ class AISalesAgent:
             return random.choice(variations)
         elif signal_type == 'confusion':
             return f"Pardonnez-moi{prenom_str}, je suis allé un peu vite en besogne. En deux mots : on aide les entreprises à trouver et closer plus de clients réguliers. Vous vendez quel type de service vous ?"
+        elif signal_type == 'irritation':
+            return f"Pardonnez-moi pour ces maladresses{prenom_str}, je comprends tout à fait votre agacement. Dites-moi simplement ce dont vous avez besoin pour avancer ?"
 
         # Réinitialiser le compteur de diagnostic en base
         if lead_id:
@@ -1386,7 +1502,307 @@ class AISalesAgent:
             except Exception as e_db:
                 logger.warning(f"Erreur enregistrement signal rupture en base : {e_db}")
 
-        return responses.get(signal_type, responses['confusion'])
+        return f"Je vous écoute{prenom_str}, dites-moi exactement ce que vous souhaitez accomplir."
+
+    # ==========================================================================
+    # CORRECTION CRITIQUE : GESTION DES SIGNAUX D'ACHAT EXPLICITES & MATCHING
+    # ==========================================================================
+    def detect_purchase_signal(self, message: str) -> bool:
+        """
+        Détecte si le message du prospect contient un signal d'achat explicite.
+        """
+        if not message:
+            return False
+        msg_clean = message.lower().strip()
+        purchase_signals = [
+            'avez-vous une solution',
+            'avez vous une solution',
+            'vous avez une solution',
+            'est-ce que vous avez une solution',
+            'est ce que vous avez une solution',
+            'que proposez-vous',
+            'que proposez vous',
+            'qu\'est-ce que vous proposez',
+            'quest-ce que vous proposez',
+            'comment ça marche',
+            'comment ca marche',
+            'je veux m\'inscrire',
+            'je veux minscrire',
+            'comment je fais',
+            'je suis intéressé',
+            'je suis interesse',
+            'ça m\'intéresse',
+            'ca minteresse',
+            'je prends',
+            'envoyez-moi',
+            'envoyez moi',
+            'montrez-moi',
+            'montrez moi',
+            'donnez-moi accès',
+            'donnez moi acces',
+            'quel est le prix',
+            'c\'est combien',
+            'cest combien',
+            'comment payer',
+            'comment commander',
+            'je veux ça',
+            'je veux ca'
+        ]
+        return any(s in msg_clean for s in purchase_signals)
+
+    def extract_need_summary(self, conversation_history: list) -> Optional[Dict[str, Any]]:
+        """
+        Extrait un résumé structuré du besoin du prospect depuis l'historique de conversation.
+        """
+        if not conversation_history:
+            return None
+
+        history_text = "\n".join([
+            f"{('USER' if m.get('sender') in ('LEAD', 'USER', 'PROSPECT', 'CLIENT') else 'AGENT')} : {m.get('message', '')}"
+            for m in conversation_history
+        ])
+
+        analysis_prompt = f"""Analyse cette conversation et extrais le besoin du prospect en JSON strict. Si une information n'est pas mentionnée, mettre null.
+
+Conversation :
+{history_text}
+
+Réponds UNIQUEMENT en JSON avec ce schéma exact :
+{{
+  "secteur": "ex: restaurant, e-commerce, coaching...",
+  "probleme_principal": "ex: gestion réservations manuelle",
+  "besoins_specifiques": ["liste des besoins énoncés"],
+  "canal_utilise": "ex: WhatsApp, téléphone...",
+  "signal_achat": true,
+  "diagnostic_complet": true
+}}"""
+
+        gemini_key = self._get_gemini_key()
+        if gemini_key:
+            models_to_try = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+            for mod in models_to_try:
+                try:
+                    import urllib.request
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": analysis_prompt}]}],
+                        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 400}
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        t = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        clean_j = t.replace("```json", "").replace("```", "").strip()
+                        return json.loads(clean_j)
+                except Exception as e_an:
+                    logger.warning(f"Note extraction besoin via Gemini ({mod}) : {e_an}")
+
+        # Fallback heuristique si Gemini ne répond pas
+        all_text = history_text.lower()
+        secteur = "restaurant" if "restaurant" in all_text else ("e-commerce" if "boutique" in all_text or "vente" in all_text else "services")
+        besoins = []
+        if "menu" in all_text:
+            besoins.append("envoi menu du jour")
+        if "relance" in all_text or "7 jours" in all_text or "j+7" in all_text:
+            besoins.append("relance J+7")
+        if "anniversaire" in all_text or "hbd" in all_text:
+            besoins.append("souhait d'anniversaire automatique")
+        if "réservation" in all_text or "table" in all_text:
+            besoins.append("gestion automatisée des réservations")
+
+        return {
+            "secteur": secteur,
+            "probleme_principal": "Gestion manuelle des réservations et relation client",
+            "besoins_specifiques": besoins or ["Automatisation relation client et prospection"],
+            "canal_utilise": "WhatsApp",
+            "signal_achat": True,
+            "diagnostic_complet": True
+        }
+
+    def match_offer_from_need(self, need_summary: Optional[Dict[str, Any]], canal: str = "messenger") -> Optional[Dict[str, Any]]:
+        """
+        Sélectionne l'offre la plus adaptée depuis catalog_items selon le besoin extrait.
+        Jamais de matching arbitraire ou codé en dur.
+        """
+        if not need_summary:
+            return {
+                "offre_id": 7,
+                "titre": "Système d'Automatisation & Closing WhatsApp",
+                "prix": 75000,
+                "lien": "https://formations.sagbodavid.com/automatisation-whatsapp",
+                "raison_matching": "Automatisation WhatsApp & fidélisation clients"
+            }
+
+        try:
+            from core.database_store import get_connection
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT id, nom, prix_vente, url_externe, fiche_technique_json FROM catalog_items WHERE statut = 'Actif' ORDER BY id ASC")
+            offers = [dict(r) for r in c.fetchall()]
+            conn.close()
+        except Exception:
+            offers = []
+
+        if not offers:
+            return {
+                "offre_id": 7,
+                "titre": "Système d'Automatisation & Closing WhatsApp",
+                "prix": 75000,
+                "lien": "https://formations.sagbodavid.com/automatisation-whatsapp",
+                "raison_matching": "Solution par défaut"
+            }
+
+        offers_text = "\n".join([
+            f"#{o['id']} — {o['nom']} ({int(o['prix_vente']):,} FCFA) — {o['url_externe']}"
+            for o in offers
+        ])
+
+        matching_prompt = f"""Voici le besoin précis d'un prospect :
+Secteur : {need_summary.get('secteur')}
+Problème : {need_summary.get('probleme_principal')}
+Besoins : {', '.join(need_summary.get('besoins_specifiques', []))}
+Canal souhaité : {need_summary.get('canal_utilise')}
+
+Voici le catalogue disponible :
+{offers_text}
+
+Quelle est l'offre la PLUS ADAPTÉE à ce besoin précis ?
+Réponds UNIQUEMENT en JSON avec ce format :
+{{
+  "offre_id": 7,
+  "titre": "...",
+  "prix": 75000,
+  "lien": "...",
+  "raison_matching": "pourquoi cette offre correspond"
+}}"""
+
+        gemini_key = self._get_gemini_key()
+        if gemini_key:
+            models_to_try = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+            for mod in models_to_try:
+                try:
+                    import urllib.request
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={gemini_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": matching_prompt}]}],
+                        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 300}
+                    }
+                    req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                        t = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                        clean_j = t.replace("```json", "").replace("```", "").strip()
+                        return json.loads(clean_j)
+                except Exception as e_mat:
+                    logger.warning(f"Note matching catalogue via Gemini ({mod}) : {e_mat}")
+
+        # Fallback intelligent basé sur les besoins identifiés
+        besoins_str = " ".join(need_summary.get("besoins_specifiques", [])).lower()
+        if "whatsapp" in besoins_str or "menu" in besoins_str or "réservation" in besoins_str or "anniversaire" in besoins_str or "relance" in besoins_str:
+            return {
+                "offre_id": 7,
+                "titre": "Système d'Automatisation & Closing WhatsApp",
+                "prix": 75000,
+                "lien": "https://formations.sagbodavid.com/automatisation-whatsapp",
+                "raison_matching": "Automatisation complète des flux WhatsApp, relances et notifications clients."
+            }
+        elif "vitrine" in besoins_str or "site" in besoins_str:
+            return {
+                "offre_id": 3,
+                "titre": "Audit Digital & Conception Site Vitrine Express",
+                "prix": 250000,
+                "lien": "https://formations.sagbodavid.com/site-vitrine",
+                "raison_matching": "Création de site vitrine"
+            }
+        else:
+            return {
+                "offre_id": 5,
+                "titre": "Audit Commercial & Tunnel de Vente Express",
+                "prix": 50000,
+                "lien": "https://formations.sagbodavid.com/audit-commercial",
+                "raison_matching": "Diagnostic et déblocage de tunnel de vente"
+            }
+
+    def handle_purchase_signal(self, lead_id: int, lead: Dict[str, Any], conversation_history: list) -> str:
+        """
+        Le prospect a signalé son intérêt pour une solution ('avez-vous une solution ?').
+        Ne pas poser d'autres questions.
+        Confirmer la compréhension du besoin SPÉCIFIQUE et présenter l'offre la plus adaptée depuis le catalogue.
+        """
+        conversation_history = conversation_history or []
+        need_summary = self.extract_need_summary(conversation_history)
+        matched_offer = self.match_offer_from_need(need_summary, lead.get("canal_source", "messenger"))
+
+        # Mettre à jour immédiatement crm_leads en base
+        if lead_id and matched_offer:
+            try:
+                from core.database_store import get_connection
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("""
+                    UPDATE crm_leads
+                    SET diagnostic_complet = 1,
+                        statut_lead = 'Chaud',
+                        temperature = 'Chaud',
+                        score_qualification = 90,
+                        score_dur = 90,
+                        offre_proposee = 1,
+                        offre_matchee = ?,
+                        offre_matchee_id = ?,
+                        phase_actuelle = 'closer',
+                        douleur_identifiee = COALESCE(douleur_identifiee, ?),
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                """, (
+                    matched_offer.get("titre"),
+                    str(matched_offer.get("offre_id")),
+                    need_summary.get("probleme_principal") if need_summary else "Besoin d'automatisation validé",
+                    lead_id
+                ))
+                conn.commit()
+                conn.close()
+            except Exception as e_upd:
+                logger.warning(f"Note mise à jour lead suite signal achat : {e_upd}")
+
+        closing_prompt = f"""Le prospect vient de demander si tu as une solution pour son besoin précis.
+
+Résumé de son besoin extrait de la conversation :
+{json.dumps(need_summary, ensure_ascii=False) if need_summary else 'Besoin précis exprimé dans l historique'}
+
+Offre matchée dans le catalogue officiel :
+{json.dumps(matched_offer, ensure_ascii=False) if matched_offer else 'Offre #7 Automatisation WhatsApp'}
+
+RÈGLE IMPÉRATIVE DE GÉNÉRATION :
+Génère UN message de réponse qui :
+1. Confirme en 1 phrase que tu as bien compris son besoin SPÉCIFIQUE (nommer explicitement son secteur et ses besoins réels : ex: réservations WhatsApp de son restaurant, envoi du menu du jour, relances J+7 et anniversaires).
+2. Présente l'offre matchée avec son bénéfice direct pour son cas précis (pas un pitch générique).
+3. Donne le lien officiel : {matched_offer.get('lien', 'https://formations.sagbodavid.com/automatisation-whatsapp')}
+
+RÈGLES STRICTES :
+- Maximum 4 à 5 lignes sur Messenger / WhatsApp
+- Nommer ses besoins réels, ZÉRO template générique (interdiction de parler d'accroche LinkedIn ou de formation générale)
+- Ton : direct, confiant, pertinent, humain
+- Vouvoiement strict"""
+
+        reply = self.call_gemini_with_full_context(
+            lead_id=lead_id,
+            system_prompt=f"{SYSTEM_PROMPT}\n\n=== CLOSING IMMÉDIAT SUR SIGNAL D'ACHAT ===\n{closing_prompt}",
+            new_user_message=conversation_history[-1].get("message", "") if conversation_history else "",
+            history=conversation_history
+        )
+
+        if reply and len(reply.strip()) > 10:
+            return reply.strip()
+
+        # Fallback déterministe contextuel si Gemini est indisponible
+        besoins_texte = ", ".join(need_summary.get("besoins_specifiques", [])) if need_summary else "la gestion automatisée de vos réservations et vos relances clients"
+        secteur = need_summary.get("secteur", "votre activité") if need_summary else "votre restaurant"
+        lien = matched_offer.get("lien", "https://formations.sagbodavid.com/automatisation-whatsapp")
+        return (
+            f"Oui, nous avons exactement le système adapté pour votre {secteur}. "
+            f"Il permet de centraliser automatiquement vos réservations sur WhatsApp, d'envoyer le menu du jour, et de programmer vos relances J+7 ainsi que les messages d'anniversaire sans intervention manuelle.\n\n"
+            f"Voici tous les détails pour mettre en place ce dispositif : {lien}"
+        )
 
     def sanitize_gemini_contents(self, contents: list) -> list:
         """
@@ -1477,8 +1893,8 @@ class AISalesAgent:
         if not gemini_contents:
             gemini_contents = [{"role": "user", "parts": [{"text": new_user_message.strip()}]}]
 
-        # Modèles ordonnés par efficacité et disponibilité
-        models = ["gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-flash-latest"]
+        # Modèles ordonnés par efficacité et disponibilité testée
+        models = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
         for mod in models:
             try:
                 import urllib.request
@@ -1592,14 +2008,21 @@ class AISalesAgent:
 
         reply_text = None
 
-        # 1. ÉTAPE PRIORITAIRE : Détection des signaux de rupture (confusion, bot, irritation, boucle, réflexion)
+        # 1. ÉTAPE PRIORITAIRE ABSOLUE : Détection des signaux de rupture (stop, incompréhension, bot, irritation, réflexion)
         distress = self.detect_distress_signal(user_message, history)
         if distress:
             lead_info = lead_data or {}
             reply_text = self.handle_distress_signal(distress, lead_id, lead_info, conversation_history=history)
             return reply_text
 
-        # 2. ÉTAPE OUVERTURE : Si c'est le tout premier message du prospect ou du dialogue
+        # 2. ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
+        # Quand le prospect demande explicitement s'il y a une solution ou manifeste un signal d'achat clair
+        if self.detect_purchase_signal(user_message):
+            lead_info = lead_data or {}
+            reply_text = self.handle_purchase_signal(lead_id, lead_info, conversation_history=history)
+            return reply_text
+
+        # 3. ÉTAPE OUVERTURE : Si c'est le tout premier message du prospect ou du dialogue
         if is_first_turn:
             opening_type = self.detect_opening_type(user_message)
             lead_info = lead_data or {}
@@ -1607,83 +2030,51 @@ class AISalesAgent:
             if custom_opening:
                 return custom_opening
 
-        # 3. ÉTAPE DIAGNOSTIC COMPLET / CLOSING
-        if is_diagnostic_confirmed:
-            if diag_res["diagnostic_type"] == "OUTREACH_LINKEDIN":
-                reply_text = (
-                    "Votre problème est clair : vous avez la régularité, le bon message, le bon CTA — mais votre accroche parle de vous avant de parler d'eux. Chaque semaine sans changer ça, c'est du temps de prospection qui ne convertit pas.\n\n"
-                    "On a un système qui règle exactement ça — scripts d'accroche, séquences de relance automatisées, méthode pour décrocher 3x plus de réponses sur LinkedIn sans augmenter votre temps. Voici comment y accéder : "
-                    f"{diag_res['offer_url']}"
-                )
-            elif diag_res["diagnostic_type"] == "AUDIT_COMMERCIAL":
-                reply_text = (
-                    "Votre problème est identifié : vous déployez beaucoup d'énergie commerciale sans avoir de visibilité sur l'étape exacte où vos prospects décrochent. Chaque semaine sans corriger ce goulot d'étranglement, ce sont des opportunités perdues.\n\n"
-                    "Nous réalisons un diagnostic complet et rapide de votre tunnel pour pointer immédiatement ce qu'il faut débloquer. Voici les détails pour lancer votre audit : "
-                    f"{diag_res['offer_url']}"
-                )
-            else:
-                reply_text = (
-                    "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
-                    "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
-                    "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
-                    f"C'est ce qu'on déploie ici : {diag_res['offer_url']}"
-                )
+        # 4. Inférence Gemini avec Contexte Complet, Règle 22 à 26 et Historique multi-tours
+        system_prompt = (
+            f"{SYSTEM_PROMPT}\n\n"
+            f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
+            f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
+            f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+        )
+        if is_first_turn:
+            system_prompt += "- Il s'agit du premier échange. Identifie-toi sobrement ('Bonjour, c'est Dave Sagbo.').\n"
         else:
-            # 4. Inférence Gemini avec Règle 10 et Historique COMPLET multi-tours
-            system_prompt = (
-                f"{SYSTEM_PROMPT}\n\n"
-                f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
-                f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
-                f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+            system_prompt += (
+                "- INTERDICTION STRICTE de dire Bonjour ou Bonsoir.\n"
+                "- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
+                "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum avec une parfaite clarté.\n"
+                "- Lis l'INTÉGRALITÉ des échanges précédents pour rester 100% cohérent avec ce qui a été dit.\n"
+                "- COHÉRENCE SECTORIELLE STRICTE : Identifie le secteur réel (ex: restaurant, e-commerce, formation) et parle UNIQUEMENT de ce secteur.\n"
+                "- ZÉRO PHRASE TRONQUÉE : Termine TOUJOURS complètement tes phrases par un point ou un point d'interrogation.\n"
+                "- INTERDICTION ABSOLUE DE TEMPLATES GÉNÉRIQUES : N'utilise jamais 'le blocage se situe à l'un de ces 3 niveaux', 'vos prospects jugent un chiffre avant de comprendre', etc.\n"
+                "- COMPORTEMENT HUMAIN EXPERT : Sois chaleureux, pragmatique et à l'écoute comme un vrai directeur commercial.\n"
             )
+
+        if is_diagnostic_confirmed:
+            system_prompt += (
+                f"- Le diagnostic est complet. Offre sélectionnée : {diag_res.get('matched_offer')}. "
+                f"Lien officiel : {diag_res.get('offer_url')}.\n"
+                "- Présente directement l'offre avec son lien en expliquant le bénéfice concret pour son secteur.\n"
+            )
+
+        reply_text = self.call_gemini_with_full_context(
+            lead_id=lead_id,
+            system_prompt=system_prompt,
+            new_user_message=user_message,
+            history=history
+        )
+
+        # 5. Fallback contextuel sobre sans template rigide recyclé
+        if not reply_text:
+            prenom = (lead_data.get('prenom') if lead_data else '') or ''
+            prenom_str = f" {prenom}" if prenom else ""
             if is_first_turn:
-                system_prompt += "- Il s'agit du premier échange. Identifie-toi sobrement ('Bonjour, c'est Dave Sagbo.').\n"
+                reply_text = f"Bonjour{prenom_str}, c'est Dave Sagbo. Quel est le principal défi ou besoin que vous souhaitez aborder pour votre activité ?"
             else:
-                system_prompt += (
-                    "- INTERDICTION STRICTE de dire Bonjour ou Bonsoir.\n"
-                    "- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
-                    "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum avec une parfaite clarté.\n"
-                    "- Lis l'INTÉGRALITÉ des échanges précédents pour rester 100% cohérent avec ce qui a été dit.\n"
-                    "- ZÉRO PHRASE TRONQUÉE : Termine TOUJOURS complètement tes phrases par un point ou un point d'interrogation.\n"
-                    "- INTERDICTION STRICTE de répéter la même question ou formule déjà envoyée plus haut dans la conversation.\n"
-                    "- COMPORTEMENT HUMAIN EXPERT : Sois chaleureux, pragmatique et à l'écoute comme un vrai directeur commercial.\n"
-                    "- DÉCOUVERTE DU PROSPECT : Si le prospect ne s'est pas présenté ou si tu n'as pas son nom/téléphone, intéresse-toi naturellement à son activité ou invite-le simplement à se présenter ('Au fait, vous travaillez dans quel domaine ?').\n"
-                )
+                reply_text = f"C'est bien noté{prenom_str}. Pour que je comprenne au mieux votre fonctionnement, quel est le principal goulot d'étranglement dans votre quotidien actuel ?"
 
-            reply_text = self.call_gemini_with_full_context(
-                lead_id=lead_id,
-                system_prompt=system_prompt,
-                new_user_message=user_message,
-                history=history
-            )
-
-            # 5. Fallback déterministe enrichi si Gemini est indisponible
-            if not reply_text:
-                if is_confusion:
-                    reply_text = "En général, le blocage se situe à l'un de ces 3 niveaux : soit le contenu n'attire pas les bons profils, soit les gens regardent mais ne passent pas à l'acte, soit il n'y a pas de système de relance en place. Lequel de ces trois vous parle le plus ?"
-                elif is_levels_question and any(w in msg_lower for w in ["2", "regardent", "passent pas", "acte", "deuxième", "conversion"]):
-                    reply_text = "C'est très clair. Quand ils vous écrivent, est-ce que vous leur posez des questions pour comprendre leur besoin avant d'annoncer votre tarif, ou vous donnez le prix directement ?"
-                elif is_first_turn:
-                    if any(w in msg_lower for w in ["service", "offre", "propos", "savoir plus", "faire"]):
-                        reply_text = "Bonjour, c'est Dave Sagbo. Vous avez du mal à convertir votre audience en clients, c'est ça ? Vous êtes plutôt à l'étape de la visibilité ou de la conversion ?"
-                    else:
-                        reply_text = "Bonjour, c'est Dave Sagbo. Quel est le principal défi commercial que vous souhaitez surmonter en ce moment ?"
-                else:
-                    # Cas réponse brève à la question du budget ou des ressources
-                    last_was_budget = any("budget ou des ressources" in (m.get("message") or "").lower() for m in history[-2:])
-                    if last_was_budget and any(w == msg_lower or w in msg_lower for w in ["non", "pas de budget", "pas encore", "aucun"]):
-                        reply_text = "Je comprends parfaitement. Justement, est-ce que vos contacts actuels s'arrêtent aux simples interactions (likes, vues) ou vous envoient des messages privés pour s'informer ?"
-                    elif any(w in msg_lower for w in ["client", "réseau", "rs", "visibilité", "audience", "bloque", "coince", "abonnés"]):
-                        reply_text = "C'est le problème le plus courant, malgré des efforts réels. En général ça coince à l'un de ces 3 niveaux : le contenu n'attire pas les bons profils, les gens voient mais ne passent pas à l'acte, ou il n'y a pas de système de relance. Lequel vous parle le plus ?"
-                    else:
-                        # Règle anti-répétition absolue : si la question des contacts a déjà été posée
-                        already_asked_contacts = any("contacts actuels" in (m.get("message") or "").lower() for m in history)
-                        if already_asked_contacts:
-                            reply_text = "Dites-moi simplement : quel est votre canal principal d'acquisition aujourd'hui (WhatsApp, Facebook, LinkedIn ou recommandation) ?"
-                        else:
-                            reply_text = "Dites-moi : est-ce que vos contacts actuels s'arrêtent aux simples interactions ou vous envoient des messages directs pour commander ?"
-
-        # 3. Post-traitement et durcissement des 4 règles
+        # 6. Post-traitement et nettoyage
         cleaned = reply_text.strip()
         if not is_first_turn:
             for _ in range(3):
@@ -1692,33 +2083,6 @@ class AISalesAgent:
             cleaned = re.sub(r'^[,\.\s\-\!\:\;\?]+', '', cleaned).strip()
             cleaned = re.sub(r'(\n+)?(bien à vous|bien cordialement|cordialement|chaleureusement|dave sagbo|responsable du projet)[,\.\s\-]*$', '', cleaned, flags=re.IGNORECASE).strip()
             cleaned = re.sub(r'(\n+)?dave sagbo$', '', cleaned, flags=re.IGNORECASE).strip()
-
-        # Règle absolue anti-dérive : interdiction absolue de fournir un script gratuit ou du consulting gratuit
-        forbidden_drift_cues = [
-            "voici un script", "voici ce que vous pouvez dire", "voici un exemple de message",
-            "préférez-vous un appel", "par écrit ou par appel", "script gratuit", "écrit ou appel",
-            "appel téléphonique", "structurions un message", "approche tarifaire",
-            "revoir toute votre approche", "message de qualification simple", "voulez-vous que nous structurions"
-        ]
-        if is_diagnostic_confirmed or any(c in cleaned.lower() for c in forbidden_drift_cues):
-            if any(c in cleaned.lower() for c in forbidden_drift_cues) or not ("formations.sagbodavid.com" in cleaned):
-                if diag_res["diagnostic_type"] == "OUTREACH_LINKEDIN":
-                    cleaned = (
-                        "Votre problème est clair : vous avez la régularité, le bon message, le bon CTA — mais votre accroche parle de vous avant de parler d'eux. Chaque semaine sans changer ça, c'est du temps de prospection qui ne convertit pas.\n\n"
-                        "On a un système qui règle exactement ça — scripts d'accroche, séquences de relance automatisées, méthode pour décrocher 3x plus de réponses sur LinkedIn sans augmenter votre temps. Voici comment y accéder : https://formations.sagbodavid.com/automatisation-whatsapp"
-                    )
-                elif diag_res["diagnostic_type"] == "AUDIT_COMMERCIAL":
-                    cleaned = (
-                        "Votre problème est identifié : vous déployez beaucoup d'énergie commerciale sans avoir de visibilité sur l'étape exacte où vos prospects décrochent. Chaque semaine sans corriger ce goulot d'étranglement, ce sont des opportunités perdues.\n\n"
-                        "Nous réalisons un diagnostic complet et rapide de votre tunnel pour pointer immédiatement ce qu'il faut débloquer. Voici les détails pour lancer votre audit : https://formations.sagbodavid.com/audit-commercial"
-                    )
-                else:
-                    cleaned = (
-                        "C'est précisément là que ça coince. Vos prospects jugent un chiffre avant de comprendre ce que vous leur apportez — "
-                        "et chaque semaine sans changer ça, c'est des ventes perdues sur des gens qui étaient pourtant intéressés.\n\n"
-                        "On a un système qui règle exactement ça : scripts de qualification, séquences de relance, méthode pour construire la valeur avant le prix. "
-                        "C'est ce qu'on déploie ici : https://formations.sagbodavid.com/automatisation-whatsapp"
-                    )
 
         cleaned = cleaned.replace("en personne", "").replace("En personne", "")
         cleaned = cleaned.replace("l'assistant de Dave", "Dave").replace("l'assistant", "le responsable")

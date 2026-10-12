@@ -728,6 +728,17 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     status="SUCCESS" if send_res.get("success") else "ERROR",
                     details=f"Réponse envoyée au PSID {sender_psid}. Succès : {send_res.get('success')}. Extrait : {reply_text[:80]}..."
                 )
+
+                # Marquer les messages entrants du prospect comme traités pour éviter tout doublon poller
+                try:
+                    cursor.execute("""
+                        UPDATE crm_lead_messages
+                        SET processed = 1
+                        WHERE lead_id = ? AND UPPER(sender) IN ('USER', 'LEAD', 'PROSPECT', 'CLIENT')
+                    """, (lead_id,))
+                    conn.commit()
+                except Exception as e_proc_mark:
+                    logger.warning(f"Note marquage processed=1 lead #{lead_id} : {e_proc_mark}")
             else:
                 # MODE PAUSE / SUPERVISION : Enregistrer le brouillon pour contrôle humain sans envoyer
                 send_res = {"success": False, "mode": "PAUSE_SUPERVISION", "message": "Envoi suspendu (Mode Pause / Supervision actif)"}
