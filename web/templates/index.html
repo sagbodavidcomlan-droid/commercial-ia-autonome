@@ -2155,28 +2155,357 @@
 
       <!-- ==================== TAB : UNITE MULTI-AGENTS (SWARM) ==================== -->
       <section id="tab-swarm" class="tab-pane hidden space-y-6">
-        <div>
-          <h2 class="text-xl font-black text-white flex items-center gap-2">
-            <i data-lucide="cpu" class="w-6 h-6 text-cyan-400"></i>
-            Centre de Commandement Multi-Agents (Swarm Intelligence)
-          </h2>
-          <p class="text-xs text-slate-400">Cinq agents IA autonomes hyperspécialisés collaborent en essaim pour gérer l'ensemble du cycle commercial.</p>
-        </div>
+        
+        <!-- Header du Centre de Commandement Swarm -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-[#0062ff] border border-blue-100 shadow-2xs">
+                <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-ping"></span>
+                <span id="swarm-health-badge">Swarm 100% Opérationnel</span>
+              </span>
+              <span class="text-xs text-slate-400 font-bold">&bull;</span>
+              <span class="text-xs text-slate-500 font-semibold" id="swarm-active-agents-badge">5 agents IA en essaim</span>
+            </div>
+            <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <i data-lucide="cpu" class="w-6 h-6 text-[#0062ff]"></i>
+              Centre de Commandement Multi-Agents (Swarm Intelligence)
+            </h2>
+            <p class="text-xs text-slate-500 font-medium">Cinq intelligences artificielles hyperspécialisées collaborent en temps réel pour piloter votre cycle commercial de bout en bout.</p>
+          </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="swarm-agents-container">
-          <!-- Rempli par JavaScript -->
-        </div>
-
-        <!-- Protection Anti-Ban & Rate-Limiter en Direct -->
-        <div class="glass-card rounded-xl p-5 space-y-3">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-400"></i>
-            Moteur de Protection Anti-Ban & Quotas de Sécurité en Direct
-          </h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs" id="ratelimit-cards-container">
-            <!-- Rempli par JavaScript -->
+          <div class="flex items-center gap-2 self-start sm:self-auto">
+            <button onclick="loadSwarmStatus()" class="px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 hover:border-slate-300 transition shadow-2xs flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+              <span>Actualiser l'Essaim</span>
+            </button>
+            <button onclick="triggerAutopilotNow()" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-extrabold transition shadow-xs flex items-center gap-2">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              <span>Lancer une Ronde Collective</span>
+            </button>
           </div>
         </div>
+
+        <!-- GRILLE PRINCIPALE (STYLE XIAODIANPU) : Contenu Principal (8 cols) + Panneau Latéral (4 cols) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- COLONNE PRINCIPALE GAUCHE (8 COLS) -->
+          <div class="lg:col-span-8 space-y-6">
+
+            <!-- 1. Bannière d'Étapes / Workflow Collaboratif (3 Cartes Dégradées Xiaodianpu) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 class="text-lg font-black text-slate-900 tracking-tight">Cycle d'Exécution Continu de l'Essaim</h3>
+                  <p class="text-xs text-slate-400 font-medium">Chaque agent active son protocole en synergie pour capturer, qualifier et convertir sans interruption.</p>
+                </div>
+                <span class="text-[11px] font-bold text-[#0062ff] bg-blue-50 px-3 py-1 rounded-full border border-blue-100 self-start sm:self-auto">
+                  Protocole Autonome v2.4
+                </span>
+              </div>
+
+              <!-- Les 3 Cartes Xiaodianpu aux coins arrondis et dégradés doux -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Carte 01 : Scan & Prospection (Dégradé Bleu Invo) -->
+                <div class="relative overflow-hidden rounded-2xl p-5 text-white flex flex-col justify-between min-h-[170px] shadow-xs bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#38bdf8]">
+                  <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-xs font-black">01</span>
+                    <i data-lucide="radar" class="w-4 h-4 text-white/80"></i>
+                  </div>
+                  <div class="space-y-1 my-2">
+                    <h4 class="text-sm font-black tracking-tight leading-tight">Scan & Détection Multicanal</h4>
+                    <p class="text-[11px] text-blue-100/90 leading-snug">Capture de leads qualifiés sur Facebook Ads, LinkedIn et WhatsApp.</p>
+                  </div>
+                  <button onclick="switchTab('crm')" class="w-full py-1.5 px-3 rounded-xl bg-white text-[#0062ff] hover:bg-blue-50 text-[11px] font-black transition text-center shadow-2xs">
+                    Inspecter les Leads
+                  </button>
+                </div>
+
+                <!-- Carte 02 : Qualification DUR & DISC (Dégradé Violet / Rose Poudré) -->
+                <div class="relative overflow-hidden rounded-2xl p-5 text-white flex flex-col justify-between min-h-[170px] shadow-xs bg-gradient-to-br from-[#7c3aed] via-[#9333ea] to-[#c084fc]">
+                  <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-xs font-black">02</span>
+                    <i data-lucide="brain-circuit" class="w-4 h-4 text-white/80"></i>
+                  </div>
+                  <div class="space-y-1 my-2">
+                    <h4 class="text-sm font-black tracking-tight leading-tight">Scoring DUR & Profilage DISC</h4>
+                    <p class="text-[11px] text-purple-100/90 leading-snug">Calcul de la douleur et calibration du ton de persuasion adapté.</p>
+                  </div>
+                  <button onclick="switchTab('audit')" class="w-full py-1.5 px-3 rounded-xl bg-white text-purple-700 hover:bg-purple-50 text-[11px] font-black transition text-center shadow-2xs">
+                    Audit Psychologique
+                  </button>
+                </div>
+
+                <!-- Carte 03 : Closing WhatsApp & Paiement (Dégradé Vert Émeraude Frais) -->
+                <div class="relative overflow-hidden rounded-2xl p-5 text-white flex flex-col justify-between min-h-[170px] shadow-xs bg-gradient-to-br from-[#059669] via-[#10b981] to-[#34d399]">
+                  <div class="flex items-center justify-between">
+                    <span class="w-7 h-7 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center text-xs font-black">03</span>
+                    <i data-lucide="badge-dollar-sign" class="w-4 h-4 text-white/80"></i>
+                  </div>
+                  <div class="space-y-1 my-2">
+                    <h4 class="text-sm font-black tracking-tight leading-tight">Closing WhatsApp & Mobile Money</h4>
+                    <p class="text-[11px] text-emerald-100/90 leading-snug">Réponses en 3s, traitement des objections et encaissement sécurisé.</p>
+                  </div>
+                  <button onclick="switchTab('history')" class="w-full py-1.5 px-3 rounded-xl bg-white text-emerald-800 hover:bg-emerald-50 text-[11px] font-black transition text-center shadow-2xs">
+                    Voir les Encaissements
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 2. "Today's Real-time Data" : Métriques Clés en Ligne Xiaodianpu -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">Activité Temps Réel de l'Essaim Aujourd'hui</h3>
+                </div>
+                <span class="text-xs font-bold text-slate-400">Synchronisé en direct</span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                
+                <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1">
+                  <span class="text-[11px] font-bold text-slate-400 block truncate">Actions Collaboratives</span>
+                  <strong class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight block" id="swarm-total-actions-today">140</strong>
+                  <span class="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i> +18% vs hier
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1">
+                  <span class="text-[11px] font-bold text-slate-400 block truncate">Taux d'Autonomie</span>
+                  <strong class="text-xl sm:text-2xl font-black text-[#0062ff] tracking-tight block">99.4%</strong>
+                  <span class="text-[10px] font-bold text-blue-600 flex items-center gap-0.5">
+                    <i data-lucide="check-circle" class="w-3 h-3"></i> 0 rupture humaine
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1">
+                  <span class="text-[11px] font-bold text-slate-400 block truncate">Conversations Actives</span>
+                  <strong class="text-xl sm:text-2xl font-black text-purple-600 tracking-tight block" id="swarm-active-conversations-today">28</strong>
+                  <span class="text-[10px] font-bold text-purple-600 flex items-center gap-0.5">
+                    <i data-lucide="message-square" class="w-3 h-3"></i> WhatsApp & Meta
+                  </span>
+                </div>
+
+                <div class="p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1">
+                  <span class="text-[11px] font-bold text-slate-400 block truncate">Ventes Réalisées</span>
+                  <strong class="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight block" id="swarm-sales-count-today">19</strong>
+                  <span class="text-[10px] font-bold text-emerald-600 flex items-center gap-0.5">
+                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i> Wave & MTN MoMo
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 3. Cartes Détaillées des 5 Agents en Action (Style Xiaodianpu Cards) -->
+            <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">Escouade des 5 Agents IA Spécialisés</h3>
+                  <p class="text-xs text-slate-400 font-medium">Répartition des missions et statuts d'activité en temps réel.</p>
+                </div>
+                <span class="text-xs font-bold bg-blue-50 text-[#0062ff] px-3 py-1 rounded-full border border-blue-100">
+                  5 Agents Actifs
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="swarm-agents-container">
+                <!-- Rempli dynamiquement en JS avec le template Xiaodianpu -->
+                <div class="p-8 text-center text-slate-400 text-xs md:col-span-2">
+                  <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-[#0062ff]"></i>
+                  Chargement de l'état de l'essaim...
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Section Basse : To-Do de l'Essaim & Assistant des Opérations (Xiaodianpu Lower Blocks) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Bloc To-Do de l'Essaim -->
+              <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h4 class="text-sm font-black text-slate-900 tracking-tight">Protocole & Sécurité Active</h4>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Normes Invo</span>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                  <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                    <div class="space-y-0.5">
+                      <div class="font-bold text-slate-800">Garde-fous Zéro Hallucination</div>
+                      <div class="text-[11px] text-slate-500">Validation systématique des prix officiels</div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Actif
+                    </span>
+                  </div>
+
+                  <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                    <div class="space-y-0.5">
+                      <div class="font-bold text-slate-800">Respect Conforme RGPD</div>
+                      <div class="text-[11px] text-slate-500">Purge automatique et opt-in vérifié</div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Conforme
+                    </span>
+                  </div>
+
+                  <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                    <div class="space-y-0.5">
+                      <div class="font-bold text-slate-800">Délai Humain Simulable</div>
+                      <div class="text-[11px] text-slate-500">Évite les détections de bot sur Meta</div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-black bg-blue-50 text-[#0062ff] border border-blue-200">
+                      1.2s - 2.8s
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloc Assistant des Opérations -->
+              <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <h4 class="text-sm font-black text-slate-900 tracking-tight">Orchestration & File d'Attente</h4>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">État Réseau</span>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                  <div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-slate-800">File de Réponses WhatsApp</span>
+                      <strong class="text-emerald-600 font-black">0 en attente</strong>
+                    </div>
+                    <div class="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                      <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 100%"></div>
+                    </div>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-slate-800">Veille Publicitaire Meta Ads</span>
+                      <strong class="text-[#0062ff] font-black">Patrouille continue</strong>
+                    </div>
+                    <div class="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                      <div class="bg-[#0062ff] h-1.5 rounded-full" style="width: 85%"></div>
+                    </div>
+                  </div>
+
+                  <div class="p-3 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-slate-800">Vérification Mobile Money</span>
+                      <strong class="text-amber-600 font-black">Webhooks actifs</strong>
+                    </div>
+                    <div class="w-full bg-slate-200/80 rounded-full h-1.5 overflow-hidden">
+                      <div class="bg-amber-500 h-1.5 rounded-full" style="width: 100%"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- COLONNE LATÉRALE DROITE (4 COLS) : SUPERVISION LIVE & QUOTAS SÉCURITÉ -->
+          <div class="lg:col-span-4 space-y-6">
+
+            <!-- 1. Profil Superviseur & Statut d'Assistance (Style Xiaodianpu User Profile) -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-[#0062ff] text-white flex items-center justify-center font-black text-lg shadow-xs">
+                    IA
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-black text-slate-900 tracking-tight">Superviseur IA Invo</h4>
+                    <span class="text-xs text-slate-400 font-medium">Orchestrateur Central de l'Essaim</span>
+                  </div>
+                </div>
+                <button onclick="switchTab('settings')" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center transition">
+                  <i data-lucide="settings" class="w-4 h-4"></i>
+                </button>
+              </div>
+
+              <!-- Mini-cartes de Synthèse Live Data (Style Rose Néon & Cartes Arrondies Xiaodianpu) -->
+              <div class="space-y-3">
+                <div class="flex items-center justify-between text-xs font-bold text-slate-700">
+                  <span>Données Live de l'Essaim</span>
+                  <span class="text-[10px] text-[#0062ff] font-extrabold uppercase">Temps Réel</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- Carte Néon Xiaodianpu (Adaptée Bleu/Rose doux) -->
+                  <div class="p-3.5 rounded-2xl bg-gradient-to-br from-[#0062ff] to-blue-700 text-white space-y-1 shadow-xs">
+                    <span class="text-[10px] font-bold text-blue-100 uppercase tracking-wider block">Activité Cumulée</span>
+                    <strong class="text-xl font-black block tracking-tight" id="swarm-live-cumulative">12,540</strong>
+                    <span class="text-[9px] text-blue-200">Interventions IA</span>
+                  </div>
+
+                  <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vitesse Réponse</span>
+                    <strong class="text-xl font-black text-slate-900 block tracking-tight">&lt; 3.0s</strong>
+                    <span class="text-[9px] text-emerald-600 font-bold">Ultra réactif</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Protection Anti-Ban & Quotas de Sécurité par Canal (Xiaodianpu Contact/Channels) -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                  <h4 class="text-sm font-black text-slate-900 tracking-tight">Protection Anti-Ban & Quotas</h4>
+                </div>
+                <span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Sécurisé
+                </span>
+              </div>
+
+              <div class="space-y-3" id="ratelimit-cards-container">
+                <!-- Rempli dynamiquement en JS -->
+                <div class="p-4 text-center text-slate-400 text-xs">
+                  <i data-lucide="loader-2" class="w-4 h-4 animate-spin mx-auto mb-1 text-[#0062ff]"></i>
+                  Chargement des quotas...
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Centre d'Assistance & Règles Opérationnelles -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-3">
+              <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider">Centre d'Aide & Directives</h4>
+              
+              <div class="space-y-2">
+                <a href="#tab-settings" onclick="switchTab('settings')" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition">
+                  <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="help-circle" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-slate-900 truncate">Guide de l'Essaim IA</div>
+                    <div class="text-[10px] text-slate-400 truncate">Comprendre la collaboration des 5 agents</div>
+                  </div>
+                </a>
+
+                <a href="#tab-audit" onclick="switchTab('audit')" class="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition">
+                  <div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="scale" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-slate-900 truncate">Registre Médico-Légal</div>
+                    <div class="text-[10px] text-slate-400 truncate">Consulter la traçabilité des décisions</div>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
       </section>
 
       <!-- ==================== TAB : PREVISIONS & MONTE CARLO ==================== -->

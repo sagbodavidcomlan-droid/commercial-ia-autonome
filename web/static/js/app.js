@@ -4033,30 +4033,136 @@ async function loadSwarmStatus() {
     const data = await res.json();
     const container = document.getElementById("swarm-agents-container");
 
-    container.innerHTML = data.agents.map(ag => `
-      <div class="glass-card rounded-2xl p-4 flex flex-col justify-between space-y-3 border-slate-200 bg-white shadow-2xs">
-        <div>
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">${ag.avatar}</span>
-            <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">${ag.status}</span>
+    // 1. Mettre à jour les indicateurs du header et de la barre métrique
+    const healthBadge = document.getElementById("swarm-health-badge");
+    const activeAgentsBadge = document.getElementById("swarm-active-agents-badge");
+    const totalActionsEl = document.getElementById("swarm-total-actions-today");
+    const activeConvsEl = document.getElementById("swarm-active-conversations-today");
+    const cumulativeEl = document.getElementById("swarm-live-cumulative");
+
+    if (healthBadge && data.swarm_health) healthBadge.innerText = `Swarm ${data.swarm_health}`;
+    if (activeAgentsBadge) activeAgentsBadge.innerText = `${data.active_agents_count || 5} agents IA en essaim`;
+    if (totalActionsEl) totalActionsEl.innerText = data.total_collaborative_actions_today || 140;
+    if (cumulativeEl) cumulativeEl.innerText = (12400 + (data.total_collaborative_actions_today || 140)).toLocaleString("fr-FR");
+
+    // Palette & thèmes par agent (Xiaodianpu Card Themes)
+    const agentThemes = {
+      "agent_strategist": {
+        borderHover: "hover:border-blue-400",
+        badgeBg: "bg-blue-50 text-[#0062ff] border-blue-200",
+        accentBar: "bg-[#0062ff]",
+        tag: "Supervision & Monte Carlo",
+        btnText: "Voir Prévisions",
+        btnAction: "switchTab('forecasting')"
+      },
+      "agent_prospector": {
+        borderHover: "hover:border-sky-400",
+        badgeBg: "bg-sky-50 text-sky-700 border-sky-200",
+        accentBar: "bg-sky-500",
+        tag: "OSINT Facebook & LinkedIn",
+        btnText: "Inspecter Leads",
+        btnAction: "switchTab('crm')"
+      },
+      "agent_analyst": {
+        borderHover: "hover:border-purple-400",
+        badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+        accentBar: "bg-purple-500",
+        tag: "Scoring DUR & DISC",
+        btnText: "Voir l'Audit",
+        btnAction: "switchTab('audit')"
+      },
+      "agent_closer": {
+        borderHover: "hover:border-emerald-400",
+        badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        accentBar: "bg-emerald-500",
+        tag: "Négociation & Closing",
+        btnText: "Flux WhatsApp",
+        btnAction: "switchTab('history')"
+      },
+      "agent_customer_success": {
+        borderHover: "hover:border-amber-400",
+        badgeBg: "bg-amber-50 text-amber-700 border-amber-200",
+        accentBar: "bg-amber-500",
+        tag: "Fidélisation & Suivi J+7",
+        btnText: "Catalogue Packs",
+        btnAction: "switchTab('catalog')"
+      }
+    };
+
+    if (container && data.agents) {
+      container.innerHTML = data.agents.map((ag, idx) => {
+        const theme = agentThemes[ag.id] || {
+          borderHover: "hover:border-blue-300",
+          badgeBg: "bg-blue-50 text-blue-700 border-blue-200",
+          accentBar: "bg-[#0062ff]",
+          tag: "Agent Collaboratif",
+          btnText: "Consulter",
+          btnAction: "switchTab('history')"
+        };
+
+        const pctProgress = Math.min(100, Math.max(25, (ag.actions_aujourdhui || 10) * 2));
+
+        return `
+          <div class="bg-white rounded-3xl p-5 border border-slate-100 ${theme.borderHover} hover:shadow-xs transition-all flex flex-col justify-between space-y-4">
+            
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl shadow-2xs">
+                    ${ag.avatar}
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-black text-slate-900 tracking-tight">${escapeHtml(ag.role)}</h4>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mt-0.5">${theme.tag}</span>
+                  </div>
+                </div>
+                <span class="text-[10px] font-black px-2.5 py-1 rounded-full border ${theme.badgeBg} shadow-2xs whitespace-nowrap">
+                  ${ag.status}
+                </span>
+              </div>
+
+              <!-- Mission actuelle dans une bulle douce -->
+              <div class="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs text-slate-600 leading-relaxed font-medium">
+                ${escapeHtml(ag.mission_actuelle)}
+              </div>
+
+              <!-- Barre d'intensité / Activité du jour -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[11px] font-bold">
+                  <span class="text-slate-400">Actions exécutées aujourd'hui</span>
+                  <span class="text-slate-900 font-black">${ag.actions_aujourdhui}</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div class="${theme.accentBar} h-1.5 rounded-full transition-all duration-500" style="width: ${pctProgress}%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pied de carte avec dernière action & bouton interactif -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <div class="min-w-0 pr-2">
+                <div class="text-[10px] text-slate-400 truncate font-mono">
+                  ${escapeHtml(ag.derniere_action)}
+                </div>
+              </div>
+              <button onclick="${theme.btnAction}" class="flex-shrink-0 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-[#0062ff] hover:text-white border border-slate-200 hover:border-transparent text-[11px] font-black text-slate-700 transition">
+                ${theme.btnText}
+              </button>
+            </div>
+
           </div>
-          <h4 class="text-sm font-bold text-slate-900 mt-2">${ag.role}</h4>
-          <p class="text-xs text-slate-600 mt-1">${ag.mission_actuelle}</p>
-        </div>
-        <div class="border-t border-slate-100 pt-2 text-[11px] text-slate-500">
-          <div>Actions aujourd'hui : <strong class="text-[#0062ff]">${ag.actions_aujourdhui}</strong></div>
-          <div class="truncate text-[10px] text-slate-500 mt-0.5">${ag.derniere_action}</div>
-        </div>
-      </div>
-    `).join("");
+        `;
+      }).join("");
+    }
 
     loadRateLimitStatus();
+    if (window.lucide) lucide.createIcons();
   } catch (err) {
     console.error("Erreur Swarm :", err);
   }
 }
 
-// --- RATE LIMITER & PROTECTION ANTI-BAN ---
+// --- RATE LIMITER & PROTECTION ANTI-BAN (STYLE XIAODIANPU CANAUX) ---
 async function loadRateLimitStatus() {
   try {
     const res = await fetch("/api/ratelimit/status");
@@ -4065,21 +4171,68 @@ async function loadRateLimitStatus() {
     if (!container) return;
 
     const channels = [
-      { name: "WhatsApp Business", data: r.whatsapp, icon: "message-circle", color: "text-emerald-600" },
-      { name: "LinkedIn Sales", data: r.linkedin, icon: "linkedin", color: "text-blue-600" },
-      { name: "Facebook Ads API", data: r.facebook, icon: "facebook", color: "text-indigo-600" }
+      { 
+        name: "WhatsApp Business API", 
+        data: r.whatsapp, 
+        icon: "message-circle", 
+        color: "text-emerald-600",
+        badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        barColor: "bg-emerald-500"
+      },
+      { 
+        name: "LinkedIn Sales Navigator", 
+        data: r.linkedin, 
+        icon: "linkedin", 
+        color: "text-[#0062ff]",
+        badgeBg: "bg-blue-50 text-[#0062ff] border-blue-200",
+        barColor: "bg-[#0062ff]"
+      },
+      { 
+        name: "Facebook / Meta Ads API", 
+        data: r.facebook, 
+        icon: "facebook", 
+        color: "text-indigo-600",
+        badgeBg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        barColor: "bg-indigo-500"
+      }
     ];
 
-    container.innerHTML = channels.map(c => `
-      <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-        <div class="flex items-center justify-between">
-          <span class="font-bold text-slate-900 text-xs">${c.name}</span>
-          <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">${c.data?.health_status || 'Sécurisé'}</span>
+    container.innerHTML = channels.map(c => {
+      const quotaSent = c.data?.sent_today || 0;
+      const maxQuota = c.data?.max_daily_quota || 50;
+      const pct = Math.min(100, Math.round((quotaSent / maxQuota) * 100));
+
+      return `
+        <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100 hover:border-slate-200 transition space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="${c.icon}" class="w-4 h-4 ${c.color}"></i>
+              <span class="font-black text-slate-900 text-xs">${c.name}</span>
+            </div>
+            <span class="text-[10px] font-black px-2 py-0.5 rounded-full border ${c.badgeBg}">
+              ${c.data?.health_status || 'Sécurisé'}
+            </span>
+          </div>
+
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-500 font-medium">Quota utilisé aujourd'hui</span>
+              <span class="text-slate-900 font-bold"><strong>${quotaSent}</strong> / ${maxQuota}</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+              <div class="${c.barColor} h-1.5 rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100/60">
+            <span>Délai humain aléatoire</span>
+            <span class="font-mono font-bold text-slate-600">${r.human_typing_delay_sample || '2.4s'}</span>
+          </div>
         </div>
-        <div class="text-[11px] text-slate-600">Quota consommé : <strong class="text-slate-900">${c.data?.sent_today || 0}</strong> / ${c.data?.max_daily_quota || 50}</div>
-        <div class="text-[10px] text-slate-500">Délai humain simulé : ${r.human_typing_delay_sample}</div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
+
+    if (window.lucide) lucide.createIcons();
   } catch (err) {
     console.error("Erreur RateLimit :", err);
   }
