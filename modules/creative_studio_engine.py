@@ -37,29 +37,33 @@ BRAND_BIBLE = {
         "tone_of_voice": "Sobre, percutant, empathique, direct, sans jargon creux ni fausse promesse."
     },
     "visual_palette": {
-        "primary_dark": "#0B0F19",       # Noir profond luxueux / Deep Onyx
-        "surface_dark": "#111827",       # Slate foncé pour les cartes et arrière-plans
-        "pure_white": "#FFFFFF",         # Blanc net pour la lisibilité maximale
-        "light_surface": "#F8FAFC",      # Blanc cassé haut de gamme
-        "accent_royal_blue": "#0062FF",  # Bleu électrique / Invo signature (technologie & clarté)
-        "accent_gold": "#E5A93C",        # Or mat prestigieux (statut & exclusivité)
+        "primary_dark": "#0A1128",       # Bleu Nuit Royal profond (Executive Prestige)
+        "navy_deep": "#001F54",          # Bleu Marine Statutaire
+        "surface_dark": "#0D1B2A",       # Dark Slate pour arrière-plans texturés
+        "pure_white": "#FFFFFF",         # Blanc éclatant
+        "light_surface": "#F4F7FC",      # Blanc cassé satiné / Slate-50 pro
+        "accent_royal_blue": "#0062FF",  # Bleu électrique / Invo signature (énergie & clarté)
+        "accent_warm_gold": "#F39C12",   # Jaune ocre chaud / Or mat (chaleur & attention sélective)
         "accent_emerald": "#10B981",     # Vert conversion / rentabilité
-        "border_subtle": "#1E293B"       # Bordures légères
+        "border_subtle": "#CBD5E1",      # Bordure slate élégante
+        "border_cyan_neon": "#38BDF8"    # Liseré néon cyan subtil
     },
     "typography": {
-        "display_font": "Plus Jakarta Sans / Syne / Cabinet Grotesk",
-        "body_font": "Inter / Plus Jakarta Sans",
+        "display_font": "Plus Jakarta Sans, 'Cabinet Grotesk', -apple-system, sans-serif",
+        "body_font": "Inter, 'Plus Jakarta Sans', sans-serif",
         "rules": [
-            "Titres courts et tranchants (maximum 7 à 9 mots par titre de slide).",
-            "Mots clés à fort impact émotionnel ou financier mis en valeur avec la couleur d'accent.",
-            "Pas de pavés indigestes : une seule idée centrale par visuel ou diapositive."
+            "Titres courts, monumentaux et tranchants (max 7 à 9 mots par diapositive).",
+            "Mots clés à fort impact surlignés avec liseré lumineux ou couleur d'accent (Or/Cyan).",
+            "Rythme visuel asymétrique : bulles de dialogue géométriques, arches néon et citations géantes.",
+            "Zéro fadeur : alternance rythmée de diapositives à dominante blanche et dominante bleu nuit."
         ]
     },
     "visual_principles": [
-        "Minimalisme statutaire : privilégier les espaces aérés et les contrastes élevés.",
-        "Preuve tangible : intégrer systématiquement des données réelles (+350 professionnels, captures de flux, métriques concrètes).",
-        "Rupture de pattern dès les 3 premières secondes ou la première slide.",
-        "Zéro élément enfantin, zéro emoji dans les titres majeurs, esthétique executive."
+        "Architecture & Arches : découpes géométriques élégantes (arches, fenêtres arrondies, lignes néon fines).",
+        "Continuité Seamless : tracés et arches qui chevauchent la séparation des diapositives pour inciter au swipe.",
+        "Footer Institutionnel : badge WhatsApp direct (+229 / numéro pro), logo Invo/DS, URL claire, garantie.",
+        "Preuve tangible & Métriques : chiffres concrets (+350 pros, +84% conversion, métriques précises).",
+        "Zéro élément enfantin, esthétique haut de gamme inspirée des meilleures agences de branding B2B."
     ]
 }
 
@@ -173,34 +177,45 @@ class CreativeStudioEngine:
         topic_clean = (topic or "Automatiser ses relances clients").strip()
         catalog_ctx = self.get_catalog_context()
 
-        sys_prompt = f"""Tu es le Directeur Artistique & Concepteur de Contenu Haute Conversion de Dave Sagbo.
+        sys_prompt = f"""Tu es le Directeur Artistique Exécutif & Maître Designer Graphique Haute Conversion de Dave Sagbo.
 Identité de marque : Dave Sagbo — Systèmes Commerciaux & Automatisation d'Acquisition B2B / PME.
-Ton de voix : Sobre, tranchant, clinique, pragmatique, axé ROI et statut, jamais familier, aucun emoji puéril.
-Palette : Deep Onyx #0B0F19, Bleu Royal #0062FF, Or Mat #E5A93C, Émeraude #10B981.
+Esthétique : Direction artistique luxueuse, inspirée des campagnes de branding premium (arches architecturales, bulles de dialogue géométriques asymétriques, contrastes alternés blanc pur et bleu nuit royal, lignes néon cyan fines, touches d'or ocre chaud, footer corporate avec badge WhatsApp et logo Invo).
+Ton : Sobre, tranchant, clinique, pragmatique, axé ROI et statut, sans jargon creux ni fausse promesse.
 
 {catalog_ctx}
 
-Règles impératives :
-1. Crée exactement 8 slides progressives (Hook -> Douleur cachée -> Diagnostic chiffré -> Méthode étape 1 -> Méthode étape 2 -> Preuve d'autorité -> Récapitulatif -> Call-to-Action).
-2. Titres de slides courts et percutants (max 7-9 mots).
-3. Le CTA final doit inciter à commenter un mot-clé précis en majuscules (ex: SYSTÈME, CLOSING, AUDIT, CLIENTS).
-4. Fournis une légende (caption) de post captivante avec storytelling et appel à l'action.
-5. Format de sortie : JSON STRICT."""
+Règles impératives de design pour chaque slide :
+1. Crée exactement 8 slides progressives avec une vraie continuité visuelle (SEAMLESS CONTINUOUS FLOW) :
+   - Slide 1 : HOOK_COVER (Titre choc, bulle géométrique, sous-titre percutant, incitation au swipe)
+   - Slide 2 : PAIN_POINT (La douleur cachée, l'erreur fatale dénoncée avec rigueur)
+   - Slide 3 : METRIC_PUNCH (Chiffre percutant, diagnostic clinique, boîte de dialogue contrastée)
+   - Slide 4 : METHOD_ARCH (La méthode étape 1 présentée dans un cadre d'arche architecturale avec liseré néon)
+   - Slide 5 : METHOD_DEEP (La méthode étape 2 avec 3 leviers concrets et contrastes élevés)
+   - Slide 6 : BIG_QUOTE (Citation forte de terrain ou vérité contre-intuitive entre guillemets monumentaux)
+   - Slide 7 : SUMMARY_CHECKLIST (Synthèse des 3 actions clés indispensables)
+   - Slide 8 : CALL_TO_ACTION (Appel à l'action sans friction : 'Commentez [MOTCLÉ]' pour recevoir la ressource en MP)
+2. Titres de slides courts et monumentaux (max 7 à 9 mots par titre).
+3. Attribue à chaque slide un 'theme' : alterne judicieusement 'LIGHT' (fond blanc éclatant #FFFFFF, texte sombre, cartouche bleu) et 'DARK' (fond bleu nuit profond #0A1128, texte blanc pur, liserés néon).
+4. Le mot-clé CTA doit être en majuscules (ex: SYSTÈME, CLOSING, AUDIT, CLIENTS).
+5. Fournis une légende (caption) de post captivante avec storytelling de terrain et appel à l'action.
+6. Format de sortie : JSON STRICT."""
 
-        user_prompt = f"""Génère un carrousel de 8 slides sur le sujet : "{topic_clean}" pour le canal {channel} et l'audience {target_audience}.
+        user_prompt = f"""Génère un carrousel de 8 slides haute conversion sur le sujet : "{topic_clean}" pour le canal {channel} et l'audience {target_audience}.
 Structure JSON attendue :
 {{
   "title": "Titre explicite du carrousel",
   "trigger_keyword": "MOTCLÉ",
-  "caption": "Texte complet de la publication avec retours à la ligne",
+  "caption": "Texte complet de la publication avec retours à la ligne aérés",
   "slides": [
     {{
       "slide_number": 1,
-      "type": "HOOK",
-      "title": "Titre choc de la slide",
-      "subtitle": "Explication limpide et percutante en 2 phrases max",
-      "visual_layout": "Indication visuelle (mise en page, contraste)",
-      "badge": "TITRE DU BADGE",
+      "type": "HOOK_COVER",
+      "theme": "DARK",
+      "title": "Titre monumental de la slide",
+      "subtitle": "Sous-titre limpide et percutant en 2 phrases max",
+      "badge": "STRATÉGIE CONVERSION",
+      "metric_highlight": "-80%",
+      "quote_text": "",
       "cta_hint": "Glisser vers la droite 👉"
     }}
   ]
@@ -211,6 +226,8 @@ Structure JSON attendue :
             # Assurer les clés
             for idx, s in enumerate(ai_res["slides"]):
                 s["slide_number"] = idx + 1
+                if "theme" not in s:
+                    s["theme"] = "LIGHT" if (idx % 2 == 1) else "DARK"
             return {
                 "title": ai_res.get("title", f"Carrousel : {topic_clean}"),
                 "channel": channel.upper(),
@@ -224,72 +241,76 @@ Structure JSON attendue :
                 "created_at": datetime.now().isoformat()
             }
 
-        # Fallback de qualité
+        # Fallback de qualité maître designer
         slides = [
             {
                 "slide_number": 1,
-                "type": "HOOK",
+                "type": "HOOK_COVER",
+                "theme": "DARK",
                 "title": f"Pourquoi 80% de vos prospects disparaissent sans acheter",
-                "subtitle": f"Et comment un simple ajustement de tempo double vos conversions sur '{topic_clean}'.",
-                "visual_layout": "Titre centré massif, fond sombre #0B0F19, mot clé 'disparaissent' surligné en or mat #E5A93C.",
-                "badge": "STRATÉGIE CONVERSION",
+                "subtitle": f"Et comment un simple cadrage de tempo double vos conversions sur '{topic_clean}'.",
+                "badge": "ACQUISITION & CLOSING",
+                "metric_highlight": "80%",
                 "cta_hint": "Glisser vers la droite 👉"
             },
             {
                 "slide_number": 2,
                 "type": "PAIN_POINT",
-                "title": "L'erreur fatale : donner son prix trop tôt",
-                "subtitle": "Quand vous annoncez un montant avant de construire la valeur, le prospect ne compare qu'un chiffre à son portefeuille.",
-                "visual_layout": "Schéma comparatif : Erreur classique (Prix direct = fuite) vs Approche clinique.",
-                "badge": "LE PIÈGE"
+                "theme": "LIGHT",
+                "title": "L'erreur fatale : donner son prix avant la valeur",
+                "subtitle": "Quand vous annoncez un tarif sans avoir qualifié le coût de l'inaction, le prospect compare un chiffre à son compte bancaire.",
+                "badge": "LE PIÈGE COMMERCIAL",
+                "quote_text": "« Le prix n'est un problème que lorsque la valeur est invisible. »"
             },
             {
                 "slide_number": 3,
-                "type": "DIAGNOSTIC",
-                "title": "Le vrai problème n'est pas votre prix. C'est l'inaction.",
-                "subtitle": "Chaque jour passé à faire des relances manuelles désordonnées représente un manque à gagner invisible mais colossal.",
-                "visual_layout": "Boîte métrique sombre avec bordure #0062FF : '-65% de taux de réponse après 4h de silence'.",
-                "badge": "ANALYSE DE TERRAIN"
+                "type": "METRIC_PUNCH",
+                "theme": "DARK",
+                "title": "Le vrai problème n'est pas le marché. C'est le silence.",
+                "subtitle": "Chaque heure passée sans relance programmée divise par deux la probabilité de signer le deal.",
+                "badge": "DIAGNOSTIC CLINIQUE",
+                "metric_highlight": "-65%"
             },
             {
                 "slide_number": 4,
-                "type": "METHOD_STEP_1",
-                "title": "Étape 1 : Poser une question binaire avant le tarif",
-                "subtitle": "Validez d'abord le besoin concret avec 2 options nettes. Le prospect doit formuler lui-même son blocage.",
-                "visual_layout": "Exemple concret de message encadré style message privé Messenger/WhatsApp.",
-                "badge": "LA MÉTHODE"
+                "type": "METHOD_ARCH",
+                "theme": "LIGHT",
+                "title": "Étape 1 : Poser la question de qualification binaire",
+                "subtitle": "Validez le besoin d'abord avec 2 choix clairs. Le prospect doit formuler lui-même l'urgence de régler son problème.",
+                "badge": "MÉTHODE INVO"
             },
             {
                 "slide_number": 5,
-                "type": "METHOD_STEP_2",
+                "type": "METHOD_DEEP",
+                "theme": "DARK",
                 "title": "Étape 2 : Répondre à l'objection en 3 temps",
-                "subtitle": "1. Valider la vigilance budgétaire | 2. Ancrer le levier de rentabilité | 3. Poser la question de relance douce",
-                "visual_layout": "3 blocs verticaux numérotés avec icônes discrètes et fond épuré.",
+                "subtitle": "1. Valider la vigilance budgétaire | 2. Ancrer le retour sur investissement | 3. Poser la question de relance douce.",
                 "badge": "CADRE OPÉRATIONNEL"
             },
             {
                 "slide_number": 6,
-                "type": "PROOF_AUTHORITY",
-                "title": "Ce qui se passe quand le système est en place",
-                "subtitle": "Plus de 350 professionnels ont remplacé les heures de relances manuelles par un processus de closing automatisé et régulier.",
-                "visual_layout": "Graphique minimaliste de croissance et badge '350+ déploiements validés'.",
-                "badge": "RÉSULTATS"
+                "type": "BIG_QUOTE",
+                "theme": "LIGHT",
+                "title": "La certitude vend plus que n'importe quelle remise",
+                "subtitle": "Un prospect ne cherche pas le prestataire le moins cher. Il cherche celui qui lui garantit qu'il ne se trompe pas.",
+                "badge": "VÉRITÉ DE TERRAIN",
+                "quote_text": "« On ne négocie pas son autorité quand le diagnostic est irréprochable. »"
             },
             {
                 "slide_number": 7,
-                "type": "SUMMARY",
-                "title": "Le récapitulatif opérationnel",
-                "subtitle": "Moins de bavardage, plus de qualification clinique | Zéro devis envoyé à froid sans accord | Relances programmées sans friction",
-                "visual_layout": "Checklist sobre avec puces de couleur verte (#10B981).",
-                "badge": "À RETENIR"
+                "type": "SUMMARY_CHECKLIST",
+                "theme": "DARK",
+                "title": "Le système en 3 piliers à retenir",
+                "subtitle": "Zéro devis envoyé à froid | Relances automatisées sans friction | Processus de closing standardisé et réplicable.",
+                "badge": "RÉCAPITULATIF"
             },
             {
                 "slide_number": 8,
                 "type": "CALL_TO_ACTION",
-                "title": "Vous voulez déployer ce système sur vos opportunités ?",
-                "subtitle": "Commentez 'SYSTÈME' sous ce post et je vous partage en message privé la grille de qualification exacte.",
-                "visual_layout": "Carte de conclusion premium avec logo Dave Sagbo et bouton CTA.",
-                "badge": "ACTION IMMÉDIATE",
+                "theme": "LIGHT",
+                "title": "Vous voulez déployer ce système sur votre activité ?",
+                "subtitle": "Commentez 'SYSTÈME' sous ce post et je vous transmets en message privé la grille de qualification exacte.",
+                "badge": "PLAN D'ACTION IMMÉDIAT",
                 "trigger_keyword": "SYSTÈME"
             }
         ]
@@ -491,16 +512,18 @@ Structure JSON attendue :
 
         ai_res = self._call_gemini_json(user_prompt, sys_prompt)
         if ai_res and "body" in ai_res and len(ai_res["body"]) > 100:
-            return {
+            res_obj = {
                 "title": ai_res.get("title", f"Post d'Autorité : {topic_clean}"),
                 "channel": channel.upper(),
                 "format": "AUTHORITY_POST",
                 "body": ai_res["body"],
                 "trigger_keyword": ai_res.get("trigger_keyword", "AUDIT").upper(),
-                "visual_recommendation": ai_res.get("visual_recommendation", "Photo épurée en situation de travail avec logo Dave Sagbo."),
+                "visual_recommendation": ai_res.get("visual_recommendation", "Affiche d'autorité Invo Blue avec citation en exergue et logo Dave Sagbo."),
                 "ai_generated": True,
                 "created_at": datetime.now().isoformat()
             }
+            res_obj["visual_svg_code"] = self.render_post_visual_svg(res_obj)
+            return res_obj
 
         # Fallback de qualité
         post_content = (
@@ -518,16 +541,18 @@ Structure JSON attendue :
             "Je vous enverrai la méthode pour structurer votre qualification en 3 questions simples."
         )
 
-        return {
+        res_fallback = {
             "title": f"Post d'Autorité : {topic_clean}",
             "channel": channel.upper(),
             "format": "AUTHORITY_POST",
             "body": post_content,
             "trigger_keyword": "AUDIT",
-            "visual_recommendation": "Photo épurée en situation de travail ou visuel typographique sobre sur fond noir onyx #0B0F19 avec logo Invo.",
+            "visual_recommendation": "Affiche graphique d'autorité Seguro / Invo Blue avec citation de terrain et badge WhatsApp.",
             "ai_generated": False,
             "created_at": datetime.now().isoformat()
         }
+        res_fallback["visual_svg_code"] = self.render_post_visual_svg(res_fallback)
+        return res_fallback
 
     def save_content_to_calendar(
         self,
@@ -596,117 +621,315 @@ Structure JSON attendue :
             })
         return items
 
-    def render_slide_svg(self, slide_data: Dict[str, Any], slide_index: int = 1, total_slides: int = 8) -> str:
-        """
-        Génère un visuel vectoriel SVG 1080x1350 (ratio 4:5 vertical LinkedIn / Instagram)
-        aux normes strictes de la Brand Bible de Dave Sagbo.
-        """
-        palette = self.brand_bible["visual_palette"]
-        title = (slide_data.get("title") or "Titre de la slide").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        subtitle = (slide_data.get("subtitle") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        badge = (slide_data.get("badge") or "MÉTHODE").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        cta_hint = (slide_data.get("cta_hint") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        trigger_keyword = (slide_data.get("trigger_keyword") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-        # Découpe du titre en lignes pour éviter les débordements
-        words = title.split()
+    def _wrap_text_tspans(self, text: str, max_chars_per_line: int, x: int, dy: int, max_lines: int = 4) -> str:
+        """Découpe un texte en tspans propres pour SVG."""
+        words = text.split()
         lines = []
         cur = []
         for w in words:
             cur.append(w)
-            if len(" ".join(cur)) > 26:
+            if len(" ".join(cur)) > max_chars_per_line:
                 lines.append(" ".join(cur))
                 cur = []
         if cur:
             lines.append(" ".join(cur))
         if not lines:
-            lines = [title]
+            lines = [text]
 
-        title_tspans = "".join([f'<tspan x="100" dy="{70 if i > 0 else 0}">{line}</tspan>' for i, line in enumerate(lines[:4])])
+        tspans = []
+        for i, line in enumerate(lines[:max_lines]):
+            tspans.append(f'<tspan x="{x}" dy="{dy if i > 0 else 0}">{line}</tspan>')
+        return "".join(tspans)
 
-        # Découpe du sous-titre
-        sub_words = subtitle.split()
-        sub_lines = []
-        cur_sub = []
-        for w in sub_words:
-            cur_sub.append(w)
-            if len(" ".join(cur_sub)) > 42:
-                sub_lines.append(" ".join(cur_sub))
-                cur_sub = []
-        if cur_sub:
-            sub_lines.append(" ".join(cur_sub))
+    def render_slide_svg(self, slide_data: Dict[str, Any], slide_index: int = 1, total_slides: int = 8) -> str:
+        """
+        Génère un visuel vectoriel SVG 1080x1350 (ratio 4:5 vertical LinkedIn / Instagram)
+        aux normes strictes d'une agence de branding de luxe et de haute conversion.
+        Inspiré des campagnes Invo / Seguro (arches, néons, contrastes et badge WhatsApp)
+        et des carrousels continus seamless (connexion fluide slide à slide).
+        """
+        palette = self.brand_bible["visual_palette"]
+        slide_type = (slide_data.get("type") or "HOOK_COVER").upper()
+        
+        # Détermination du thème (DARK = Bleu Nuit Royal #0A1128, LIGHT = Blanc Éclatant #FFFFFF / Satiné)
+        theme = slide_data.get("theme")
+        if not theme:
+            theme = "LIGHT" if (slide_index % 2 == 0) else "DARK"
+        is_dark = (theme.upper() == "DARK")
 
-        sub_tspans = "".join([f'<tspan x="100" dy="{44 if i > 0 else 0}">{sline}</tspan>' for i, sline in enumerate(sub_lines[:5])])
+        title_raw = (slide_data.get("title") or "Titre de la slide").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        subtitle_raw = (slide_data.get("subtitle") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        badge_raw = (slide_data.get("badge") or "MÉTHODE ACQUISITION").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        cta_hint = (slide_data.get("cta_hint") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        trigger_keyword = (slide_data.get("trigger_keyword") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        quote_text = (slide_data.get("quote_text") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        metric = (slide_data.get("metric_highlight") or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
-        accent_color = palette["accent_gold"] if slide_index in [1, total_slides] else palette["accent_royal_blue"]
+        # Couleurs de base selon le thème
+        bg_color = palette["primary_dark"] if is_dark else palette["pure_white"]
+        text_primary = "#FFFFFF" if is_dark else "#0F172A"
+        text_secondary = "#CBD5E1" if is_dark else "#475569"
+        card_bg = "#001F54" if is_dark else "#F8FAFC"
+        card_border = "#1E293B" if is_dark else "#E2E8F0"
+        accent_blue = palette["accent_royal_blue"]
+        accent_gold = palette["accent_warm_gold"]
+        neon_cyan = palette["border_cyan_neon"]
 
-        svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350" style="background:{palette['primary_dark']}; font-family:'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;">
+        # Tspans formatés
+        title_tspans = self._wrap_text_tspans(title_raw, max_chars_per_line=24, x=110, dy=68, max_lines=4)
+        sub_tspans = self._wrap_text_tspans(subtitle_raw, max_chars_per_line=38, x=110, dy=42, max_lines=4)
+        quote_tspans = self._wrap_text_tspans(quote_text, max_chars_per_line=32, x=140, dy=46, max_lines=3) if quote_text else ""
+
+        # Éléments graphiques de continuité seamless (arches et rubans traversants)
+        seamless_decor = ""
+        if slide_index < total_slides:
+            # Ruban ou arc sortant à droite (sera repris sur la slide suivante)
+            seamless_decor = f"""
+            <path d="M 980 400 C 1030 400, 1080 450, 1080 520 L 1080 620 C 1040 620, 980 580, 980 500 Z" fill="{accent_gold}" opacity="0.85"/>
+            <path d="M 920 850 C 1000 850, 1080 920, 1080 1020" fill="none" stroke="{neon_cyan}" stroke-width="3" stroke-linecap="round"/>
+            """
+        if slide_index > 1:
+            # Raccord entrant depuis la gauche
+            seamless_decor += f"""
+            <path d="M 0 520 C 0 450, 40 400, 100 400 L 100 500 C 40 500, 0 540, 0 620 Z" fill="{accent_gold}" opacity="0.85"/>
+            <path d="M 0 1020 C 0 920, 50 850, 120 850" fill="none" stroke="{neon_cyan}" stroke-width="3" stroke-linecap="round"/>
+            """
+
+        # Variantes de contenu central
+        center_content = ""
+        if quote_text or "QUOTE" in slide_type:
+            center_content = f"""
+            <!-- Boîte de Citation Monumentale -->
+            <rect x="70" y="360" width="940" height="660" rx="40" fill="{card_bg}" stroke="{card_border}" stroke-width="2"/>
+            <text x="120" y="470" font-size="120" font-family="'Plus Jakarta Sans', serif" font-weight="900" fill="{accent_gold}" opacity="0.9">“</text>
+            <text x="140" y="530" font-size="36" font-style="italic" font-weight="700" fill="{text_primary}">
+              {quote_tspans}
+            </text>
+            <line x1="140" y1="720" x2="320" y2="720" stroke="{accent_blue}" stroke-width="4" stroke-linecap="round"/>
+            <text x="140" y="790" font-size="44" font-weight="900" fill="{accent_blue}">{title_raw[:35]}</text>
+            <text x="140" y="845" font-size="24" font-weight="500" fill="{text_secondary}">{sub_tspans}</text>
+            """
+        elif metric or "METRIC" in slide_type:
+            center_content = f"""
+            <!-- Boîte Métrique Choc & Diagnostic -->
+            <rect x="70" y="340" width="940" height="700" rx="40" fill="{card_bg}" stroke="{card_border}" stroke-width="2"/>
+            <!-- Bulle métrique géante -->
+            <g transform="translate(110, 410)">
+              <rect x="0" y="0" width="280" height="110" rx="30" fill="{accent_blue}"/>
+              <text x="140" y="78" font-size="64" font-weight="900" fill="#FFFFFF" text-anchor="middle">{metric or '+350'}</text>
+            </g>
+            <text x="110" y="600" font-size="50" font-weight="900" fill="{text_primary}">
+              {title_tspans}
+            </text>
+            <line x1="110" y1="840" x2="280" y2="840" stroke="{accent_gold}" stroke-width="4" stroke-linecap="round"/>
+            <text x="110" y="900" font-size="28" font-weight="500" fill="{text_secondary}">
+              {sub_tspans}
+            </text>
+            """
+        elif "ARCH" in slide_type or slide_index in [1, 4]:
+            # Layout avec Arche Architecturale & Lignes Néon
+            arch_stroke = neon_cyan if is_dark else accent_blue
+            center_content = f"""
+            <!-- Arche Graphique Architecturale Découpée -->
+            <g transform="translate(680, 360)">
+              <!-- Arche de fond -->
+              <path d="M 0 160 C 0 70, 70 0, 160 0 C 250 0, 320 70, 320 160 L 320 620 L 0 620 Z" fill="{card_bg}" stroke="{card_border}" stroke-width="2"/>
+              <!-- Arche néon interne -->
+              <path d="M 30 180 C 30 100, 90 40, 160 40 C 230 40, 290 100, 290 180 L 290 590" fill="none" stroke="{arch_stroke}" stroke-width="3" stroke-dasharray="12 8" opacity="0.7"/>
+              <!-- Pastille graphique -->
+              <circle cx="160" cy="220" r="60" fill="{accent_gold}"/>
+              <text x="160" y="235" font-size="40" font-weight="900" fill="#0A1128" text-anchor="middle">DS</text>
+            </g>
+
+            <!-- Boîte de dialogue asymétrique style Seguro -->
+            <path d="M 80 380 Q 80 340 120 340 L 620 340 Q 660 340 660 380 L 660 880 Q 660 920 620 920 L 140 920 L 80 970 Z" fill="{card_bg}" stroke="{card_border}" stroke-width="2"/>
+            <text x="120" y="460" font-size="48" font-weight="900" fill="{text_primary}">
+              {title_tspans}
+            </text>
+            <line x1="120" y1="710" x2="260" y2="710" stroke="{accent_blue}" stroke-width="4" stroke-linecap="round"/>
+            <text x="120" y="770" font-size="28" font-weight="500" fill="{text_secondary}">
+              {sub_tspans}
+            </text>
+            """
+        else:
+            # Layout Executive Standard Ultra Propre
+            center_content = f"""
+            <rect x="70" y="340" width="940" height="700" rx="40" fill="{card_bg}" stroke="{card_border}" stroke-width="2"/>
+            <line x1="110" y1="340" x2="260" y2="340" stroke="{accent_blue}" stroke-width="8" stroke-linecap="round"/>
+            <text x="110" y="470" font-size="52" font-weight="900" fill="{text_primary}">
+              {title_tspans}
+            </text>
+            <line x1="110" y1="740" x2="300" y2="740" stroke="{accent_gold}" stroke-width="4" stroke-linecap="round"/>
+            <text x="110" y="810" font-size="28" font-weight="500" fill="{text_secondary}">
+              {sub_tspans}
+            </text>
+            """
+
+        svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350" width="1080" height="1350" style="background:{bg_color}; font-family:'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;">
   <defs>
-    <linearGradient id="bgGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#111827" stop-opacity="0.8"/>
-      <stop offset="100%" stop-color="{palette['primary_dark']}" stop-opacity="1"/>
+    <linearGradient id="neonGlow_{slide_index}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="{accent_blue}"/>
+      <stop offset="100%" stop-color="{neon_cyan}"/>
     </linearGradient>
-    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="{accent_color}"/>
-      <stop offset="100%" stop-color="{palette['accent_royal_blue']}"/>
-    </linearGradient>
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="{'0.5' if is_dark else '0.08'}"/>
     </filter>
   </defs>
 
-  <!-- Fond Principal & Lueur -->
-  <rect width="1080" height="1350" fill="url(#bgGlow)"/>
-  <circle cx="950" cy="150" r="350" fill="{accent_color}" opacity="0.08" filter="blur(60px)"/>
-  <circle cx="100" cy="1200" r="300" fill="{palette['accent_royal_blue']}" opacity="0.06" filter="blur(60px)"/>
+  <!-- Fond Principal -->
+  <rect width="1080" height="1350" fill="{bg_color}"/>
 
-  <!-- Bordure fine de prestige -->
-  <rect x="40" y="40" width="1000" height="1270" rx="32" fill="none" stroke="{palette['border_subtle']}" stroke-width="2"/>
+  <!-- Continuité Seamless & Décor de Lignes -->
+  {seamless_decor}
 
-  <!-- Header : Logo / Brand Name & Pagination -->
-  <g transform="translate(100, 120)">
-    <rect x="0" y="0" width="44" height="44" rx="12" fill="url(#accentGrad)"/>
-    <text x="22" y="28" font-size="20" font-weight="900" fill="#FFFFFF" text-anchor="middle">DS</text>
-    <text x="64" y="26" font-size="22" font-weight="800" fill="#FFFFFF" letter-spacing="1">DAVE SAGBO</text>
-    <text x="64" y="44" font-size="14" font-weight="500" fill="#94A3B8">Directeur Opérationnel &bull; Systèmes B2B</text>
+  <!-- Ligne de Cadre Périphérique Fin -->
+  <rect x="40" y="40" width="1000" height="1270" rx="36" fill="none" stroke="{card_border}" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- ================= HEADER SUPÉRIEUR ================= -->
+  <!-- Logo & Identité Dave Sagbo -->
+  <g transform="translate(80, 95)">
+    <!-- Écusson Logo -->
+    <rect x="0" y="0" width="56" height="56" rx="16" fill="{accent_blue}"/>
+    <text x="28" y="37" font-size="24" font-weight="900" fill="#FFFFFF" text-anchor="middle">DS</text>
+    <text x="74" y="32" font-size="24" font-weight="900" fill="{text_primary}" letter-spacing="1">DAVE SAGBO</text>
+    <text x="74" y="52" font-size="14" font-weight="600" fill="{text_secondary}">Directeur Opérationnel &bull; Systèmes B2B</text>
   </g>
 
-  <!-- Pagination Badge -->
-  <g transform="translate(880, 120)">
-    <rect x="0" y="0" width="100" height="40" rx="20" fill="#1E293B" stroke="#334155" stroke-width="1.5"/>
-    <text x="50" y="25" font-size="16" font-weight="700" fill="#E2E8F0" text-anchor="middle">{slide_index} / {total_slides}</text>
+  <!-- Pagination Élégante (Pastille Ronde) -->
+  <g transform="translate(900, 95)">
+    <rect x="0" y="0" width="100" height="46" rx="23" fill="{card_bg}" stroke="{card_border}" stroke-width="1.5"/>
+    <text x="50" y="29" font-size="16" font-weight="800" fill="{accent_blue if is_dark else '#0F172A'}" text-anchor="middle">{slide_index} / {total_slides}</text>
   </g>
 
-  <!-- Badge Catégorie / Thématique -->
-  <g transform="translate(100, 260)">
-    <rect x="0" y="0" width="{len(badge) * 14 + 40}" height="44" rx="22" fill="#1E293B" stroke="{accent_color}" stroke-width="1.5"/>
-    <text x="20" y="28" font-size="14" font-weight="800" fill="{accent_color}" letter-spacing="1.5">{badge}</text>
+  <!-- Badge Thématique Pilule -->
+  <g transform="translate(80, 230)">
+    <rect x="0" y="0" width="{len(badge_raw) * 12 + 48}" height="42" rx="21" fill="{accent_blue if is_dark else '#EFF6FF'}" stroke="{accent_blue}" stroke-width="1.5"/>
+    <text x="24" y="27" font-size="13" font-weight="800" fill="{ '#FFFFFF' if is_dark else accent_blue }" letter-spacing="1.5">{badge_raw}</text>
   </g>
 
-  <!-- Carte Centrale Conteneur -->
-  <rect x="80" y="340" width="920" height="740" rx="28" fill="{palette['surface_dark']}" stroke="#1F2937" stroke-width="2" filter="url(#shadow)"/>
-  
-  <!-- Ligne d'accent graphique sous le conteneur -->
-  <rect x="80" y="340" width="8" height="740" rx="4" fill="url(#accentGrad)"/>
+  <!-- ================= ZONE CENTRALE (MISE EN PAGE PRO) ================= -->
+  <g filter="url(#softShadow)">
+    {center_content}
+  </g>
 
-  <!-- Titre Principal Impactant -->
-  <text x="120" y="460" font-size="52" font-weight="900" fill="#FFFFFF" letter-spacing="-1">
-    {title_tspans}
-  </text>
+  <!-- ================= FOOTER INSTITUTIONNEL SEGURO / INVO ================= -->
+  <g transform="translate(80, 1140)">
+    <!-- Ligne de séparation fine -->
+    <line x1="0" y1="0" x2="920" y2="0" stroke="{card_border}" stroke-width="1.5"/>
 
-  <!-- Séparateur discret -->
-  <line x1="120" y1="720" x2="300" y2="720" stroke="{accent_color}" stroke-width="4" stroke-linecap="round"/>
+    <!-- Gauche : Adresse Web & Localisation -->
+    <text x="0" y="44" font-size="14" font-weight="600" fill="{text_secondary}">davesagbo.com &bull; B2B Growth System</text>
+    <text x="0" y="68" font-size="12" font-weight="500" fill="{text_secondary}" opacity="0.8">Afrique &bull; Europe &bull; International</text>
 
-  <!-- Sous-titre & Explication clinique -->
-  <text x="120" y="790" font-size="30" font-weight="400" fill="#CBD5E1" line-height="1.6">
-    {sub_tspans}
-  </text>
+    <!-- Droite : Badge Contact WhatsApp Immédiat ou Call-To-Action -->
+    {"<g transform='translate(560, 20)'><rect x='0' y='0' width='360' height='58' rx='29' fill='#10B981'/><text x='180' y='36' font-size='18' font-weight='900' fill='#FFFFFF' text-anchor='middle'>💬 WHATSAPP : +229 01 97 00 00</text></g>" if not trigger_keyword else f"<g transform='translate(540, 20)'><rect x='0' y='0' width='380' height='58' rx='29' fill='{accent_blue}'/><text x='190' y='36' font-size='18' font-weight='900' fill='#FFFFFF' text-anchor='middle'>COMMENTEZ &apos;{trigger_keyword}&apos;</text></g>"}
 
-  <!-- Footer : Indication de Swipe ou Call-to-Action -->
-  <g transform="translate(100, 1160)">
-    {"<text x='0' y='40' font-size='22' font-weight='800' fill='" + palette['accent_gold'] + "'>👉 " + cta_hint + "</text>" if cta_hint else ""}
-    {"<rect x='0' y='0' width='340' height='56' rx='28' fill='" + palette['accent_royal_blue'] + "'/><text x='170' y='36' font-size='20' font-weight='900' fill='#FFFFFF' text-anchor='middle'>COMMENTEZ &apos;" + trigger_keyword + "&apos;</text>" if trigger_keyword else ""}
-    <text x="880" y="40" font-size="16" font-weight="600" fill="#64748B" text-anchor="end">Invo Platform &bull; Haute Conversion</text>
+    <!-- Swipe Indicator -->
+    {"<text x='460' y='46' font-size='16' font-weight='800' fill='" + accent_gold + "' text-anchor='middle'>👉 " + cta_hint + "</text>" if cta_hint else ""}
+  </g>
+
+</svg>"""
+        return svg_content
+
+    def render_post_visual_svg(self, post_data: Dict[str, Any]) -> str:
+        """
+        Génère automatiquement une affiche graphique vectorielle d'autorité (format carré 1080x1080 ou 4:5 1080x1350)
+        pour accompagner tout post texte simple (Facebook, LinkedIn, Statut WhatsApp).
+        Inspiré du design Seguro / Invo : bulle géométrique, liseré néon, citation forte et badge de contact.
+        """
+        palette = self.brand_bible["visual_palette"]
+        title_raw = (post_data.get("title") or "LE SYSTÈME COMMERCIAL DAVE SAGBO").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        body_raw = post_data.get("body", "")
+        # Extraire la première phrase d'accroche marquante
+        first_sentence = body_raw.split("\n")[0] if body_raw else "Pourquoi la plupart des opportunités commerciales s'évaporent sans méthode."
+        first_sentence = first_sentence.replace("«", "").replace("»", "").strip()[:140]
+        first_sentence = first_sentence.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        
+        trigger_keyword = (post_data.get("trigger_keyword") or "AUDIT").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        title_tspans = self._wrap_text_tspans(title_raw, max_chars_per_line=24, x=100, dy=64, max_lines=3)
+        quote_tspans = self._wrap_text_tspans(f"« {first_sentence} »", max_chars_per_line=34, x=110, dy=46, max_lines=4)
+
+        accent_blue = palette["accent_royal_blue"]
+        accent_gold = palette["accent_warm_gold"]
+        neon_cyan = palette["border_cyan_neon"]
+
+        svg_content = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080" style="background:#0A1128; font-family:'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;">
+  <defs>
+    <linearGradient id="postBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0A1128"/>
+      <stop offset="100%" stop-color="#001F54"/>
+    </linearGradient>
+    <filter id="postShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Fond Dégradé Deep Royal -->
+  <rect width="1080" height="1080" fill="url(#postBgGrad)"/>
+
+  <!-- Arches Géométriques Architecturales Découpées -->
+  <g opacity="0.35">
+    <path d="M 850 150 C 850 60, 930 0, 1020 0 L 1080 0 L 1080 400 L 850 400 Z" fill="#0062FF"/>
+    <path d="M 800 200 C 800 90, 890 0, 1000 0" fill="none" stroke="{neon_cyan}" stroke-width="3" stroke-dasharray="10 6"/>
+    <circle cx="150" cy="950" r="280" fill="none" stroke="{accent_gold}" stroke-width="2" opacity="0.4"/>
+  </g>
+
+  <!-- Cadre Périphérique Fin -->
+  <rect x="40" y="40" width="1000" height="1000" rx="36" fill="none" stroke="#1E293B" stroke-width="2"/>
+
+  <!-- Header : Logo & Auteur -->
+  <g transform="translate(80, 80)">
+    <rect x="0" y="0" width="52" height="52" rx="16" fill="{accent_blue}"/>
+    <text x="26" y="34" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">DS</text>
+    <text x="70" y="30" font-size="22" font-weight="900" fill="#FFFFFF" letter-spacing="1">DAVE SAGBO</text>
+    <text x="70" y="50" font-size="13" font-weight="600" fill="#94A3B8">Directeur Opérationnel &bull; Systèmes B2B</text>
+  </g>
+
+  <!-- Badge Catégorie -->
+  <g transform="translate(780, 80)">
+    <rect x="0" y="0" width="220" height="44" rx="22" fill="#1E293B" stroke="{accent_gold}" stroke-width="1.5"/>
+    <text x="110" y="28" font-size="13" font-weight="800" fill="{accent_gold}" text-anchor="middle" letter-spacing="1">NOTE DE TERRAIN</text>
+  </g>
+
+  <!-- Carte Centrale Asymétrique Haute Conversion -->
+  <g filter="url(#postShadow)">
+    <path d="M 70 200 Q 70 170 100 170 L 980 170 Q 1010 170 1010 200 L 1010 820 Q 1010 850 980 850 L 140 850 L 70 910 Z" fill="#0D1B2A" stroke="#1E293B" stroke-width="2"/>
+    
+    <!-- Liseré supérieur bleu électrique -->
+    <rect x="70" y="170" width="940" height="6" fill="{accent_blue}"/>
+
+    <!-- Titre Impactant -->
+    <text x="110" y="270" font-size="44" font-weight="900" fill="#FFFFFF">
+      {title_tspans}
+    </text>
+
+    <!-- Séparateur or -->
+    <line x1="110" y1="460" x2="260" y2="460" stroke="{accent_gold}" stroke-width="4" stroke-linecap="round"/>
+
+    <!-- Guillemet géant & Citation de rupture -->
+    <text x="110" y="550" font-size="70" font-weight="900" fill="{accent_gold}">“</text>
+    <text x="150" y="550" font-size="30" font-style="italic" font-weight="600" fill="#E2E8F0">
+      {quote_tspans}
+    </text>
+    
+    <!-- Badge Méthode -->
+    <g transform="translate(110, 750)">
+      <rect x="0" y="0" width="320" height="46" rx="23" fill="{accent_blue}"/>
+      <text x="160" y="29" font-size="14" font-weight="900" fill="#FFFFFF" text-anchor="middle">MÉTHODE CLINIQUE APPLIQUÉE</text>
+    </g>
+  </g>
+
+  <!-- Footer : Badge Social Selling & Contact WhatsApp -->
+  <g transform="translate(80, 960)">
+    <text x="0" y="30" font-size="14" font-weight="600" fill="#94A3B8">davesagbo.com &bull; Accompagnement Exécutif</text>
+    <text x="0" y="52" font-size="12" font-weight="500" fill="#64748B">Réservé aux Dirigeants, Prestataires &amp; PME</text>
+
+    <!-- Bouton CTA -->
+    <g transform="translate(560, 0)">
+      <rect x="0" y="0" width="360" height="56" rx="28" fill="{accent_blue}"/>
+      <text x="180" y="35" font-size="16" font-weight="900" fill="#FFFFFF" text-anchor="middle">COMMENTEZ &apos;{trigger_keyword}&apos;</text>
+    </g>
   </g>
 </svg>"""
         return svg_content

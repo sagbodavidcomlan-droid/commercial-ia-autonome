@@ -236,6 +236,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_creative_calendar(query)
         elif path == "/api/creative/slide-svg":
             self.handle_api_get_slide_svg(query)
+        elif path == "/api/creative/post-visual-svg":
+            self.handle_api_get_post_visual_svg(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -1944,6 +1946,25 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
         self.send_header("Content-Disposition", f'attachment; filename="slide_{slide_index}.svg"')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(svg_code.encode("utf-8"))
+
+    def handle_api_get_post_visual_svg(self, query):
+        title = query.get("title", ["LE SYSTÈME COMMERCIAL DAVE SAGBO"])[0]
+        body = query.get("body", [""])[0]
+        trigger_keyword = query.get("trigger_keyword", ["AUDIT"])[0]
+
+        post_data = {
+            "title": title,
+            "body": body,
+            "trigger_keyword": trigger_keyword
+        }
+        svg_code = creative_studio_engine.render_post_visual_svg(post_data)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "image/svg+xml; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="post_visual_dave_sagbo.svg"')
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(svg_code.encode("utf-8"))

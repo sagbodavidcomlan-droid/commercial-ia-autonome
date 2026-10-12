@@ -6474,60 +6474,122 @@ async function triggerGenerateCreative() {
   }
 }
 
+function getSlideSvgUrl(slide, slideIndex, totalSlides) {
+  const query = new URLSearchParams({
+    title: slide.title || "",
+    subtitle: slide.subtitle || "",
+    badge: slide.badge || "MÉTHODE ACQUISITION",
+    cta_hint: slide.cta_hint || "",
+    trigger_keyword: slide.trigger_keyword || "",
+    quote_text: slide.quote_text || "",
+    metric_highlight: slide.metric_highlight || "",
+    type: slide.type || "HOOK_COVER",
+    theme: slide.theme || (slideIndex % 2 === 0 ? "LIGHT" : "DARK"),
+    index: slideIndex + 1,
+    total: totalSlides
+  });
+  return `/api/creative/slide-svg?${query.toString()}`;
+}
+
 function renderCarouselPreview(result) {
   const container = document.getElementById("creative-render-container");
   if (!container) return;
 
-  const slidesHtml = (result.slides || []).map((slide, sIdx) => `
-    <div class="p-4 rounded-xl border border-slate-200 bg-[#0B0F19] text-white flex flex-col justify-between shadow-md h-[290px] relative overflow-hidden group hover:border-[#0062ff] transition-all">
-      <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-        <span class="px-2 py-0.5 rounded-full bg-slate-800 text-blue-400 border border-slate-700">${slide.badge || 'SLIDE'}</span>
-        <span class="w-5 h-5 rounded-full bg-slate-800 flex items-center justify-center font-mono">${slide.slide_number}</span>
+  const slides = result.slides || [];
+  const totalSlides = slides.length;
+
+  const slidesHtml = slides.map((slide, sIdx) => {
+    const svgUrl = getSlideSvgUrl(slide, sIdx, totalSlides);
+    return `
+    <div class="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-lg transition-all duration-300">
+      
+      <!-- En-tête de la slide avec Badge & Numéro -->
+      <div class="p-3 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold">
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full ${slide.theme === 'LIGHT' ? 'bg-amber-400' : 'bg-blue-600'}"></span>
+          <span class="px-2 py-0.5 rounded-full bg-white text-slate-800 border border-slate-200 text-[10px] uppercase font-black tracking-tight">${slide.badge || 'SLIDE'}</span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono text-[10px] font-black">${sIdx + 1} / ${totalSlides}</span>
       </div>
-      <div class="my-auto space-y-1.5">
-        <h4 class="text-xs font-black text-white leading-snug">${slide.title}</h4>
-        <p class="text-[11px] text-slate-300 leading-relaxed font-normal">${slide.subtitle}</p>
-      </div>
-      <div class="text-[9px] text-slate-400 border-t border-slate-800/80 pt-2 flex items-center justify-between gap-1">
-        <span class="truncate max-w-[90px] text-slate-500">${slide.visual_layout ? slide.visual_layout.slice(0, 16) + '...' : 'Direction Invo'}</span>
-        <div class="flex items-center gap-1">
-          <button onclick="downloadSingleSlideFormat(${sIdx}, 'svg')" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-white font-bold text-[9px] transition-all" title="Télécharger SVG">
-            SVG
-          </button>
-          <button onclick="downloadSingleSlideFormat(${sIdx}, 'png')" class="px-1.5 py-0.5 rounded bg-blue-600/90 hover:bg-blue-600 text-white font-bold text-[9px] transition-all" title="Télécharger PNG Haute Définition">
-            PNG
-          </button>
-          <button onclick="downloadSingleSlideFormat(${sIdx}, 'jpeg')" class="px-1.5 py-0.5 rounded bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold text-[9px] transition-all" title="Télécharger JPEG">
-            JPG
-          </button>
+
+      <!-- Aperçu Graphique Réel du Visuel Vectoriel (Aspect Ratio 4:5) -->
+      <div class="relative w-full aspect-[4/5] bg-slate-900 overflow-hidden cursor-pointer" onclick="openSlideModal(${sIdx})">
+        <iframe src="${svgUrl}" class="w-full h-full border-0 pointer-events-none transform scale-100 origin-top-left" loading="lazy" scrolling="no"></iframe>
+        
+        <!-- Hover Overlay avec loupe -->
+        <div class="absolute inset-0 bg-[#0062ff]/10 opacity-0 group-hover:opacity-100 backdrop-blur-[1px] transition-all flex items-center justify-center">
+          <span class="px-3 py-1.5 rounded-full bg-white text-slate-900 font-extrabold text-xs shadow-md flex items-center gap-1.5">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-[#0062ff]"></i> Agrandir
+          </span>
         </div>
       </div>
+
+      <!-- Titre et Barre d'Export HD -->
+      <div class="p-3 bg-white space-y-2">
+        <h4 class="text-xs font-bold text-slate-900 truncate" title="${slide.title}">${slide.title}</h4>
+        
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+          <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">${slide.theme || 'DARK'}</span>
+          <div class="flex items-center gap-1">
+            <button onclick="downloadSingleSlideFormat(${sIdx}, 'svg')" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-[10px] transition-all" title="Télécharger SVG Vectoriel">
+              SVG
+            </button>
+            <button onclick="downloadSingleSlideFormat(${sIdx}, 'png')" class="px-2 py-1 rounded-lg bg-[#0062ff] hover:bg-blue-600 text-white font-black text-[10px] transition-all shadow-xs" title="Télécharger PNG 1080x1350 Haute Définition">
+              PNG HD
+            </button>
+            <button onclick="downloadSingleSlideFormat(${sIdx}, 'jpeg')" class="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] transition-all" title="Télécharger JPEG">
+              JPG
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
-  `).join("");
+    `;
+  }).join("");
 
   container.innerHTML = `
-    <div class="w-full space-y-4">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-100 p-3 rounded-xl border border-slate-200">
-        <div class="text-xs font-bold text-slate-700 flex items-center gap-2">
-          <span>Carrousel ${result.slides_count || 8} Slides Haute Définition (Norme 4:5 1080x1350)</span>
-          ${result.ai_generated ? '<span class="px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-extrabold">Généré par Gemini</span>' : ''}
+    <div class="w-full space-y-5">
+      
+      <!-- Barre d'actions Carrousel & Téléchargements -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+        <div class="space-y-0.5">
+          <div class="text-xs font-extrabold text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Carrousel Continu Haute Couture (Ratio 4:5 &bull; 1080x1350)</span>
+            ${result.ai_generated ? '<span class="px-2 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200 text-[10px] font-black">Direction IA</span>' : ''}
+          </div>
+          <p class="text-[11px] text-slate-500">Design continu seamless, arches géométriques, contrastes alternés et footer de contact.</p>
         </div>
-        <div class="flex items-center gap-1.5">
-          <button onclick="downloadAllSlidesInFormat('png')" class="btn btn-xs btn-primary flex items-center gap-1 font-bold">
-            <i data-lucide="image" class="w-3.5 h-3.5"></i> Tout en PNG
+
+        <div class="flex items-center gap-2">
+          <button onclick="downloadAllSlidesInFormat('png')" class="px-3.5 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+            <i data-lucide="image" class="w-3.5 h-3.5"></i> Tout en PNG HD
           </button>
-          <button onclick="downloadAllSlidesInFormat('svg')" class="btn btn-xs btn-secondary flex items-center gap-1 font-bold">
+          <button onclick="downloadAllSlidesInFormat('svg')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs flex items-center gap-1.5 transition">
             <i data-lucide="download" class="w-3.5 h-3.5"></i> Tout en SVG
           </button>
         </div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+
+      <!-- Galerie Visuelle Grille Haute Définition -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         ${slidesHtml}
       </div>
-      <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1 text-slate-700">
-        <strong class="text-slate-900 block font-bold">Légende & Accroche Social Selling :</strong>
-        <p class="whitespace-pre-line text-slate-600 font-normal text-[11px] leading-relaxed">${result.caption || ''}</p>
+
+      <!-- Légende et Accroche Social Selling -->
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5 text-slate-700">
+        <div class="flex items-center justify-between">
+          <strong class="text-slate-900 font-extrabold flex items-center gap-1.5">
+            <i data-lucide="message-square" class="w-4 h-4 text-[#0062ff]"></i> Accroche & Légende Social Selling
+          </strong>
+          <button onclick="navigator.clipboard.writeText(currentCreativeResult?.caption || ''); showToast('Légende copiée !', 'success');" class="text-[10px] font-bold text-[#0062ff] hover:underline">
+            Copier le texte
+          </button>
+        </div>
+        <p class="whitespace-pre-line text-slate-600 font-medium text-xs leading-relaxed select-all">${result.caption || ''}</p>
       </div>
+
     </div>
   `;
   if (window.lucide) lucide.createIcons();
@@ -7204,28 +7266,122 @@ async function exportMotionVideoFile() {
   drawFrame(0);
 }
 
+function getPostVisualSvgUrl(result) {
+  const query = new URLSearchParams({
+    title: result.title || "LE SYSTÈME COMMERCIAL DAVE SAGBO",
+    body: result.body || "",
+    trigger_keyword: result.trigger_keyword || "AUDIT"
+  });
+  return `/api/creative/post-visual-svg?${query.toString()}`;
+}
+
+async function downloadPostVisualFormat(format = 'png') {
+  if (!currentCreativeResult) return;
+  const downloadUrl = getPostVisualSvgUrl(currentCreativeResult);
+
+  if (format === 'svg') {
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = `affiche_autorite_dave_sagbo.svg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Affiche d'autorité téléchargée en SVG !", "success");
+    return;
+  }
+
+  showToast(`Conversion de l'affiche d'autorité en ${format.toUpperCase()}...`, "info");
+  try {
+    const rasterDataUrl = await convertSvgUrlToRaster(downloadUrl, format, 1080, 1080);
+    const a = document.createElement("a");
+    a.href = rasterDataUrl;
+    a.download = `affiche_autorite_dave_sagbo.${format === 'jpeg' ? 'jpg' : 'png'}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast(`Affiche d'autorité téléchargée en ${format.toUpperCase()} HD !`, "success");
+  } catch (err) {
+    console.error("Erreur conversion raster affiche :", err);
+    window.open(downloadUrl, "_blank");
+  }
+}
+
 function renderAuthorityPostPreview(result) {
   const container = document.getElementById("creative-render-container");
   if (!container) return;
 
+  const visualSvgUrl = getPostVisualSvgUrl(result);
+
   container.innerHTML = `
-    <div class="w-full space-y-4">
-      <div class="p-5 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs">DS</div>
-          <div>
-            <h4 class="text-xs font-bold text-slate-900">Dave Sagbo</h4>
-            <span class="text-[10px] text-slate-500">Directeur Opérationnel • Système d'Acquisition B2B</span>
-          </div>
+    <div class="w-full space-y-5">
+      
+      <!-- Bannière d'en-tête -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+        <div>
+          <h3 class="text-xs font-black text-slate-900 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+            <span>Post d'Autorité & Visuel Graphique Haute Conversion (Pack Texte + Image)</span>
+          </h3>
+          <p class="text-[11px] text-slate-500">Chaque post texte est automatiquement pourvu d'une affiche visuelle d'impact aux normes Seguro / Invo.</p>
         </div>
-        <div class="p-4 bg-slate-50/70 rounded-xl border border-slate-100 text-xs text-slate-800 whitespace-pre-line leading-relaxed font-normal">
-          ${result.body || ''}
-        </div>
-        <div class="text-[11px] text-slate-500 flex items-center gap-1.5 pt-2 border-t border-slate-100">
-          <i data-lucide="image" class="w-3.5 h-3.5 text-blue-600"></i>
-          <span>Recommandation visuelle : ${result.visual_recommendation || 'Visuel sobre avec logo Invo.'}</span>
+        <div class="flex items-center gap-2">
+          <button onclick="downloadPostVisualFormat('png')" class="px-3.5 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+            <i data-lucide="image" class="w-3.5 h-3.5"></i> Affiche en PNG HD
+          </button>
+          <button onclick="downloadPostVisualFormat('svg')" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs flex items-center gap-1.5 transition">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Affiche en SVG
+          </button>
         </div>
       </div>
+
+      <!-- Corps du Post : Colonne Texte + Colonne Visuel Graphique Carré -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Colonne 1 : Rédaction Copywriting & Storytelling (7 cols) -->
+        <div class="lg:col-span-7 p-5 bg-white border border-slate-200 rounded-2xl shadow-xs space-y-4">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black flex items-center justify-center text-xs shadow-xs">DS</div>
+              <div>
+                <h4 class="text-xs font-black text-slate-900">Dave Sagbo</h4>
+                <span class="text-[10px] text-slate-500">Directeur Opérationnel &bull; Systèmes Commerciaux B2B</span>
+              </div>
+            </div>
+            <button onclick="navigator.clipboard.writeText(currentCreativeResult?.body || ''); showToast('Texte du post copié !', 'success');" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1">
+              <i data-lucide="copy" class="w-3 h-3"></i> Copier
+            </button>
+          </div>
+
+          <div class="p-4 bg-slate-50/70 rounded-xl border border-slate-100 text-xs text-slate-800 whitespace-pre-line leading-relaxed font-normal max-h-[460px] overflow-y-auto select-all">
+            ${result.body || ''}
+          </div>
+
+          <div class="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-[11px] text-blue-900 flex items-center justify-between">
+            <span>Mot-clé de conversion : <strong class="font-mono text-blue-700 uppercase">${result.trigger_keyword || 'AUDIT'}</strong></span>
+            <span class="text-[10px] text-slate-500 font-medium">Invitation en MP / Commentaires</span>
+          </div>
+        </div>
+
+        <!-- Colonne 2 : Affiche Visuelle Générée en Direct (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col space-y-3">
+          <div class="rounded-2xl border border-slate-200 bg-slate-900 overflow-hidden shadow-lg relative group aspect-square">
+            <iframe src="${visualSvgUrl}" class="w-full h-full border-0 pointer-events-none transform scale-100 origin-top-left" loading="lazy" scrolling="no"></iframe>
+            
+            <div class="absolute inset-0 bg-[#0062ff]/10 opacity-0 group-hover:opacity-100 backdrop-blur-[1px] transition-all flex items-center justify-center">
+              <span class="px-3.5 py-1.5 rounded-full bg-white text-slate-900 font-extrabold text-xs shadow-md flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-[#0062ff]"></i> Affiche Haute Définition
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-500 px-1">
+            <span>Format : <strong>Carré 1:1 (1080x1080)</strong></span>
+            <span>Prêt pour LinkedIn &amp; Facebook</span>
+          </div>
+        </div>
+
+      </div>
+
     </div>
   `;
   if (window.lucide) lucide.createIcons();
