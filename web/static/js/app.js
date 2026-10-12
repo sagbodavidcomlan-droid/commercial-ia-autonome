@@ -416,7 +416,7 @@ function showTab(tabId) {
   closeMobileSidebar();
 
   document.querySelectorAll(".tab-pane").forEach(el => el.classList.add("hidden"));
-  document.querySelectorAll(".nav-item, .nav-btn").forEach(el => {
+  document.querySelectorAll(".nav-item, .nav-btn, .vitaliy-nav-item").forEach(el => {
     el.classList.remove("active");
   });
 
