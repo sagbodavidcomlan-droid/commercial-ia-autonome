@@ -54,6 +54,8 @@ from core.meta_messenger_sync import (
 from modules.silent_watcher import watcher_instance
 from modules.composio_enricher import get_enricher
 from modules.google_calendar_closer import get_calendar_closer
+from modules.realtime_notifier import get_notifier
+from modules.crm_mirror_sync import get_crm_mirror
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -329,6 +331,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_add_calendar_event(body)
         elif path == "/api/calendar/google/schedule-closing":
             self.handle_api_google_schedule_closing(body)
+        elif path == "/api/alerts/test":
+            self.handle_api_test_alert(body)
+        elif path == "/api/crm/mirror/sync":
+            self.handle_api_crm_mirror_sync(body)
         elif path in ("/api/crm/leads/bulk-action", "/crm/leads/bulk-action"):
             self.handle_api_crm_bulk_action(body)
         elif path in ("/api/crm/leads/update", "/crm/leads/update"):
@@ -2298,6 +2304,41 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 description=description,
                 timezone_str=tz
             )
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    # --- ROUTES ALERTING INSTANTANÉ & MIROIR CRM ---
+    def handle_api_test_alert(self, body):
+        try:
+            alert_type = body.get("type", "closing")
+            notifier = get_notifier()
+            if alert_type == "closing":
+                sample_lead = {
+                    "id": 999,
+                    "nom_complet": "Directeur Commercial Test",
+                    "entreprise": "Groupe Afrique Digitale",
+                    "score_qualification": 92,
+                    "offre_recommandee": "Pack Scale IA Autonome",
+                    "whatsapp": "+22997000000",
+                    "email": "directeur@afrique-digitale.bj"
+                }
+                res = notifier.notify_hot_lead(sample_lead, trigger_reason="Demande directe de lien de paiement")
+            else:
+                res = notifier.notify_watcher_anomaly(
+                    anomaly_type="Test Superviseur SilentWatcher",
+                    details="Simulation d'alerte de supervision technique envoyée avec succès.",
+                    severity="warning"
+                )
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_crm_mirror_sync(self, body):
+        try:
+            spreadsheet_id = body.get("spreadsheet_id")
+            mirror = get_crm_mirror()
+            res = mirror.sync_to_google_sheets(spreadsheet_id=spreadsheet_id)
             self.send_json_response(res)
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)
