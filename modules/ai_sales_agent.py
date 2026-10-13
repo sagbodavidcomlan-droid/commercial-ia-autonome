@@ -992,9 +992,9 @@ class AISalesAgent:
         2. Actif et décideur identifiés (DUR validé)
         3. Plafond strict : 8 questions posées par Dave au maximum.
         """
-        agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
+        agent_msgs = [m for m in history if m.get("sender") in ("AGENT", "AI", "DAVE") or m.get("role") in ("model", "assistant", "agent")]
         agent_count = len(agent_msgs)
-        user_msgs = [m for m in history if m.get("sender") in ("USER", "LEAD")]
+        user_msgs = [m for m in history if m.get("sender") in ("USER", "LEAD", "PROSPECT", "CLIENT") or m.get("role") == "user"]
 
         diagnostic_count = 0
         if lead_data and lead_data.get("diagnostic_questions_count") is not None:
@@ -1006,10 +1006,10 @@ class AISalesAgent:
             diagnostic_count = agent_count
 
         msg_clean = (user_message or "").strip().lower()
-        last_agent = (agent_msgs[-1].get("message", "") if agent_msgs else "").lower()
+        last_agent = ((agent_msgs[-1].get("message") or agent_msgs[-1].get("content") or "") if agent_msgs else "").lower()
 
         # Profil 1 : Outbound / Prospection LinkedIn / Messages avec faible taux de retour
-        all_conv_text = " ".join([m.get("message", "").lower() for m in history] + [msg_clean])
+        all_conv_text = " ".join([(m.get("message") or m.get("content") or "").lower() for m in history] + [msg_clean])
         is_linkedin_outreach = (
             any(k in all_conv_text for k in ["linkedin", "prospection directe", "organique", "outreach", "messages personnalisés"])
             and any(k in all_conv_text for k in ["taux de retour", "faible", "répondent pas", "peu de réponse", "retour reste faible"])
@@ -1241,9 +1241,11 @@ class AISalesAgent:
         loop_detected = False
         if len(conversation_history) >= 4:
             agent_messages = [
-                m.get('message', '') for m in conversation_history
-                if m.get('sender') == 'AGENT'
+                (m.get('message') or m.get('content') or '').strip()
+                for m in conversation_history
+                if m.get('sender') == 'AGENT' or m.get('role') == 'model'
             ]
+            agent_messages = [txt for txt in agent_messages if txt]
             if len(agent_messages) >= 2 and agent_messages[-1] == agent_messages[-2]:
                 loop_detected = True
 
@@ -1903,7 +1905,7 @@ RÈGLES STRICTES :
             gemini_contents = [{"role": "user", "parts": [{"text": new_user_message.strip()}]}]
 
         # Modèles ordonnés par efficacité et disponibilité testée
-        models = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
+        models = ["gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3-flash-preview"]
         for mod in models:
             try:
                 import urllib.request
@@ -2027,7 +2029,18 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 logger.warning(f"Note scan initial lead #{lead_id} : {e_scan}")
 
         if history is None:
-            history = full_history if full_history else (get_lead_messages(lead_id) if lead_id else [])
+            raw_hist = full_history if full_history else (get_lead_messages(lead_id) if lead_id else [])
+            norm_history = []
+            for h in raw_hist:
+                raw_snd = str(h.get("sender") or "").upper()
+                raw_role = str(h.get("role") or "").lower()
+                if raw_snd in ("AGENT", "AI", "DAVE") or raw_role in ("model", "assistant", "agent"):
+                    snd = "AGENT"
+                else:
+                    snd = "LEAD"
+                msg_txt = h.get("message") or h.get("content") or h.get("text") or ""
+                norm_history.append({"sender": snd, "message": msg_txt, "channel": channel})
+            history = norm_history
         else:
             norm_history = []
             for h in history:
@@ -2069,14 +2082,57 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
             return validated['message']
 
-        # 2. ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
-        if self.detect_purchase_signal(user_message) or scan_purchase:
-            lead_info = lead_data or {}
-            proposed = self.handle_purchase_signal(lead_id, lead_info, conversation_history=history)
+        # 2. ÉTAPE DIAGNOSTIC COMPLET & PLAFOND 8 TOURS (RÈGLES D'OR DE CLOSING)
+        diag = self.is_diagnostic_complete(lead_id, history, user_message, lead_data)
+        if diag.get("is_complete"):
+            # Mettre à jour immédiatement crm_leads en base
+            if lead_id:
+                try:
+                    from core.database_store import get_connection
+                    conn = get_connection()
+                    c = conn.cursor()
+                    c.execute("""
+                        UPDATE crm_leads
+                        SET diagnostic_complet = 1,
+                            statut_lead = 'Chaud',
+                            temperature = 'Chaud',
+                            score_qualification = 90,
+                            score_dur = 90,
+                            offre_proposee = 1,
+                            offre_matchee = ?,
+                            phase_actuelle = 'closer',
+                            douleur_identifiee = COALESCE(douleur_identifiee, ?),
+                            updated_at = datetime('now')
+                        WHERE id = ?
+                    """, (
+                        diag.get("matched_offer"),
+                        diag.get("douleur_identifiee"),
+                        lead_id
+                    ))
+                    conn.commit()
+                    conn.close()
+                except Exception as e_upd_diag:
+                    logger.warning(f"Note mise à jour lead suite diagnostic complet : {e_upd_diag}")
+
+            # Formulation de transition experte : Problème identifié + Coût de l'inaction (MSG +1) + Offre avec lien officiel (MSG +2)
+            diag_type = diag.get("diagnostic_type", "")
+            if diag_type == "PRIX_DIRECT":
+                proposed = (
+                    "C'est précisément là que ça coince : annoncer un tarif sans avoir cadré le besoin dévalue votre offre et fait fuir vos prospects.\n\n"
+                    f"Pour verrouiller vos conversions et automatiser vos closing, voici notre solution clé en main : {diag.get('offer_url')}"
+                )
+            else:
+                # Profil OUTREACH_LINKEDIN ou par défaut
+                proposed = (
+                    "Votre problème est clair : envoyer des messages centrés sur votre présentation ne convertit pas et vous coûte des clients potentiels chaque semaine.\n\n"
+                    f"Pour installer un système d'acquisition et de closing rentable, voici le dispositif adapté : {diag.get('offer_url')}"
+                )
+
             conversation_context = {
                 'lead_id': lead_id,
-                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
                 'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
                 'message_count': len(history) + 1,
                 'purchase_signal_detected': True,
                 'stop_signal_detected': False,
@@ -2086,6 +2142,24 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             }
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
             return validated['message']
+
+        # 2.5 ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
+        if self.detect_purchase_signal(user_message) or scan_purchase:
+            lead_info = lead_data or {}
+            proposed = self.handle_purchase_signal(lead_id, lead_info, conversation_history=history)
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
 
         # 3. ÉTAPE OUVERTURE : Premier contact
         if is_first_turn:
@@ -2097,6 +2171,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                     'lead_id': lead_id,
                     'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
                     'last_agent_message': "",
+                    'agent_message_count': 0,
                     'message_count': 1,
                     'purchase_signal_detected': False,
                     'stop_signal_detected': False,
@@ -2113,8 +2188,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
             f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
             f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
-            f"- INTERDICTION STRICTE de dire Bonjour ou Bonsoir (hors 1er message).\n"
-            f"- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
+            f"- {'PREMIER MESSAGE : Commence obligatoirement par \"Bonjour, c est Dave Sagbo.\"' if is_first_turn else 'INTERDICTION STRICTE de dire Bonjour ou Bonsoir (hors 1er message) et INTERDICTION STRICTE de te présenter (\"C est Dave Sagbo\") ou de signer.'}\n"
             f"- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum.\n"
             f"- COHÉRENCE SECTORIELLE STRICTE : Ancre la réponse dans le secteur réel du prospect.\n"
             f"- INTERDICTION ABSOLUE DE TEMPLATES GÉNÉRIQUES.\n"
@@ -2132,19 +2206,27 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             history=history
         )
 
-        # 5. Fallback sobre
+        # 5. Fallback sobre et contextualisé
         if not reply_text:
             prenom = (lead_data.get('prenom') if lead_data else '') or ''
             prenom_str = f" {prenom}" if prenom else ""
             sec = scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else 'votre activité'
+            msg_low = (user_message or '').lower()
             if is_first_turn:
                 reply_text = f"Bonjour{prenom_str}, c'est Dave Sagbo. Quel est le principal défi ou besoin que vous souhaitez aborder pour {sec} ?"
-            else:
+            elif any(w in msg_low for w in ["sais pas", "sais plus", "identifier", "aucune idée", "comment savoir", "perdu", "difficile à dire"]):
+                reply_text = "Je vais vous aider à le trouver simplement. Est-ce que vos publications sur les réseaux sociaux génèrent au moins quelques messages privés de prospects intéressés chaque semaine ?"
+            elif agent_count == 1:
                 reply_text = f"Pour que je comprenne au mieux votre fonctionnement pour {sec}, quel est le principal goulot d'étranglement dans votre quotidien actuel ?"
+            else:
+                reply_text = "Pour avancer efficacement, vous concentrez plutôt vos efforts sur la création de contenu ou sur la prise de contact directe ?"
 
         # 6. Nettoyage préliminaire
         cleaned = reply_text.strip()
-        if not is_first_turn:
+        if is_first_turn:
+            if not any(phrase in cleaned.lower() for phrase in ["dave sagbo", "c'est dave sagbo"]):
+                cleaned = f"Bonjour, c'est Dave Sagbo. {cleaned}"
+        else:
             for _ in range(3):
                 cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\-\!]*', '', cleaned, flags=re.IGNORECASE).strip()
                 cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo|dave sagbo|ici dave sagbo|dave à l'appareil)[,\.\s\-\!]*", '', cleaned, flags=re.IGNORECASE).strip()
@@ -2162,6 +2244,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             'lead_id': lead_id,
             'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
             'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+            'agent_message_count': agent_count,
             'message_count': len(history) + 1,
             'purchase_signal_detected': bool(scan_purchase),
             'stop_signal_detected': False,

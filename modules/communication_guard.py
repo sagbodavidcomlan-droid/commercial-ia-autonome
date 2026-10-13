@@ -49,14 +49,14 @@ def _detect_topic(message: str) -> str:
     """
     message_lower = message.lower()
     topics = {
-        'linkedin':     ['linkedin', 'réseau professionnel', 'connexion', 'profil linkedin'],
-        'reseaux':      ['réseaux sociaux', 'instagram', 'facebook', 'tiktok', 'publication', 'contenu', 'audience'],
-        'prospection':  ['prospect', 'accroche', 'cold', 'démarchage', 'b2b'],
-        'ecommerce':    ['boutique en ligne', 'e-commerce', 'panier', 'livraison'],
-        'restaurant':   ['réservation', 'table', 'menu', 'client restaurant', 'salle', 'restaurant', 'restauration'],
+        'linkedin':     [r'\blinkedin\b', r'\bréseau professionnel\b', r'\bconnexion\b', r'\bprofil linkedin\b'],
+        'reseaux':      [r'\bréseaux sociaux\b', r'\binstagram\b', r'\bfacebook\b', r'\btiktok\b', r'\bpublication\b', r'\bcontenu\b', r'\baudience\b'],
+        'prospection':  [r'\bprospect\b', r'\baccroche\b', r'\bcold\b', r'\bdémarchage\b', r'\bb2b\b'],
+        'ecommerce':    [r'\bboutique en ligne\b', r'\be-commerce\b', r'\bpanier\b', r'\blivraison\b'],
+        'restaurant':   [r'\bréservation\b', r'\btable\b', r'\bmenu\b', r'\bclient restaurant\b', r'\bsalle\b', r'\brestaurant\b', r'\brestauration\b'],
     }
-    for topic, keywords in topics.items():
-        if any(kw in message_lower for kw in keywords):
+    for topic, regexes in topics.items():
+        if any(re.search(rx, message_lower) for rx in regexes):
             return topic
     return 'général'
 
@@ -64,21 +64,24 @@ def _detect_topic(message: str) -> str:
 def _check_sector_mismatch(message: str, prospect_sector: Optional[str]) -> bool:
     """
     Vérifie si le message parle d'un secteur différent de celui du prospect.
+    Les thématiques transversales de prospection, réseaux ou général ne constituent jamais un mismatch.
     """
-    if not prospect_sector:
+    if not prospect_sector or prospect_sector.lower() in ('inconnu', 'non précisé', 'général', 'autre'):
         return False
     detected = _detect_topic(message)
+    # Les thématiques universelles d'acquisition/vente sont applicables à tous les secteurs
+    if detected in ('général', 'prospection', 'reseaux', 'linkedin'):
+        return False
     sector_map = {
         'restaurant': ['restaurant', 'restauration'],
         'ecommerce':  ['ecommerce', 'boutique', 'e-commerce'],
         'coaching':   ['coaching', 'formation'],
     }
-    # Si le prospect est dans un secteur connu et que le message parle d'un autre secteur connu
-    if detected != 'général':
-        sec_low = prospect_sector.lower()
-        allowed = sector_map.get(detected, [detected])
-        if not any(a in sec_low for a in allowed):
-            return True
+    # Si le prospect est dans un secteur connu et que le message parle d'un autre secteur spécifique
+    sec_low = prospect_sector.lower()
+    allowed = sector_map.get(detected, [detected])
+    if not any(a in sec_low for a in allowed):
+        return True
     return False
 
 
@@ -122,7 +125,7 @@ class CommunicationQualityGuard:
         },
         'reidentification': {
             'check': lambda msg, ctx: (
-                ctx.get('message_count', 0) > 1 and
+                ctx.get('agent_message_count', 0) > 0 and
                 any(phrase in msg.lower() for phrase in [
                     "bonjour, c'est dave sagbo",
                     "bonjour c'est dave sagbo",
@@ -221,6 +224,17 @@ class CommunicationQualityGuard:
             conversation_context['scan_result'] = scan_result
             if not conversation_context.get('prospect_sector'):
                 conversation_context['prospect_sector'] = scan_result.get('profil_prospect', {}).get('secteur_activite')
+
+        # Si un signal d'achat ou closing de diagnostic est activé dans le contexte, synchroniser scan_result
+        if conversation_context.get('purchase_signal_detected'):
+            if 'scan_result' not in conversation_context:
+                conversation_context['scan_result'] = {}
+            if 'instruction_reponse_suivante' not in conversation_context['scan_result']:
+                conversation_context['scan_result']['instruction_reponse_suivante'] = {}
+            conversation_context['scan_result']['instruction_reponse_suivante']['inclure_lien'] = True
+            if 'progression_commerciale' not in conversation_context['scan_result']:
+                conversation_context['scan_result']['progression_commerciale'] = {}
+            conversation_context['scan_result']['progression_commerciale']['signal_achat_detecte'] = True
 
         max_attempts = 2
         current_message = proposed_message
@@ -330,6 +344,9 @@ class CommunicationQualityGuard:
         derniers = scan_result.get('derniers_echanges_analyse', {})
         secteur = scan_result.get('profil_prospect', {}).get('secteur_activite') or ctx.get('prospect_sector', 'inconnu')
 
+        is_link_allowed = bool(ctx.get('purchase_signal_detected') or instruc.get('inclure_lien', False))
+        is_purchase_signal = bool(ctx.get('purchase_signal_detected') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
+
         scoring_prompt = f"""Tu es un superviseur qualité strict pour un directeur commercial.
 Tu as la fiche de contexte complète de la conversation.
 Évalue si le message proposé respecte ce qui était attendu.
@@ -339,9 +356,9 @@ Secteur du prospect : {secteur}
 Besoin principal : {besoins.get('besoin_principal', 'inconnu')}
 Ce que l'agent devait couvrir : {instruc.get('quoi_dire', 'Répondre directement')}
 Ce que l'agent devait éviter : {instruc.get('quoi_eviter', 'Templates génériques')}
-Lien à inclure : {instruc.get('inclure_lien', False)}
+Lien autorisé et attendu : {is_link_allowed}
 Ton recommandé : {instruc.get('ton_recommande', 'empathique')}
-Signal d'achat détecté : {scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False)}
+Signal d'achat / phase de closing détecté : {is_purchase_signal}
 Signal de rupture détecté : {scan_result.get('progression_commerciale', {}).get('signal_rupture')}
 L'agent avait répondu hors sujet avant : {derniers.get('agent_a_repondu_hors_sujet', False)}
 
@@ -375,7 +392,7 @@ Réponds UNIQUEMENT en JSON valide :
 }}
 """
 
-        models_to_try = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
+        models_to_try = ["gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3-flash-preview"]
         import urllib.request
         for mod in models_to_try:
             try:
@@ -434,7 +451,7 @@ Message rejeté (NE PAS reproduire) :
 Génère une réponse entièrement nouvelle de 2 à 3 lignes qui corrige exactement ce problème.
 Vouvoiement strict, naturel direct, zéro formule bannie."""
 
-        models_to_try = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
+        models_to_try = ["gemini-3.5-flash", "gemini-flash-lite-latest", "gemini-3-flash-preview"]
         import urllib.request
         for mod in models_to_try:
             try:

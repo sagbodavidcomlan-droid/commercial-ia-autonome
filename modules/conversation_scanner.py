@@ -61,9 +61,9 @@ class ConversationScanner:
             return None
 
         models_to_try = [
+            "gemini-3.5-flash",
             "gemini-flash-lite-latest",
-            "gemini-3-flash-preview",
-            "gemini-flash-latest"
+            "gemini-3-flash-preview"
         ]
 
         import urllib.request
@@ -305,7 +305,7 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
                 secteur = "service B2B"
 
         # Signal d'achat
-        purchase_cues = ["avez-vous une solution", "avez vous une solution", "que proposez-vous", "comment s'y prendre", "comment commander", "tarif"]
+        purchase_cues = ["avez-vous une solution", "avez vous une solution", "que proposez-vous", "comment s'y prendre", "comment commander", "quel est le tarif", "vos tarifs", "combien ça coûte"]
         is_purchase = any(cue in new_message.lower() for cue in purchase_cues)
 
         # Signal d'arrêt / incompréhension
