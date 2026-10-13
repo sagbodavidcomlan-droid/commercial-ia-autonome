@@ -343,6 +343,9 @@ def init_db():
             ("source_detail", "TEXT"),
             ("referral_code", "TEXT"),
             ("secteur_activite", "TEXT"),
+            ("entreprise", "TEXT"),
+            ("site_web", "TEXT"),
+            ("email_verifie", "INTEGER DEFAULT 0"),
             ("updated_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:

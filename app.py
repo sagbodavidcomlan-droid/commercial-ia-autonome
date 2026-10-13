@@ -52,6 +52,7 @@ from core.meta_messenger_sync import (
     send_whatsapp_cloud_message
 )
 from modules.silent_watcher import watcher_instance
+from modules.composio_enricher import get_enricher
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -411,6 +412,11 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         elif path == "/api/watcher/bugs/update" or path.startswith("/api/watcher/bugs/"):
             bug_id = path.replace("/api/watcher/bugs/", "").strip() if path.startswith("/api/watcher/bugs/") else body.get("bug_id")
             self.handle_api_watcher_update_bug(bug_id, body)
+        elif path.startswith("/api/crm/leads/") and path.endswith("/enrich"):
+            lead_id = path.replace("/api/crm/leads/", "").replace("/enrich", "").strip()
+            self.handle_api_crm_lead_enrich(lead_id)
+        elif path == "/api/enrichment/verify-email":
+            self.handle_api_enrichment_verify_email(body)
         else:
             self.send_json_response({"error": "Route POST introuvable", "path": path}, status=404)
 
@@ -2233,6 +2239,26 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.send_json_response({"success": success, "bug_id": bug_id, "status": new_status})
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    # --- ROUTES ENRICHISSEMENT COMPOSIO / OSINT ---
+    def handle_api_crm_lead_enrich(self, lead_id):
+        try:
+            lead_id_int = int(lead_id)
+            enricher = get_enricher()
+            res = enricher.enrich_lead(lead_id_int)
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_enrichment_verify_email(self, body):
+        try:
+            email = (body.get("email") or "").strip()
+            enricher = get_enricher()
+            res = enricher.verify_email_deliverability(email)
+            self.send_json_response({"success": True, "data": res})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
 
 
 def run_server(port=7860):

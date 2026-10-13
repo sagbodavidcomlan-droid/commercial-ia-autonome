@@ -3342,6 +3342,20 @@ function renderDrawerLeadHeader(lead) {
       emailEl.classList.add("text-slate-400", "italic");
     }
   }
+  // Entreprise & Poste
+  const companyEl = document.getElementById("drawer-lead-company");
+  const jobEl = document.getElementById("drawer-lead-job");
+  if (companyEl) {
+    const comp = lead.entreprise || "";
+    companyEl.textContent = comp || "Non renseignée";
+    companyEl.className = comp ? "font-semibold text-slate-800 text-xs mt-0.5" : "text-slate-400 italic text-xs mt-0.5";
+  }
+  if (jobEl) {
+    const job = lead.poste || "";
+    jobEl.textContent = job || "Non renseigné";
+    jobEl.className = job ? "font-semibold text-slate-800 text-xs mt-0.5 truncate" : "text-slate-400 italic text-xs mt-0.5 truncate";
+  }
+
   // Bannière "Aucune coordonnée" si tout est vide
   const coordBanner = document.getElementById("drawer-no-coord-banner");
   if (coordBanner) {
@@ -3377,6 +3391,48 @@ function renderDrawerLeadHeader(lead) {
   if (durDEl) durDEl.textContent = pain ? "Douleur: Validée (40)" : "Douleur: --";
   if (durUEl) durUEl.textContent = (score >= 60) ? "Urgence: Haute (30)" : "Urgence: Moyenne";
   if (durREl) durREl.textContent = (score >= 75) ? "Ressources: Oui (30)" : "Ressources: En cours";
+}
+
+async function triggerComposioEnrichment() {
+  if (!activeDrawerLeadId) {
+    showToast("Aucun prospect sélectionné", "warning");
+    return;
+  }
+  const btn = document.getElementById("btn-drawer-enrich");
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-indigo-600"></i><span>Enrichissement en cours...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch(`/api/crm/leads/${activeDrawerLeadId}/enrich`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(json.message || "Prospect enrichi avec succès !", "success");
+      // Recharger le drawer
+      await openDrawer(activeDrawerLeadId);
+      // Recharger la liste CRM si disponible
+      if (typeof fetchCrmLeads === "function") {
+        fetchCrmLeads();
+      }
+    } else {
+      showToast(json.error || "Erreur lors de l'enrichissement", "error");
+    }
+  } catch (err) {
+    console.error("Erreur triggerComposioEnrichment:", err);
+    showToast("Erreur de connexion : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
 }
 
 function renderDrawerMessages(messages, leadName) {

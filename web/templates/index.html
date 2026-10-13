@@ -5472,6 +5472,25 @@
           </div>
         </div>
 
+        <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-200/60">
+          <div>
+            <span class="text-[10px] text-slate-400 font-bold uppercase block">Entreprise</span>
+            <div id="drawer-lead-company" class="font-semibold text-slate-800 text-xs mt-0.5">Non renseignée</div>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 font-bold uppercase block">Poste</span>
+            <div id="drawer-lead-job" class="font-semibold text-slate-800 text-xs mt-0.5 truncate">Non renseigné</div>
+          </div>
+        </div>
+
+        <!-- Bouton d'enrichissement automatique Composio -->
+        <div class="pt-1">
+          <button type="button" onclick="triggerComposioEnrichment()" id="btn-drawer-enrich" class="w-full py-1.5 px-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200 flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Enrichir & Valider Coordonnées (Composio)</span>
+          </button>
+        </div>
+
         <div id="drawer-no-coord-banner" class="hidden px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 flex items-center gap-2">
           <i data-lucide="alert-circle" class="w-3.5 h-3.5 shrink-0"></i>
           <span class="font-medium">Aucune coordonnée collectée pour ce prospect.</span>
