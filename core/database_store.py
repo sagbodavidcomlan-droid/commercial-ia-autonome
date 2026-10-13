@@ -251,6 +251,7 @@ def init_db():
             ("prochaine_action_at", "TEXT"),
             ("source_detail", "TEXT"),
             ("referral_code", "TEXT"),
+            ("secteur_activite", "TEXT"),
             ("updated_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
@@ -625,6 +626,34 @@ def init_db():
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    # 13. Table des scans intégraux de conversation (ConversationScanner)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS conversation_scans (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL,
+        scan_json TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_scan_lead ON conversation_scans(lead_id, created_at)")
+
+    # 14. Table d'audit de qualité des communications (CommunicationQualityGuard)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS guard_quality_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER,
+        canal TEXT,
+        attempt_count INTEGER,
+        final_score REAL,
+        status TEXT,  -- validated | fallback
+        criteria_json TEXT,  -- JSON des critères évalués
+        created_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_guard_lead ON guard_quality_logs(lead_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_guard_date ON guard_quality_logs(created_at)")
+
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide

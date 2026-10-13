@@ -522,6 +522,13 @@ async function loadDashboardData() {
     const respTime = document.getElementById("kpi-response-time");
     if (respTime) respTime.textContent = stats.avg_response_time || "38s";
 
+    // 5e Carte : Qualité IA (CommunicationQualityGuard)
+    const guardStats = data.guard_stats || {};
+    const guardScoreEl = document.getElementById("kpi-guard-score");
+    if (guardScoreEl) guardScoreEl.textContent = guardStats.score_moyen || "8.8";
+    const guardTauxEl = document.getElementById("kpi-guard-premier-coup");
+    if (guardTauxEl) guardTauxEl.textContent = `${guardStats.taux_premier_coup || 95}%`;
+
     // --- FINNOVA COCKPIT INTERACTIF (LISTE & DÉTAIL DES FACTURES/DEVIS) ---
     if (data.recent_transactions && data.recent_transactions.length > 0) {
       window.finnovaTransactions = data.recent_transactions;

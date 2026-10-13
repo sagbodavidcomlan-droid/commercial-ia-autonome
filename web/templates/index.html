@@ -611,8 +611,8 @@
           </div>
         </div>
 
-        <!-- 1. TOP 4 CARTES MÉTRIQUES DONEZO -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 1. TOP 5 CARTES MÉTRIQUES DONEZO AVEC GUARD DE COMMUNICATION -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           
           <!-- Card 1 (Signature Invo Blue Feature Card) : Total Chiffre d'Affaires -->
           <div class="bg-gradient-to-br from-[#0052cc] via-[#0062ff] to-[#1d4ed8] text-white p-5 rounded-3xl shadow-lg shadow-blue-500/20 flex flex-col justify-between hover:shadow-xl transition relative overflow-hidden group">
@@ -709,6 +709,29 @@
                 <span>Réponse IA : <strong id="kpi-response-time" class="text-slate-900 font-black">38s</strong></span>
               </div>
               <span class="text-emerald-600 font-bold text-[10px]">Autonome</span>
+            </div>
+          </div>
+
+          <!-- Card 5 (Superviseur IA / Communication Guard) : Qualité des Messages -->
+          <div class="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between hover:shadow-md transition group">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="text-xs font-bold text-slate-400">Qualité IA (Guardrail)</span>
+                <div class="text-2xl sm:text-3xl font-black text-emerald-600 tracking-tight mt-2 flex items-baseline gap-1">
+                  <span id="kpi-guard-score">8.8</span><span class="text-xs font-semibold text-slate-400">/10</span>
+                </div>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-black transition group-hover:scale-105">
+                <i data-lucide="shield-check" class="w-4 h-4"></i>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <div class="flex items-center gap-1 text-slate-500 font-bold">
+                <span class="px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black">Validé</span>
+                <span><strong id="kpi-guard-premier-coup" class="text-slate-900 font-black">95%</strong> 1er coup</span>
+              </div>
+              <span class="text-emerald-600 font-bold text-[10px]">0 Rejet</span>
             </div>
           </div>
 

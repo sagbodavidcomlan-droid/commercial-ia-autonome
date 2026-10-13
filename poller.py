@@ -562,31 +562,14 @@ def process_pending_conversation(conv: Dict[str, Any]) -> bool:
 
     try:
         # 1. Reconstituer l'historique complet
-        gemini_messages, situation, lead = build_full_conversation_context(lead_id)
-
-        # 2. Directives contextuelles temporelles
-        attente_context = get_attente_context(minutes_attente, lead)
-
-        # 3. Construire le Master System Prompt
-        system_prompt = (
-            f"{SYSTEM_PROMPT}\n\n"
-            f"=== CONTEXTE D'EXÉCUTION POLLER 24/7 ===\n"
-            f"{situation}\n"
-            f"{attente_context}\n"
+        # 1. Utiliser le moteur conversationnel expert unifié (sécurisé par Scanner & Guard)
+        last_msg = conv.get("dernier_message_prospect", "")
+        message_agent = ai_sales_agent.generate_conversational_reply(
+            lead_id=lead_id,
+            user_message=last_msg,
+            channel=conv.get("canal_source", "FACEBOOK_MESSENGER"),
+            lead_data=lead
         )
-
-        # 4. Inférence Gemini
-        message_agent = call_gemini_full_context(gemini_messages, system_prompt)
-
-        # 5. Fallback si indisponibilité Gemini
-        if not message_agent:
-            last_msg = conv.get("dernier_message_prospect", "")
-            message_agent = ai_sales_agent.generate_conversational_reply(
-                lead_id=lead_id,
-                user_message=last_msg,
-                channel=conv.get("canal_source", "FACEBOOK_MESSENGER"),
-                lead_data=lead
-            )
 
         if not message_agent or len(message_agent.strip()) < 5:
             logger.warning(f"Impossible de générer une réponse pour lead #{lead_id}")

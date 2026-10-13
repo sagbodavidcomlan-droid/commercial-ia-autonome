@@ -25,6 +25,13 @@ if ROOT_DIR not in sys.path:
 from core.catalog_engine import CatalogEngine
 from modules.config_loader import get_active_config
 from core.database_store import get_lead_messages, get_connection
+from modules.conversation_scanner import ConversationScanner
+from modules.communication_guard import (
+    CommunicationQualityGuard,
+    _detect_tutoiement,
+    _detect_topic,
+    _check_sector_mismatch
+)
 
 # ==============================================================================
 # SECTION 5 : MASTER SYSTEM PROMPT OFFICIEL UNIQUE (TOUTES PHASES)
@@ -219,6 +226,8 @@ class AISalesAgent:
         self.config = get_active_config()
         self.catalog = CatalogEngine()
         self.api_key = os.getenv("GEMINI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        self.scanner = ConversationScanner()
+        self.guard = CommunicationQualityGuard()
 
     def _get_gemini_key(self) -> Optional[str]:
         gemini_key = os.getenv("GEMINI_API_KEY")
@@ -1579,7 +1588,7 @@ Réponds UNIQUEMENT en JSON avec ce schéma exact :
 
         gemini_key = self._get_gemini_key()
         if gemini_key:
-            models_to_try = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+            models_to_try = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
             for mod in models_to_try:
                 try:
                     import urllib.request
@@ -1678,7 +1687,7 @@ Réponds UNIQUEMENT en JSON avec ce format :
 
         gemini_key = self._get_gemini_key()
         if gemini_key:
-            models_to_try = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"]
+            models_to_try = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
             for mod in models_to_try:
                 try:
                     import urllib.request
@@ -1894,7 +1903,7 @@ RÈGLES STRICTES :
             gemini_contents = [{"role": "user", "parts": [{"text": new_user_message.strip()}]}]
 
         # Modèles ordonnés par efficacité et disponibilité testée
-        models = ["gemini-3-flash-preview", "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash", "gemini-flash-latest"]
+        models = ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"]
         for mod in models:
             try:
                 import urllib.request
@@ -1906,10 +1915,7 @@ RÈGLES STRICTES :
                     "contents": gemini_contents,
                     "generationConfig": {
                         "temperature": 0.7,
-                        "maxOutputTokens": 1500,
-                        "thinkingConfig": {
-                            "thinkingBudget": 0
-                        }
+                        "maxOutputTokens": 1500
                     }
                 }
                 req = urllib.request.Request(
@@ -1933,6 +1939,67 @@ RÈGLES STRICTES :
                 logger.warning(f"Appel Gemini plein contexte ({mod}) : {e}")
 
         return None
+    def build_agent_prompt_from_scan(self, scan_result: Dict[str, Any], system_prompt: str) -> str:
+        """
+        Construit le prompt de génération en injectant la fiche de contexte du scanner.
+        L'agent sait exactement où il en est, ce que le prospect veut, et quoi répondre.
+        """
+        profil = scan_result.get('profil_prospect', {})
+        besoins = scan_result.get('besoins_identifies', {})
+        prog = scan_result.get('progression_commerciale', {})
+        instruc = scan_result.get('instruction_reponse_suivante', {})
+        offre = scan_result.get('offre_recommandee', {})
+        derniers = scan_result.get('derniers_echanges_analyse', {})
+
+        context_injection = f"""
+=== FICHE DE CONTEXTE DU SCANNER — LECTURE OBLIGATOIRE ===
+SYNTHÈSE DE TOUTE LA CONVERSATION :
+{scan_result.get('synthese_conversation', {}).get('resume', 'En cours d échange')}
+
+SECTEUR DU PROSPECT : {profil.get('secteur_activite', 'non identifié')}
+REGISTRE DE LANGAGE : {profil.get('registre_langage', 'semi-formel')}
+PROFIL DISC : {profil.get('profil_disc_estime', 'inconnu')}
+
+BESOIN PRINCIPAL IDENTIFIÉ :
+{besoins.get('besoin_principal', 'non encore identifié')}
+
+BESOINS SECONDAIRES :
+{chr(10).join('- ' + str(b) for b in besoins.get('besoins_secondaires', [])) if besoins.get('besoins_secondaires') else '- Aucun besoin annexe spécifié'}
+
+DOULEURS EXPRIMÉES PAR LE PROSPECT :
+{chr(10).join('- ' + str(d) for d in besoins.get('douleurs_explicites', [])) if besoins.get('douleurs_explicites') else '- Aucune douleur explicite'}
+
+PHASE COMMERCIALE ACTUELLE : {prog.get('phase_actuelle', 'setter')}
+SIGNAL D'ACHAT : {'OUI — ' + str(prog.get('signal_achat_detail')) if prog.get('signal_achat_detecte') else 'NON'}
+OBJECTION EN COURS : {prog.get('objection_en_cours', 'aucune')}
+SIGNAL DE RUPTURE : {prog.get('signal_rupture', 'aucun')}
+
+OFFRE RECOMMANDÉE PAR LE SCANNER :
+{offre.get('titre', 'non déterminée')} — {offre.get('prix_fcfa', '')} FCFA
+{offre.get('justification', '')}
+Lien officiel : {offre.get('lien', '')}
+
+ANALYSE DES DERNIERS ÉCHANGES :
+- L'agent a répondu hors sujet précédemment : {derniers.get('agent_a_repondu_hors_sujet', False)}
+- L'agent a utilisé un template : {derniers.get('agent_a_utilise_template', False)}
+- Question du prospect restée sans réponse : {derniers.get('question_sans_reponse', 'aucune')}
+
+CE QUE TU DOIS COUVRIR DANS TA RÉPONSE :
+{instruc.get('quoi_dire', 'Répondre directement et naturellement')}
+
+CE QUE TU DOIS ABSOLUMENT ÉVITER :
+{instruc.get('quoi_eviter', 'Templates génériques et exemples hors secteur')}
+
+TON RECOMMANDÉ : {instruc.get('ton_recommande', 'empathique')}
+LONGUEUR RECOMMANDÉE : {instruc.get('longueur_recommandee', '2-3 lignes')}
+INCLURE LE LIEN : {'OUI — ' + str(instruc.get('raison_inclure_lien')) if instruc.get('inclure_lien') else 'NON — pas de signal d accord explicite'}
+=== FIN FICHE DE CONTEXTE ===
+
+Génère maintenant ta réponse en respectant strictement cette fiche.
+Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite', 'du prospect')}) et le contexte réel ci-dessus.
+"""
+        return system_prompt + "\n\n" + context_injection
+
     def generate_conversational_reply(
         self,
         lead_id: int,
@@ -1943,13 +2010,25 @@ RÈGLES STRICTES :
     ) -> str:
         """
         Génère une réponse conversationnelle experte en respectant rigoureusement
-        les règles d'or du cours d'apprentissage et la règle 10 de sortie de diagnostic.
+        les règles d'or du cours d'apprentissage, sécurisée par ConversationScanner et CommunicationQualityGuard.
         """
         import re
+
+        # ÉTAPE 0 : SCANNER — LECTURE COMPLÈTE ET STRUCTURÉE DE TOUTE LA CONVERSATION
+        scan_result = None
+        full_history = []
+        if lead_id:
+            try:
+                scan_result, full_history = self.scanner.scan(
+                    lead_id=lead_id,
+                    new_message=user_message
+                )
+            except Exception as e_scan:
+                logger.warning(f"Note scan initial lead #{lead_id} : {e_scan}")
+
         if history is None:
-            history = get_lead_messages(lead_id) if lead_id else []
+            history = full_history if full_history else (get_lead_messages(lead_id) if lead_id else [])
         else:
-            # Normaliser l'historique fourni (format simulateur ou web)
             norm_history = []
             for h in history:
                 raw_snd = str(h.get("sender") or "").upper()
@@ -1962,101 +2041,89 @@ RÈGLES STRICTES :
                 norm_history.append({"sender": snd, "message": msg_txt, "channel": channel})
             history = norm_history
 
-        agent_msgs = [m for m in history if m.get("sender") == "AGENT"]
+        agent_msgs = [m for m in history if m.get("sender") == "AGENT" or m.get("role") == "model"]
         agent_count = len(agent_msgs)
         is_first_turn = (agent_count == 0)
 
-        msg_clean = (user_message or "").strip()
-        msg_lower = msg_clean.lower()
+        # Vérifier si le scanner a repéré un signal d'arrêt ou d'incompréhension
+        scan_rupture = scan_result.get('progression_commerciale', {}).get('signal_rupture') if scan_result else None
+        scan_purchase = scan_result.get('progression_commerciale', {}).get('signal_achat_detecte') if scan_result else False
 
-        last_agent_msg = agent_msgs[-1].get("message", "") if agent_msgs else ""
-        last_agent_lower = last_agent_msg.lower()
-
-        # Évaluation diagnostique DUR et plafond de questions
-        diag_res = self.is_diagnostic_complete(lead_id, history, user_message, lead_data)
-        is_diagnostic_confirmed = diag_res["is_complete"]
-
-        # Si le diagnostic est complet, synchroniser immédiatement crm_leads
-        if is_diagnostic_confirmed and lead_id:
-            try:
-                conn = get_connection()
-                c = conn.cursor()
-                c.execute("""
-                    UPDATE crm_leads
-                    SET diagnostic_complet = 1,
-                        phase_actuelle = 'closer',
-                        douleur_identifiee = COALESCE(douleur_identifiee, ?),
-                        offre_matchee = ?,
-                        score_dur = 85,
-                        statut_lead = 'Chaud',
-                        temperature = 'Chaud'
-                    WHERE id = ?
-                """, (diag_res["douleur_identifiee"], diag_res["matched_offer"], lead_id))
-                conn.commit()
-                conn.close()
-            except Exception as e_db:
-                logger.warning(f"Note synchronisation crm_leads sortie diagnostic : {e_db}")
-
-        # Détection de signaux de confusion / "je ne sais pas"
-        confusion_signals = [
-            "ne sais pas", "sais pas", "comment l'identifier", "comment savoir",
-            "pas sûr", "aucune idée", "pas d'idée", "comment faire pour savoir",
-            "comment trouver", "je sais pas trop", "je ne comprends pas"
-        ]
-        is_confusion = any(s in msg_lower for s in confusion_signals)
-        is_levels_question = any(w in last_agent_lower for w in ["trois niveaux", "3 niveaux", "lequel de ces trois", "lequel vous parle", "blocage se situe"])
-
-        reply_text = None
-
-        # 1. ÉTAPE PRIORITAIRE ABSOLUE : Détection des signaux de rupture (stop, incompréhension, bot, irritation, réflexion)
-        distress = self.detect_distress_signal(user_message, history)
+        # 1. ÉTAPE SIGNAUX DE RUPTURE (Stop, Incompréhension, Réflexion)
+        distress = self.detect_distress_signal(user_message, history) or scan_rupture
         if distress:
             lead_info = lead_data or {}
-            reply_text = self.handle_distress_signal(distress, lead_id, lead_info, conversation_history=history)
-            return reply_text
+            proposed = self.handle_distress_signal(distress, lead_id, lead_info, conversation_history=history)
+            # Valider également la réponse de sortie par le Guard
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': False,
+                'stop_signal_detected': distress == 'stop' or distress == 'arret',
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
 
         # 2. ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
-        # Quand le prospect demande explicitement s'il y a une solution ou manifeste un signal d'achat clair
-        if self.detect_purchase_signal(user_message):
+        if self.detect_purchase_signal(user_message) or scan_purchase:
             lead_info = lead_data or {}
-            reply_text = self.handle_purchase_signal(lead_id, lead_info, conversation_history=history)
-            return reply_text
+            proposed = self.handle_purchase_signal(lead_id, lead_info, conversation_history=history)
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
 
-        # 3. ÉTAPE OUVERTURE : Si c'est le tout premier message du prospect ou du dialogue
+        # 3. ÉTAPE OUVERTURE : Premier contact
         if is_first_turn:
             opening_type = self.detect_opening_type(user_message)
             lead_info = lead_data or {}
             custom_opening = self.build_opening_response(opening_type, lead_info)
             if custom_opening:
-                return custom_opening
+                conversation_context = {
+                    'lead_id': lead_id,
+                    'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                    'last_agent_message': "",
+                    'message_count': 1,
+                    'purchase_signal_detected': False,
+                    'stop_signal_detected': False,
+                    'last_prospect_message': user_message,
+                    'conversation_history': history,
+                    'canal': channel
+                }
+                validated = self.guard.evaluate_and_validate(custom_opening, conversation_context, scan_result)
+                return validated['message']
 
-        # 4. Inférence Gemini avec Contexte Complet, Règle 22 à 26 et Historique multi-tours
-        system_prompt = (
+        # 4. Inférence Gemini avec Contexte Enrichi par le Scanner
+        base_system = (
             f"{SYSTEM_PROMPT}\n\n"
             f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
             f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
             f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
+            f"- INTERDICTION STRICTE de dire Bonjour ou Bonsoir (hors 1er message).\n"
+            f"- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
+            f"- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum.\n"
+            f"- COHÉRENCE SECTORIELLE STRICTE : Ancre la réponse dans le secteur réel du prospect.\n"
+            f"- INTERDICTION ABSOLUE DE TEMPLATES GÉNÉRIQUES.\n"
         )
-        if is_first_turn:
-            system_prompt += "- Il s'agit du premier échange. Identifie-toi sobrement ('Bonjour, c'est Dave Sagbo.').\n"
-        else:
-            system_prompt += (
-                "- INTERDICTION STRICTE de dire Bonjour ou Bonsoir.\n"
-                "- INTERDICTION STRICTE de te présenter ('C'est Dave Sagbo') ou de signer.\n"
-                "- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum avec une parfaite clarté.\n"
-                "- Lis l'INTÉGRALITÉ des échanges précédents pour rester 100% cohérent avec ce qui a été dit.\n"
-                "- COHÉRENCE SECTORIELLE STRICTE : Identifie le secteur réel (ex: restaurant, e-commerce, formation) et parle UNIQUEMENT de ce secteur.\n"
-                "- ZÉRO PHRASE TRONQUÉE : Termine TOUJOURS complètement tes phrases par un point ou un point d'interrogation.\n"
-                "- INTERDICTION ABSOLUE DE TEMPLATES GÉNÉRIQUES : N'utilise jamais 'le blocage se situe à l'un de ces 3 niveaux', 'vos prospects jugent un chiffre avant de comprendre', etc.\n"
-                "- COMPORTEMENT HUMAIN EXPERT : Sois chaleureux, pragmatique et à l'écoute comme un vrai directeur commercial.\n"
-            )
 
-        if is_diagnostic_confirmed:
-            system_prompt += (
-                f"- Le diagnostic est complet. Offre sélectionnée : {diag_res.get('matched_offer')}. "
-                f"Lien officiel : {diag_res.get('offer_url')}.\n"
-                "- Présente directement l'offre avec son lien en expliquant le bénéfice concret pour son secteur.\n"
-            )
+        if scan_result:
+            system_prompt = self.build_agent_prompt_from_scan(scan_result, base_system)
+        else:
+            system_prompt = base_system
 
         reply_text = self.call_gemini_with_full_context(
             lead_id=lead_id,
@@ -2065,16 +2132,17 @@ RÈGLES STRICTES :
             history=history
         )
 
-        # 5. Fallback contextuel sobre sans template rigide recyclé
+        # 5. Fallback sobre
         if not reply_text:
             prenom = (lead_data.get('prenom') if lead_data else '') or ''
             prenom_str = f" {prenom}" if prenom else ""
+            sec = scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else 'votre activité'
             if is_first_turn:
-                reply_text = f"Bonjour{prenom_str}, c'est Dave Sagbo. Quel est le principal défi ou besoin que vous souhaitez aborder pour votre activité ?"
+                reply_text = f"Bonjour{prenom_str}, c'est Dave Sagbo. Quel est le principal défi ou besoin que vous souhaitez aborder pour {sec} ?"
             else:
-                reply_text = f"C'est bien noté{prenom_str}. Pour que je comprenne au mieux votre fonctionnement, quel est le principal goulot d'étranglement dans votre quotidien actuel ?"
+                reply_text = f"Pour que je comprenne au mieux votre fonctionnement pour {sec}, quel est le principal goulot d'étranglement dans votre quotidien actuel ?"
 
-        # 6. Post-traitement et nettoyage
+        # 6. Nettoyage préliminaire
         cleaned = reply_text.strip()
         if not is_first_turn:
             for _ in range(3):
@@ -2089,12 +2157,32 @@ RÈGLES STRICTES :
         if cleaned and cleaned[0].islower():
             cleaned = cleaned[0].upper() + cleaned[1:]
 
-        if channel.upper() in ("FACEBOOK_MESSENGER", "WHATSAPP", "MESSENGER"):
-            lines = [l.strip() for l in cleaned.split("\n") if l.strip()]
-            if len(lines) > 4:
-                cleaned = "\n\n".join(lines[:4])
+        # 7. SUPERVISION QUALITÉ OBLIGATOIRE : CommunicationQualityGuard
+        conversation_context = {
+            'lead_id': lead_id,
+            'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+            'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+            'message_count': len(history) + 1,
+            'purchase_signal_detected': bool(scan_purchase),
+            'stop_signal_detected': False,
+            'last_prospect_message': user_message,
+            'conversation_history': history,
+            'canal': channel
+        }
 
-        return cleaned
+        validated = self.guard.evaluate_and_validate(
+            proposed_message=cleaned,
+            conversation_context=conversation_context,
+            scan_result=scan_result
+        )
+
+        final_msg = validated['message'].strip()
+        if channel.upper() in ("FACEBOOK_MESSENGER", "WHATSAPP", "MESSENGER"):
+            lines = [l.strip() for l in final_msg.split("\n") if l.strip()]
+            if len(lines) > 4:
+                final_msg = "\n\n".join(lines[:4])
+
+        return final_msg
 
 
 if __name__ == "__main__":
