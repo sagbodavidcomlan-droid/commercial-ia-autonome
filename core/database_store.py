@@ -356,132 +356,8 @@ def init_db():
         prod_setting = cursor.fetchone()
         is_production_mode = (prod_setting and prod_setting[0] == '1')
 
-        # Ingestion des leads de référence du cours UNIQUEMENT si le mode production n'est pas actif
-        if not is_production_mode:
-            curriculum_leads = [
-                ("Gérard Houessou", "+22997000101", "gerard.restaurant@gmail.com", "Facebook Messenger", "Relance WhatsApp & Automatisation", 85, "Tiède", "Restaurateur / Chef d'entreprise",
-                 "A partagé dans une discussion professionnelle qu'il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.",
-                 "Chef d'entreprise débordé par le volume de conversations entrantes sur WhatsApp.",
-                 "Point de départ : constat du temps perdu en relances manuelles", "setter", "S", "MESSENGER", "MESSENGER"),
-                ("Awa Diallo", "+221770000202", "awa.design@orange.sn", "LinkedIn", "Graphisme & Canva", 78, "Tiède", "Graphiste indépendante",
-                 "A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.",
-                 "Graphiste talentueuse cherchant à professionnaliser son image de marque.",
-                 "Point de départ : valorisation de ses créations et structuration de ses offres", "setter", "S", "LINKEDIN", "LINKEDIN"),
-                ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "WhatsApp Business", "Kit Vidéaste Smartphone", 70, "Tiède", "Créateur de contenu mobile",
-                 "A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.",
-                 "Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.",
-                 "Point de départ : recommandation bienveillante sur la qualité de prise de vue", "setter", "S", "WHATSAPP", "WHATSAPP"),
-                ("Alain Degila", "+225070000303", "alain.degila@pme.ci", "Emailing Pro", "Audit Digital & Site Vitrine Express", 65, "Tiède", "Directeur de PME commerciale",
-                 "Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.",
-                 "Directeur de PME commerciale avec une visibilité web sous-optimale.",
-                 "Point de départ : opportunité de crédibilité client grâce à un site vitrine", "setter", "S", "EMAIL", "EMAIL"),
-                ("Sékou Traoré", "+223700000404", "sekou.invest@groupe.ml", "LinkedIn", "Parcelle Viabilisée Titre Foncier", 90, "Chaud", "Investisseur immobilier",
-                 "A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.",
-                 "Investisseur sérieux et prudent recherchant la sécurité juridique absolue.",
-                 "Point de départ : partage d'expertise sur la sécurisation foncière", "closer", "C", "LINKEDIN", "LINKEDIN")
-            ]
-            for nom, tel, mail, src, interet, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act in curriculum_leads:
-                cursor.execute("SELECT id FROM crm_leads WHERE nom_complet = ? OR nom_lead = ?", (nom, nom))
-                row_lead = cursor.fetchone()
-                parts = nom.split()
-                p_prenom = parts[0]
-                p_nom = " ".join(parts[1:]) if len(parts) > 1 else ""
-                if not row_lead:
-                    cursor.execute("""
-                    INSERT INTO crm_leads (
-                        prenom, nom, nom_complet, nom_lead, telephone, whatsapp, email, source_contact, source_canal,
-                        centre_interet, score_qualification, score_dur, statut_lead, poste,
-                        declencheur_prospection, observation_source, contexte_approche,
-                        phase_actuelle, profil_disc, canal_source, canal_actuel, created_at, date_creation
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-                    """, (p_prenom, p_nom, nom, nom, tel, tel, mail, src, c_src, interet, sc, sc, st, pst, decl, obs, ctx_app, phase, disc, c_src, c_act))
-                else:
-                    cursor.execute("""
-                    UPDATE crm_leads
-                    SET prenom = COALESCE(NULLIF(prenom, ''), ?),
-                        nom = COALESCE(NULLIF(nom, ''), ?),
-                        declencheur_prospection = ?, observation_source = ?, contexte_approche = ?,
-                        source_canal = ?, canal_source = ?, canal_actuel = ?, poste = ?, centre_interet = ?
-                    WHERE id = ?
-                    """, (p_prenom, p_nom, decl, obs, ctx_app, c_src, c_src, c_act, pst, interet, row_lead[0]))
-
-        # Mise à jour et ancrage garanti de David SAGBO (Lead #222)
-        cursor.execute("""
-        UPDATE crm_leads 
-        SET prenom = 'David', nom = 'SAGBO', nom_complet = 'David SAGBO', nom_lead = 'David SAGBO',
-            telephone = '+22997000202', whatsapp = '+22997000202', email = 'david.sagbo@gmail.com',
-            poste = 'Directeur & Fondateur',
-            centre_interet = 'Automatisation Commerciale & Closing IA',
-            douleur_identifiee = 'Besoin de déployer l''agent de prospection IA et auditer les conversions',
-            source_canal = 'WHATSAPP', canal_source = 'whatsapp', canal_actuel = 'WHATSAPP',
-            statut_lead = 'Chaud', phase_actuelle = 'closer'
-        WHERE id = 222
-        """)
-
-        # Synchronisation et décomposition systématique de prénom & nom pour tous les leads sans inventer de fausses identités
-        cursor.execute("SELECT id, prenom, nom, nom_complet, nom_lead, telephone, email, douleur_identifiee, centre_interet, poste, canal_source, source_canal FROM crm_leads")
-        existing_all = cursor.fetchall()
-        for r in existing_all:
-            l_id = r[0]
-            pr = (r[1] or "").strip()
-            nm = (r[2] or "").strip()
-            fc = (r[3] or r[4] or "").strip()
-            src_c = str(r[10] or r[11] or "").lower()
-            is_placeholder = not fc or "prospect" in fc.lower() or "contact" in fc.lower() or fc.startswith("#")
-            
-            if is_placeholder:
-                if not pr:
-                    pr = "Contact" if ("whatsapp" in src_c or "messenger" in src_c or "facebook" in src_c) else "Prospect"
-                if not nm:
-                    nm = f"#{l_id}"
-                fc = f"{pr} {nm}".strip()
-                cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
-            elif not pr or not nm:
-                parts = fc.split()
-                pr = parts[0] if parts else "Prospect"
-                nm = " ".join(parts[1:]) if len(parts) > 1 else ""
-                cursor.execute("UPDATE crm_leads SET prenom = ?, nom = ?, nom_complet = ?, nom_lead = ? WHERE id = ?", (pr, nm, fc, fc, l_id))
-
-            # Enrichissement contextuel des déclencheurs de prospection uniques
-            cursor.execute("""
-            UPDATE crm_leads 
-            SET declencheur_prospection = 'A partagé dans une discussion professionnelle qu''il passait ses soirées à relancer manuellement ses prospects WhatsApp sans réussir à traiter toutes les demandes.',
-                observation_source = 'Chef d''entreprise débordé par le volume de conversations entrantes sur WhatsApp.',
-                contexte_approche = 'Point de départ : constat du temps perdu en relances manuelles'
-            WHERE (nom_complet LIKE '%Gérard%' OR nom_lead LIKE '%Gérard%')
-            """)
-
-            cursor.execute("""
-            UPDATE crm_leads 
-            SET declencheur_prospection = 'A posté sur LinkedIn un aperçu de ses créations graphiques tout en partageant sa difficulté à valoriser ses prix et stabiliser son flux de commandes.',
-                observation_source = 'Graphiste talentueuse cherchant à professionnaliser son image de marque.',
-                contexte_approche = 'Point de départ : valorisation de ses créations et structuration de ses offres'
-            WHERE (nom_complet LIKE '%Awa%' OR nom_lead LIKE '%Awa%')
-            """)
-
-            cursor.execute("""
-            UPDATE crm_leads 
-            SET declencheur_prospection = 'A publié une vidéo de démonstration avec son smartphone en demandant des conseils pour stabiliser ses plans et éliminer les bruits parasites.',
-                observation_source = 'Créateur de contenu motivé démarrant avec les moyens du bord sur mobile.',
-                contexte_approche = 'Point de départ : recommandation bienveillante sur la qualité de prise de vue'
-            WHERE (nom_complet LIKE '%Koffi%' OR nom_lead LIKE '%Koffi%')
-            """)
-
-            cursor.execute("""
-            UPDATE crm_leads 
-            SET declencheur_prospection = 'Son entreprise B2B communique uniquement via une page Facebook informelle sans vitrine digitale ni nom de domaine propre.',
-                observation_source = 'Directeur de PME commerciale avec une visibilité web sous-optimale.',
-                contexte_approche = 'Point de départ : opportunité de crédibilité client grâce à un site vitrine'
-            WHERE (nom_complet LIKE '%Alain%' OR nom_lead LIKE '%Alain%')
-            """)
-
-            cursor.execute("""
-            UPDATE crm_leads 
-            SET declencheur_prospection = 'A commenté une actualité immobilière en exprimant son angoisse face aux risques de litiges sur des terrains sans titre foncier garanti.',
-                observation_source = 'Investisseur sérieux et prudent recherchant la sécurité juridique absolue.',
-                contexte_approche = 'Point de départ : partage d''expertise sur la sécurisation foncière'
-            WHERE (nom_complet LIKE '%Sékou%' OR nom_lead LIKE '%Sékou%')
-            """)
+        # Mode 100% réel : aucun lead de test/curriculum n'est inséré en dur
+        pass
     except Exception as e:
         logger.warning(f"Migration crm_leads : {e}")
 
@@ -750,38 +626,8 @@ def seed_initial_data(conn):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (slot, title, desc, chan, status, out, today_str, ev_type, contact, link, now_iso))
 
-    # En mode production, on ne génère AUCUN faux lead ni faux client
-    if not is_prod:
-        # 3. Exemples de Leads CRM
-        sample_leads = [
-            ("Koffi Mensah", "+22997112233", "koffi.mensah@gmail.com", "Facebook Ads Library", "Graphisme Canva", 88, "Chaud", 1, "Intéressé par le pack vacances. A demandé comment payer par MTN Mobile Money.", 0),
-            ("Awa Diallo", "+22177123456", "awa.diallo@orange.sn", "LinkedIn", "Marketing Digital", 76, "Chaud", 1, "Étudiante en master, souhaite se former au community management.", 0),
-            ("Yannick Kamga", "+23769123456", "yannick@kamga.cm", "TikTok Ads", "Freelance & Web", 65, "Tiède", 2, "A demandé un aperçu vidéo du programme.", 0),
-            ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Facebook Group", "Graphisme Canva", 94, "Converti", 1, "Paiement validé 15 000 FCFA par Wave.", 0),
-            ("Jean-Baptiste Dossou", "+22996001122", "jb.dossou@gmail.com", "WhatsApp Inbound", "Marketing", 30, "Rejeté", 0, "A envoyé STOP. Désinscrit conformément au RGPD.", 1)
-        ]
-
-        for nom, phone, email, src, interet, score, statut, relances, notes, opt in sample_leads:
-            cursor.execute("""
-            INSERT INTO crm_leads (
-                nom_complet, whatsapp, email, source_contact, centre_interet, score_qualification,
-                statut_lead, nombre_relances, historique_interactions, opt_out, created_at, last_interaction
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (nom, phone, email, src, interet, score, statut, relances, notes, opt, now_iso, now_iso))
-
-        # 4. Exemples de Clients
-        sample_customers = [
-            ("Marcelle Kouassi", "+22507112233", "marcelle@yahoo.fr", "Pack Graphisme Pro & Canva", 15000, "Wave Mobile Money", today_str, 9, "Actif (Affilié)"),
-            ("Ibrahim Traoré", "+22670123456", "ibrahim@faso.bf", "Pack Digital Starter", 15000, "Orange Money", today_str, 10, "Top Partenaire"),
-            ("Sonia Lawson", "+22890123456", "sonia.lawson@togo.tg", "Masterclass Complète VIP", 45000, "Carte Bancaire", today_str, 8, "Sollicité")
-        ]
-
-        for nom, phone, email, prod, montant, mode, dte, nps, amb in sample_customers:
-            cursor.execute("""
-            INSERT INTO crm_customers (
-                nom_complet, whatsapp, email, produit_achete, montant_paye, mode_paiement, date_achat, satisfaction_nps, statut_ambassadeur, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (nom, phone, email, prod, montant, mode, dte, nps, amb, now_iso))
+    # Aucun faux lead ni faux client n'est injecté : seuls les vrais leads issus des agents ou webhooks doivent exister
+    pass
 
     # 5. Registre RGPD
     cursor.execute("""
@@ -1772,8 +1618,52 @@ def get_or_create_lead(
     conn = get_connection()
     c = conn.cursor()
     try:
-        c.execute("SELECT id, prenom, nom, nom_complet, conversation_count FROM crm_leads WHERE canal_id = ?", (canal_id,))
-        lead = c.fetchone()
+        # 1. Recherche exhaustive du lead existant à travers TOUS ses identifiants
+        phone_val = kwargs.get("whatsapp") or kwargs.get("telephone")
+        phone = str(phone_val).strip() if phone_val and str(phone_val).strip() else None
+
+        email_val = kwargs.get("email")
+        email = str(email_val).strip() if email_val and str(email_val).strip() else None
+
+        psid_val = kwargs.get("facebook_psid")
+        psid = str(psid_val).strip() if psid_val and str(psid_val).strip() else None
+
+        # Construction dynamique des conditions de recherche pour éviter les faux doublons
+        conditions = []
+        params = []
+
+        if canal_id:
+            conditions.append("canal_id = ?")
+            params.append(canal_id)
+        if psid:
+            conditions.append("facebook_psid = ?")
+            params.append(psid)
+            # Cas où canal_id était stocké sous la forme messenger_<psid> ou fb_audience_<psid>
+            conditions.append("canal_id = ?")
+            params.append(f"messenger_{psid}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_audience_{psid}")
+        if phone:
+            conditions.append("whatsapp = ?")
+            params.append(phone)
+            conditions.append("telephone = ?")
+            params.append(phone)
+        if email:
+            conditions.append("email = ?")
+            params.append(email)
+
+        lead = None
+        if conditions:
+            sql_find = f"""
+                SELECT id, prenom, nom, nom_complet, conversation_count, 
+                       canal_id, facebook_psid, telephone, whatsapp, email
+                FROM crm_leads 
+                WHERE {' OR '.join(conditions)}
+                ORDER BY id ASC
+                LIMIT 1
+            """
+            c.execute(sql_find, tuple(params))
+            lead = c.fetchone()
 
         if lead:
             lead_id = lead[0]
@@ -1785,20 +1675,37 @@ def get_or_create_lead(
             ]
             upd_params = [existing_count + 1]
 
-            if prenom and not lead[1]:
+            if prenom and (not lead[1] or "Contact" in lead[1] or "Prospect" in lead[1]):
                 upd_fields.append("prenom = ?")
                 upd_params.append(prenom)
             if nom and not lead[2]:
                 upd_fields.append("nom = ?")
                 upd_params.append(nom)
-            if (prenom or nom) and (not lead[3] or "Prospect" in lead[3]):
+            if (prenom or nom) and (not lead[3] or "Prospect" in lead[3] or "Contact" in lead[3]):
                 full = f"{prenom or ''} {nom or ''}".strip()
-                if full:
+                if full and "Contact" not in full and "Prospect" not in full:
                     upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
                     upd_params.extend([full, full])
 
-            # Champs optionnels passés en kwargs (ex: email, whatsapp, telephone, facebook_psid, offre_matchee, secteur_activite)
-            for k in ["email", "whatsapp", "telephone", "facebook_psid", "linkedin_url", "secteur_activite", "offre_matchee", "offre_matchee_id"]:
+            # Remplir automatiquement les identifiants manquants (consolidation omnicanale)
+            if canal_id and not lead[5]:
+                upd_fields.append("canal_id = ?")
+                upd_params.append(canal_id)
+            if psid and not lead[6]:
+                upd_fields.append("facebook_psid = ?")
+                upd_params.append(psid)
+            if phone and not lead[7]:
+                upd_fields.append("telephone = ?")
+                upd_params.append(phone)
+            if phone and not lead[8]:
+                upd_fields.append("whatsapp = ?")
+                upd_params.append(phone)
+            if email and not lead[9]:
+                upd_fields.append("email = ?")
+                upd_params.append(email)
+
+            # Champs optionnels passés en kwargs (ex: linkedin_url, secteur_activite, offre_matchee, etc.)
+            for k in ["linkedin_url", "secteur_activite", "offre_matchee", "offre_matchee_id", "douleur_identifiee"]:
                 val = kwargs.get(k)
                 if val:
                     upd_fields.append(f"{k} = COALESCE({k}, ?)")
@@ -1841,28 +1748,6 @@ def get_or_create_lead(
                     full_name = f"{prenom} {nom}".strip()
             elif not full_name:
                 full_name = f"{prenom or ''} {nom or ''}".strip()
-
-            phone_val = kwargs.get("whatsapp") or kwargs.get("telephone")
-            phone = str(phone_val).strip() if phone_val and str(phone_val).strip() else None
-
-            # Si le téléphone est renseigné, vérifier s'il existe déjà un lead avec ce numéro
-            if phone:
-                c.execute("SELECT id, prenom, nom, nom_complet, conversation_count FROM crm_leads WHERE whatsapp = ? OR telephone = ?", (phone, phone))
-                existing_by_phone = c.fetchone()
-                if existing_by_phone:
-                    lead_id = existing_by_phone[0]
-                    c.execute("""
-                        UPDATE crm_leads 
-                        SET last_contact_at = datetime('now'),
-                            conversation_count = COALESCE(conversation_count, 1) + 1,
-                            updated_at = datetime('now')
-                        WHERE id = ?
-                    """, (lead_id,))
-                    conn.commit()
-                    return lead_id, False
-
-            email_val = kwargs.get("email")
-            email = str(email_val).strip() if email_val and str(email_val).strip() else None
 
             psid_val = kwargs.get("facebook_psid")
             psid = str(psid_val).strip() if psid_val and str(psid_val).strip() else None

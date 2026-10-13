@@ -38,7 +38,7 @@ class CatalogEngine:
             params.append(item_type)
 
         if statut and statut != "tous":
-            query += " AND statut = ?"
+            query += " AND LOWER(statut) = LOWER(?)"
             params.append(statut)
 
         query += " ORDER BY id DESC"
