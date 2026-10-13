@@ -53,6 +53,7 @@ from core.meta_messenger_sync import (
 )
 from modules.silent_watcher import watcher_instance
 from modules.composio_enricher import get_enricher
+from modules.google_calendar_closer import get_calendar_closer
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -185,6 +186,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_agenda()
         elif path == "/api/calendar/events":
             self.handle_api_get_calendar_events(query)
+        elif path == "/api/calendar/google/slots":
+            self.handle_api_get_google_calendar_slots(query)
         elif path == "/api/crm/conversion-audit":
             self.handle_api_conversion_audit()
         elif path == "/api/crm/leads":
@@ -324,6 +327,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_add_agenda_task(body)
         elif path == "/api/calendar/events":
             self.handle_api_add_calendar_event(body)
+        elif path == "/api/calendar/google/schedule-closing":
+            self.handle_api_google_schedule_closing(body)
         elif path in ("/api/crm/leads/bulk-action", "/crm/leads/bulk-action"):
             self.handle_api_crm_bulk_action(body)
         elif path in ("/api/crm/leads/update", "/crm/leads/update"):
@@ -2256,6 +2261,44 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             enricher = get_enricher()
             res = enricher.verify_email_deliverability(email)
             self.send_json_response({"success": True, "data": res})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    # --- ROUTES GOOGLE CALENDAR CLOSER (COMPOSIO) ---
+    def handle_api_get_google_calendar_slots(self, query):
+        try:
+            days_str = query.get("days", ["3"])[0]
+            days = int(days_str) if days_str.isdigit() else 3
+            tz = query.get("timezone", ["Africa/Porto-Novo"])[0]
+            closer = get_calendar_closer()
+            slots = closer.get_free_slots(days_ahead=days, timezone_str=tz)
+            self.send_json_response({"success": True, "slots": slots})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_google_schedule_closing(self, body):
+        try:
+            lead_id = body.get("lead_id")
+            contact_name = body.get("contact_name") or ""
+            contact_email = body.get("contact_email") or ""
+            start_datetime = body.get("start_datetime") or ""
+            duration = int(body.get("duration_minutes") or 30)
+            summary = body.get("summary") or ""
+            description = body.get("description") or ""
+            tz = body.get("timezone") or "Africa/Porto-Novo"
+
+            closer = get_calendar_closer()
+            res = closer.schedule_closing_call(
+                lead_id=int(lead_id) if lead_id else None,
+                contact_name=contact_name,
+                contact_email=contact_email,
+                start_datetime=start_datetime,
+                duration_minutes=duration,
+                summary=summary,
+                description=description,
+                timezone_str=tz
+            )
+            self.send_json_response(res)
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)
 

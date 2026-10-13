@@ -1450,6 +1450,7 @@ function closeAddCalendarEventModal() {
 
 async function submitCalendarEvent(e) {
   e.preventDefault();
+  const syncGoogle = document.getElementById("cal-sync-google") ? document.getElementById("cal-sync-google").checked : false;
   const payload = {
     task_date: document.getElementById("cal-input-date").value,
     time_slot: document.getElementById("cal-input-time").value,
@@ -1462,6 +1463,42 @@ async function submitCalendarEvent(e) {
   };
 
   try {
+    if (syncGoogle) {
+      showToast("Synchronisation avec Google Calendar & Meet en cours...", "info");
+      // Calculer une heure de début approchée à partir de task_date et time_slot
+      let startHour = "10:00:00";
+      const timeMatch = payload.time_slot.match(/(\d{1,2})[h:](\d{2})?/);
+      if (timeMatch) {
+        const hh = String(timeMatch[1]).padStart(2, "0");
+        const mm = String(timeMatch[2] || "00").padStart(2, "0");
+        startHour = `${hh}:${mm}:00`;
+      }
+      const isoStart = `${payload.task_date}T${startHour}Z`;
+
+      const gcalPayload = {
+        contact_name: payload.contact_name,
+        contact_email: "",
+        start_datetime: isoStart,
+        duration_minutes: 30,
+        summary: payload.task_title,
+        description: payload.task_description
+      };
+
+      const gcalRes = await fetch("/api/calendar/google/schedule-closing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(gcalPayload)
+      });
+      const gcalData = await gcalRes.json();
+      if (gcalData.success) {
+        showToast("Rendez-vous synchronisé avec Google Calendar & Meet !", "success");
+        closeAddCalendarEventModal();
+        calSelectedDate = payload.task_date;
+        await renderCalendar(calCurrentMonth, calCurrentYear);
+        return;
+      }
+    }
+
     const res = await fetch("/api/calendar/events", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3426,6 +3463,53 @@ async function triggerComposioEnrichment() {
   } catch (err) {
     console.error("Erreur triggerComposioEnrichment:", err);
     showToast("Erreur de connexion : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+async function triggerScheduleClosingMeeting() {
+  if (!activeDrawerLeadId) {
+    showToast("Aucun prospect sélectionné", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btn-drawer-schedule-meet");
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-emerald-600"></i><span>Génération Meet...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    showToast("Planification automatique de l'appel de closing...", "info");
+    const res = await fetch("/api/calendar/google/schedule-closing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeDrawerLeadId,
+        duration_minutes: 30
+      })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast(`RDV Google Meet créé avec succès ! Lien : ${json.meeting_link}`, "success");
+      // Recharger le drawer pour afficher le statut "RDV Planifié"
+      await openDrawer(activeDrawerLeadId);
+      if (typeof fetchCrmLeads === "function") {
+        fetchCrmLeads();
+      }
+    } else {
+      showToast(json.error || "Erreur lors de la planification du RDV", "error");
+    }
+  } catch (err) {
+    console.error("Erreur triggerScheduleClosingMeeting:", err);
+    showToast("Erreur de planification : " + err.message, "error");
   } finally {
     if (btn) {
       btn.disabled = false;
