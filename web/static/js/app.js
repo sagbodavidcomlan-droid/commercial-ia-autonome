@@ -465,6 +465,8 @@ function showTab(tabId) {
     loadHistoryFeed();
   } else if (tabId === "creative") {
     loadCreativeCalendar();
+  } else if (tabId === "watcher") {
+    loadWatcherDashboard();
   }
 }
 
@@ -4263,6 +4265,18 @@ async function loadSwarmStatus() {
         tag: "Fidélisation & Suivi J+7",
         btnText: "Catalogue Packs",
         btnAction: "showTab('catalog')"
+      },
+      "agent_watcher": {
+        icon: "shield-alert",
+        iconColor: "text-indigo-600",
+        iconBg: "bg-indigo-50 border-indigo-100",
+        borderHover: "hover:border-indigo-400",
+        badgeBg: "bg-indigo-50 text-indigo-700 border-indigo-200",
+        dotColor: "bg-indigo-600",
+        accentBar: "bg-indigo-600",
+        tag: "Supervision & Audit Qualité",
+        btnText: "Ouvrir SilentWatcher",
+        btnAction: "showTab('watcher')"
       }
     };
 
@@ -7706,6 +7720,316 @@ async function loadBrandBible() {
     }
   } catch (e) {
     alert("Erreur Brand Bible : " + e.message);
+  }
+}
+
+// =========================================================================
+// SILENTWATCHER — AGENT DE SUPERVISION AUTONOME (UI & POLLING 30S)
+// =========================================================================
+
+let watcherPollInterval = null;
+
+async function loadWatcherDashboard() {
+  await Promise.all([
+    fetchWatcherStatus(),
+    fetchWatcherAgentCards(),
+    fetchWatcherBugs(),
+    fetchWatcherReports(),
+    fetchWatcherObservations()
+  ]);
+
+  if (!watcherPollInterval) {
+    watcherPollInterval = setInterval(() => {
+      const pane = document.getElementById("tab-watcher");
+      if (pane && !pane.classList.contains("hidden")) {
+        fetchWatcherObservations();
+        fetchWatcherStatus();
+      }
+    }, 30000);
+  }
+}
+
+async function fetchWatcherStatus() {
+  try {
+    const res = await fetch("/api/watcher/status");
+    const json = await res.json();
+    if (!json.success || !json.data) return;
+    const d = json.data;
+
+    const scoreEl = document.getElementById("watcher-score-global");
+    if (scoreEl) scoreEl.textContent = d.global_health_score !== undefined ? d.global_health_score : "--";
+
+    const bugsEl = document.getElementById("watcher-bugs-count");
+    if (bugsEl) bugsEl.textContent = d.open_bugs !== undefined ? d.open_bugs : 0;
+
+    const respEl = document.getElementById("watcher-response-time");
+    if (respEl) respEl.textContent = d.avg_response_time_sec !== undefined ? d.avg_response_time_sec : "--";
+
+    const guardEl = document.getElementById("watcher-guard-conformity");
+    if (guardEl) guardEl.textContent = d.guard_conformity_pct !== undefined ? d.guard_conformity_pct : "--";
+
+    const fbEl = document.getElementById("watcher-fallback-rate");
+    if (fbEl) fbEl.textContent = d.fallback_rate_pct !== undefined ? d.fallback_rate_pct : "0.0";
+
+    const totEl = document.getElementById("watcher-total-exchanges");
+    if (totEl) totEl.textContent = d.total_exchanges !== undefined ? d.total_exchanges : 0;
+
+    const badge = document.getElementById("watcher-badge-health");
+    if (badge) {
+      if (d.global_health_score >= 80) {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Système Optimal';
+      } else if (d.global_health_score >= 60) {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200";
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Attention Requise';
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200";
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> Anomalies Critiques';
+      }
+    }
+  } catch (e) {
+    console.error("Erreur fetchWatcherStatus:", e);
+  }
+}
+
+async function fetchWatcherAgentCards() {
+  try {
+    const res = await fetch("/api/watcher/status");
+    const json = await res.json();
+    if (!json.success || !json.data || !json.data.agents) return;
+    const agents = json.data.agents;
+
+    const container = document.getElementById("watcher-agent-cards-container");
+    if (!container) return;
+
+    const labels = {
+      "agent_vendeur": { name: "Agent Vendeur", role: "Génération Gemini 2.5", icon: "bot" },
+      "communication_guard": { name: "Quality Guard", role: "Superviseur Qualité", icon: "shield-check" },
+      "conversation_scanner": { name: "Conv Scanner", role: "Analyse Contexte", icon: "scan" },
+      "poller": { name: "Agent Poller", role: "Relances 24/7", icon: "clock" },
+      "prospect_tracker": { name: "Prospect Tracker", role: "Signaux & Chasse", icon: "crosshair" }
+    };
+
+    container.innerHTML = Object.keys(agents).map(k => {
+      const ag = agents[k];
+      const meta = labels[k] || { name: k, role: "Agent", icon: "cpu" };
+      const statusColor = ag.status === "healthy" ? "emerald" : (ag.status === "degraded" ? "amber" : "rose");
+      return `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-black text-slate-900">${meta.name}</span>
+              <span class="w-2 h-2 rounded-full bg-${statusColor}-500"></span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-medium mb-3">${meta.role}</div>
+          </div>
+          <div>
+            <div class="flex items-baseline justify-between">
+              <span class="text-[10px] font-bold text-slate-400">Score</span>
+              <span class="text-lg font-black text-slate-900">${ag.score || '--'}<span class="text-[10px] text-slate-400 font-normal">/100</span></span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-100">
+              <span>Anomalies: <strong>${ag.anomalies_count || 0}</strong></span>
+              <span class="font-bold text-${statusColor}-600 uppercase text-[9px]">${ag.status || 'actif'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+    lucide.createIcons();
+  } catch (e) {
+    console.error("Erreur fetchWatcherAgentCards:", e);
+  }
+}
+
+async function fetchWatcherBugs() {
+  try {
+    const res = await fetch("/api/watcher/bugs?status=open&limit=20");
+    const json = await res.json();
+    if (!json.success) return;
+    const bugs = json.data || [];
+
+    const badge = document.getElementById("watcher-bugs-badge");
+    if (badge) badge.textContent = `${bugs.length} ouverts`;
+
+    const list = document.getElementById("watcher-bugs-list");
+    if (!list) return;
+
+    if (bugs.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-8 text-slate-400 text-xs font-medium">
+          <i data-lucide="check-circle" class="w-8 h-8 mx-auto text-emerald-400 mb-2"></i>
+          Aucun bug actif détecté. Le système fonctionne de manière nominale.
+        </div>
+      `;
+    } else {
+      list.innerHTML = bugs.map(b => `
+        <div class="p-3 rounded-xl border border-rose-100 bg-rose-50/30 flex flex-col gap-2">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-100 text-rose-800">${b.bug_code}</span>
+                <span class="text-xs font-black text-slate-900">${b.bug_type}</span>
+                <span class="text-[10px] text-slate-400">(${b.occurrences_count}x)</span>
+              </div>
+              <p class="text-[11px] text-slate-600 font-medium mt-1">${b.description || ''}</p>
+            </div>
+            <button onclick="resolveWatcherBug('${b.id}')" class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition cursor-pointer">
+              Résoudre
+            </button>
+          </div>
+          ${b.fix_suggestion ? `
+            <div class="p-2 rounded-lg bg-white border border-slate-200/80 text-[10px] font-mono text-slate-600">
+              <strong class="text-indigo-600 font-sans">Fix suggéré :</strong> ${b.fix_suggestion}
+            </div>
+          ` : ''}
+        </div>
+      `).join("");
+    }
+    lucide.createIcons();
+  } catch (e) {
+    console.error("Erreur fetchWatcherBugs:", e);
+  }
+}
+
+async function resolveWatcherBug(bugId) {
+  try {
+    const res = await fetch(`/api/watcher/bugs/${bugId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "resolved" })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast("Bug marqué comme résolu avec succès.", "success");
+      fetchWatcherBugs();
+      fetchWatcherStatus();
+    } else {
+      showToast("Erreur lors de la mise à jour: " + (json.error || "Inconnue"), "error");
+    }
+  } catch (e) {
+    showToast("Erreur réseau : " + e.message, "error");
+  }
+}
+
+async function fetchWatcherReports() {
+  try {
+    const res = await fetch("/api/watcher/reports?limit=5");
+    const json = await res.json();
+    if (!json.success) return;
+    const reports = json.data || [];
+
+    const list = document.getElementById("watcher-reports-list");
+    if (!list) return;
+
+    if (reports.length === 0) {
+      list.innerHTML = `
+        <div class="text-center py-8 text-slate-400 text-xs font-medium">
+          <i data-lucide="file-text" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+          Aucun rapport généré pour le moment.
+        </div>
+      `;
+    } else {
+      list.innerHTML = reports.map(r => `
+        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-slate-900 uppercase">${r.report_type}</span>
+              <span class="text-[10px] text-slate-400 font-mono">${(r.generated_at || '').substring(0, 16)}</span>
+            </div>
+            <div class="text-[11px] text-slate-600 font-medium mt-0.5">
+              Score: <strong>${r.global_score || '--'}/100</strong> &bull; Échanges: ${r.total_exchanges || 0}
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="window.open('/api/watcher/reports/${r.id}/html', '_blank')" class="px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer" title="Voir le rapport imprimable / PDF">
+              PDF / Imprimer
+            </button>
+            <button onclick="window.open('/api/watcher/reports/${r.id}/download', '_blank')" class="px-2 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer" title="Télécharger le rapport JSON">
+              Télécharger
+            </button>
+          </div>
+        </div>
+      `).join("");
+    }
+    lucide.createIcons();
+  } catch (e) {
+    console.error("Erreur fetchWatcherReports:", e);
+  }
+}
+
+async function viewWatcherReportDetail(reportId) {
+  try {
+    const res = await fetch(`/api/watcher/reports/${reportId}`);
+    const json = await res.json();
+    if (json.success && json.data) {
+      const rep = json.data;
+      alert(`RAPPORT SILENTWATCHER #${rep.id} (${rep.report_type.toUpperCase()})\nScore Global: ${rep.global_score}/100\nDate: ${rep.generated_at}\n\nRecommandations:\n${JSON.stringify(rep.recommendations, null, 2)}`);
+    }
+  } catch (e) {
+    alert("Erreur consultation rapport: " + e.message);
+  }
+}
+
+async function triggerWatcherSessionReport() {
+  showToast("Génération du rapport d'audit SilentWatcher en cours...", "info");
+  try {
+    const res = await fetch("/api/watcher/reports/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "session" })
+    });
+    const json = await res.json();
+    if (json.success) {
+      showToast("Rapport généré avec succès !", "success");
+      await loadWatcherDashboard();
+    } else {
+      showToast("Erreur génération : " + (json.error || "Échec"), "error");
+    }
+  } catch (e) {
+    showToast("Erreur: " + e.message, "error");
+  }
+}
+
+async function fetchWatcherObservations() {
+  try {
+    const res = await fetch("/api/watcher/observations/latest?limit=30");
+    const json = await res.json();
+    if (!json.success) return;
+    const obs = json.data || [];
+
+    const tbody = document.getElementById("watcher-observations-table");
+    if (!tbody) return;
+
+    if (obs.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="text-center py-6 text-slate-400 text-xs">
+            En attente des premières observations...
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = obs.map(o => {
+        const sevClass = o.severity === "error"
+          ? "bg-rose-50 text-rose-700 border-rose-200"
+          : (o.severity === "warning" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200");
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="py-2.5 px-3 font-mono text-[10px] text-slate-400">${(o.created_at || '').substring(11, 19)}</td>
+            <td class="py-2.5 px-3 font-bold text-slate-900">${o.agent_name}</td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border ${sevClass}">${o.severity}</span>
+            </td>
+            <td class="py-2.5 px-3 font-bold text-slate-800">${o.observation_title}</td>
+            <td class="py-2.5 px-3 text-slate-500 max-w-xs truncate" title="${o.detail || ''}">${o.detail || '--'}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-slate-400">#${o.lead_id || 0}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+  } catch (e) {
+    console.error("Erreur fetchWatcherObservations:", e);
   }
 }
 

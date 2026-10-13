@@ -439,5 +439,137 @@ class TestMasterCurriculum(unittest.TestCase):
         conn.close()
 
 
+class TestSilentWatcher(unittest.TestCase):
+    """
+    Validation unitaire et comportementale de SilentWatcher (Superviseur Autonome) :
+    1. Scénario Nominal : observation enregistrée, métriques et scoring conformes.
+    2. Scénario Correction Guard : détection de l'intervention de CommunicationQualityGuard, anomalie journalisée.
+    3. Scénario Boucle Infinie / Répétition : détection de répétition de message, création de bug BUG-YYYY-XXX et suggestion de fix.
+    """
+
+    def setUp(self):
+        init_db()
+        from modules.silent_watcher import SilentWatcher
+        self.watcher = SilentWatcher()
+        self.conn = get_connection()
+        self.cursor = self.conn.cursor()
+
+    def tearDown(self):
+        self.conn.close()
+
+    def test_scenario_1_nominal_observation(self):
+        """Cas 1 : Observation nominale d'un échange fluide."""
+        lead_id = 99901
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.cursor.execute("INSERT INTO crm_leads (id, nom_complet, statut_lead, score_qualification) VALUES (?, 'Prospect Nominal', 'Tiède', 70)", (lead_id,))
+        self.conn.commit()
+
+        # Observation d'un échange parfait
+        self.watcher.observe_message_exchange(
+            lead_id=lead_id,
+            prospect_message="Bonjour, je souhaite optimiser mes relances clients.",
+            proposed_message="Bonjour, c'est Dave Sagbo. Quel volume de prospects traitez-vous par jour ?",
+            validated_message="Bonjour, c'est Dave Sagbo. Quel volume de prospects traitez-vous par jour ?",
+            scan_result={"profil_prospect": {"secteur_activite": "Immobilier"}},
+            guard_result={"score": 95, "modified": False},
+            response_time_seconds=12.5
+        )
+
+        # Vérification du scoring de conversation calculé
+        scores = self.watcher.get_conversation_scores(limit=10)
+        found = [s for s in scores if s["lead_id"] == lead_id]
+        self.assertTrue(len(found) > 0, "Le score de la conversation doit être persisté")
+        self.assertGreaterEqual(found[0]["conversation_score"], 80, "Le score nominal doit être supérieur ou égal à 80")
+
+        # Vérification du statut système global
+        status = self.watcher.get_system_status()
+        self.assertIn("global_health_score", status)
+        self.assertGreaterEqual(status["global_health_score"], 80)
+
+        # Nettoyage
+        self.cursor.execute("DELETE FROM conversation_scores WHERE lead_id = ?", (lead_id,))
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.conn.commit()
+
+    def test_scenario_2_guard_correction_detected(self):
+        """Cas 2 : Détection d'une correction automatique par CommunicationQualityGuard."""
+        lead_id = 99902
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.cursor.execute("INSERT INTO crm_leads (id, nom_complet, statut_lead, score_qualification) VALUES (?, 'Prospect Guard Test', 'Tiède', 65)", (lead_id,))
+        self.conn.commit()
+
+        # Échange où le Guard a dû corriger une formulation interdite ("C'est bien noté")
+        self.watcher.observe_message_exchange(
+            lead_id=lead_id,
+            prospect_message="Je ne comprends pas du tout votre question.",
+            proposed_message="C'est bien noté. Alors dites-moi plutôt votre budget.",
+            validated_message="Pardonnez-moi, je me suis mal exprimé. Reprenons simplement : qu'est-ce qui vous a amené à nous contacter ?",
+            guard_result={
+                "score": 55,
+                "modified": True,
+                "corrections": ["Suppression de 'C'est bien noté' face à une incompréhension"],
+                "violations": ["Règle 14 : 'C'est bien noté' interdit face à l'incompréhension"]
+            },
+            response_time_seconds=8.0
+        )
+
+        # L'observation d'intervention du Guard doit être présente
+        latest_obs = self.watcher.get_latest_observations(limit=10)
+        guard_obs = [o for o in latest_obs if o["agent_name"] == "communication_guard" and o["lead_id"] == lead_id]
+        self.assertTrue(len(guard_obs) > 0, "Une observation Guard doit être journalisée")
+        self.assertEqual(guard_obs[0]["severity"], "warning")
+
+        # Nettoyage
+        self.cursor.execute("DELETE FROM watcher_observations WHERE lead_id = ?", (lead_id,))
+        self.cursor.execute("DELETE FROM conversation_scores WHERE lead_id = ?", (lead_id,))
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.conn.commit()
+
+    def test_scenario_3_loop_repetition_bug_creation(self):
+        """Cas 3 : Répétition de message provoquant une anomalie critique et l'ouverture d'un bug récurrent."""
+        lead_id = 99903
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.cursor.execute("INSERT INTO crm_leads (id, nom_complet, statut_lead, score_qualification) VALUES (?, 'Prospect Loop Test', 'Chaud', 90)", (lead_id,))
+        self.conn.commit()
+
+        # Répétition mot pour mot du message précédent de l'agent
+        same_message = "Quel est votre objectif prioritaire pour ce trimestre ?"
+        self.watcher.observe_message_exchange(
+            lead_id=lead_id,
+            prospect_message="Je vous l'ai déjà dit hier.",
+            proposed_message=same_message,
+            validated_message=same_message,
+            scan_result={"dernier_message_agent": same_message},
+            response_time_seconds=5.0
+        )
+
+        # Vérification qu'un bug a été catalogué
+        bugs = self.watcher.get_bugs(status="open")
+        loop_bugs = [b for b in bugs if b["agent_name"] == "agent_vendeur" and b["bug_type"] == "infinite_loop_or_repetition"]
+        self.assertTrue(len(loop_bugs) > 0, "Un bug de type infinite_loop_or_repetition doit être ouvert")
+        bug_entry = loop_bugs[0]
+        self.assertTrue(bug_entry["bug_code"].startswith("BUG-"), "Le code du bug doit respecter le format BUG-YYYY-XXX")
+        self.assertIsNotNone(bug_entry["fix_suggestion"], "Une suggestion de fix doit être générée")
+
+        # Test de résolution du bug via l'API
+        success = self.watcher.update_bug_status(bug_entry["id"], "resolved")
+        self.assertTrue(success, "La mise à jour du statut du bug en resolved doit réussir")
+
+        # Vérification de la génération du rapport de session
+        rep_id = self.watcher.generate_structured_report(report_type="session")
+        self.assertIsNotNone(rep_id, "Le rapport de session doit être créé en base")
+        report = self.watcher.get_report_by_id(rep_id)
+        self.assertEqual(report["report_type"], "session")
+        self.assertIn("global_score", report)
+
+        # Nettoyage
+        self.cursor.execute("DELETE FROM watcher_observations WHERE lead_id = ?", (lead_id,))
+        self.cursor.execute("DELETE FROM watcher_bugs WHERE id = ?", (bug_entry["id"],))
+        self.cursor.execute("DELETE FROM watcher_reports WHERE id = ?", (rep_id,))
+        self.cursor.execute("DELETE FROM conversation_scores WHERE lead_id = ?", (lead_id,))
+        self.cursor.execute("DELETE FROM crm_leads WHERE id = ?", (lead_id,))
+        self.conn.commit()
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

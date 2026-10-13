@@ -593,6 +593,19 @@ def process_pending_conversation(conv: Dict[str, Any]) -> bool:
             metadata={"poller_automated": True, "minutes_attente": minutes_attente, "result": send_res}
         )
 
+        # 7b. Hook d'observation SilentWatcher (non-bloquant)
+        try:
+            from modules.silent_watcher import watcher_instance
+            watcher_instance.observe_message_exchange(
+                lead_id=lead_id,
+                prospect_message=dernier_msg or "",
+                proposed_message=message_agent,
+                validated_message=message_agent,
+                response_time_seconds=float(minutes_attente * 60)
+            )
+        except Exception as e_watch:
+            logger.debug(f"SilentWatcher poller hook note: {e_watch}")
+
         # 8. Mettre à jour les métadonnées et le CRM
         update_lead_after_response(lead_id, message_agent, lead)
 

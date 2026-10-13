@@ -2015,6 +2015,8 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
         les règles d'or du cours d'apprentissage, sécurisée par ConversationScanner et CommunicationQualityGuard.
         """
         import re
+        import time
+        t_start = time.time()
 
         # ÉTAPE 0 : SCANNER — LECTURE COMPLÈTE ET STRUCTURÉE DE TOUTE LA CONVERSATION
         scan_result = None
@@ -2141,7 +2143,21 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 'canal': channel
             }
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
-            return validated['message']
+            final_res = validated['message']
+            try:
+                from modules.silent_watcher import watcher_instance
+                watcher_instance.observe_message_exchange(
+                    lead_id=lead_id or 0,
+                    prospect_message=user_message,
+                    proposed_message=proposed,
+                    validated_message=final_res,
+                    scan_result=scan_result,
+                    guard_result=validated,
+                    response_time_seconds=time.time() - t_start
+                )
+            except Exception:
+                pass
+            return final_res
 
         # 2.5 ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
         if self.detect_purchase_signal(user_message) or scan_purchase:
@@ -2160,6 +2176,21 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 'canal': channel
             }
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            final_res = validated['message']
+            try:
+                from modules.silent_watcher import watcher_instance
+                watcher_instance.observe_message_exchange(
+                    lead_id=lead_id or 0,
+                    prospect_message=user_message,
+                    proposed_message=proposed,
+                    validated_message=final_res,
+                    scan_result=scan_result,
+                    guard_result=validated,
+                    response_time_seconds=time.time() - t_start
+                )
+            except Exception:
+                pass
+            return final_res
 
         # 3. ÉTAPE OUVERTURE : Premier contact
         if is_first_turn:
@@ -2180,7 +2211,21 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                     'canal': channel
                 }
                 validated = self.guard.evaluate_and_validate(custom_opening, conversation_context, scan_result)
-                return validated['message']
+                final_res = validated['message']
+                try:
+                    from modules.silent_watcher import watcher_instance
+                    watcher_instance.observe_message_exchange(
+                        lead_id=lead_id or 0,
+                        prospect_message=user_message,
+                        proposed_message=custom_opening,
+                        validated_message=final_res,
+                        scan_result=scan_result,
+                        guard_result=validated,
+                        response_time_seconds=time.time() - t_start
+                    )
+                except Exception:
+                    pass
+                return final_res
 
         # 4. Inférence Gemini avec Contexte Enrichi par le Scanner
         base_system = (
@@ -2264,6 +2309,22 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             lines = [l.strip() for l in final_msg.split("\n") if l.strip()]
             if len(lines) > 4:
                 final_msg = "\n\n".join(lines[:4])
+
+        # Hook d'observation SilentWatcher (non-bloquant)
+        try:
+            from modules.silent_watcher import watcher_instance
+            elapsed = time.time() - t_start if 't_start' in locals() else 1.0
+            watcher_instance.observe_message_exchange(
+                lead_id=lead_id or 0,
+                prospect_message=user_message,
+                proposed_message=cleaned,
+                validated_message=final_msg,
+                scan_result=scan_result,
+                guard_result=validated,
+                response_time_seconds=elapsed
+            )
+        except Exception as e_watch:
+            logger.debug(f"SilentWatcher hook note: {e_watch}")
 
         return final_msg
 

@@ -200,6 +200,97 @@ def init_db():
     )
     """)
 
+    # 11. Tables SilentWatcher (Supervision Autonome & Métriques de Performance)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watcher_observations (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id         INTEGER,
+        agent_name      TEXT NOT NULL,
+        observation_type TEXT NOT NULL,
+        severity        TEXT NOT NULL, -- info | warning | error | critical
+        title           TEXT NOT NULL,
+        detail          TEXT,
+        raw_data        TEXT,  -- JSON
+        conversation_excerpt TEXT,
+        created_at      TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watcher_reports (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_type     TEXT NOT NULL, -- realtime | session | daily | weekly | monthly
+        period_start    TEXT,
+        period_end      TEXT,
+        report_json     TEXT NOT NULL,
+        summary         TEXT,
+        critical_count  INTEGER DEFAULT 0,
+        error_count     INTEGER DEFAULT 0,
+        warning_count   INTEGER DEFAULT 0,
+        info_count      INTEGER DEFAULT 0,
+        created_at      TEXT DEFAULT (datetime('now')),
+        read_at         TEXT
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watcher_metrics (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        agent_name      TEXT NOT NULL,
+        metric_name     TEXT NOT NULL,
+        metric_value    REAL,
+        metric_unit     TEXT,
+        period          TEXT, -- ex: "2026-10-13" ou "2026-W41" ou "2026-10"
+        created_at      TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watcher_bugs (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        bug_code        TEXT UNIQUE, -- ex: BUG-2026-001
+        agent_name      TEXT,
+        title           TEXT NOT NULL,
+        description     TEXT NOT NULL,
+        first_seen_at   TEXT,
+        last_seen_at    TEXT,
+        occurrence_count INTEGER DEFAULT 1,
+        severity        TEXT,
+        status          TEXT DEFAULT 'open', -- open | investigating | fixed | wont_fix
+        example_lead_id INTEGER,
+        example_excerpt TEXT,
+        fix_suggestion  TEXT,
+        created_at      TEXT DEFAULT (datetime('now')),
+        updated_at      TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS conversation_scores (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id         INTEGER NOT NULL,
+        conversation_score REAL,  -- 0 à 10
+        setter_score    REAL,
+        closer_score    REAL,
+        crm_score       REAL,
+        guard_score_avg REAL,
+        total_messages  INTEGER,
+        agent_messages  INTEGER,
+        prospect_messages INTEGER,
+        time_to_first_response_min REAL,
+        avg_response_time_min REAL,
+        diagnostic_questions_count INTEGER,
+        purchase_signal_reached BOOLEAN,
+        conversion_achieved BOOLEAN,
+        drop_reason     TEXT, -- template | hors_sujet | boucle | silence | stop
+        scored_at       TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_agent ON watcher_observations(agent_name, created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_severity ON watcher_observations(severity, created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_bugs_status ON watcher_bugs(status, severity)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_conv_scores ON conversation_scores(lead_id, scored_at)")
 
     # Harmonisation & migration non-bloquante de la table crm_leads
     try:

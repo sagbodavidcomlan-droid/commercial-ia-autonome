@@ -504,10 +504,10 @@
           </button>
         </div>
 
-        <!-- 4. Carte Intégrations & Services (Jira, Slack, WhatsApp, Meta) -->
+        <!-- 4. Carte Intégrations & Services (Jira, Slack, WhatsApp, Meta, SilentWatcher) -->
         <div class="vitaliy-section-header mt-4">
           <span>Canaux & IA</span>
-          <span class="vitaliy-count-badge">4</span>
+          <span class="vitaliy-count-badge">5</span>
         </div>
 
         <div class="vitaliy-services-card">
@@ -537,6 +537,13 @@
               <i data-lucide="zap" class="w-3.5 h-3.5"></i>
             </div>
             <span class="vitaliy-service-label">Sprint Autonome</span>
+          </div>
+
+          <div class="vitaliy-service-item" onclick="showTab('watcher')" title="SilentWatcher - Superviseur Autonome">
+            <div class="vitaliy-service-icon bg-indigo-50 text-indigo-600">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+            </div>
+            <span class="vitaliy-service-label">SilentWatcher</span>
           </div>
         </div>
 
@@ -2675,13 +2682,13 @@
                 <span id="swarm-health-badge">Swarm 100% Opérationnel</span>
               </span>
               <span class="text-xs text-slate-400 font-bold">&bull;</span>
-              <span class="text-xs text-slate-500 font-semibold" id="swarm-active-agents-badge">5 agents IA en essaim</span>
+              <span class="text-xs text-slate-500 font-semibold" id="swarm-active-agents-badge">6 agents IA en essaim</span>
             </div>
             <h2 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
               <i data-lucide="cpu" class="w-6 h-6 text-[#0062ff]"></i>
               Centre de Commandement Multi-Agents (Swarm Intelligence)
             </h2>
-            <p class="text-xs text-slate-500 font-medium">Cinq intelligences artificielles hyperspécialisées collaborent en temps réel pour piloter votre cycle commercial de bout en bout.</p>
+            <p class="text-xs text-slate-500 font-medium">Six intelligences artificielles hyperspécialisées collaborent en temps réel pour piloter votre cycle commercial de bout en bout et superviser la qualité.</p>
           </div>
 
           <div class="flex items-center gap-2 self-start sm:self-auto">
@@ -2812,15 +2819,15 @@
               </div>
             </div>
 
-            <!-- 3. Cartes Détaillées des 5 Agents en Action (Style Xiaodianpu Cards) -->
+            <!-- 3. Cartes Détaillées des Agents en Action (Style Xiaodianpu Cards) -->
             <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
               <div class="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div>
-                  <h3 class="text-base font-black text-slate-900 tracking-tight">Escouade des 5 Agents IA Spécialisés</h3>
+                  <h3 class="text-base font-black text-slate-900 tracking-tight">Escouade des 6 Agents IA Spécialisés</h3>
                   <p class="text-xs text-slate-400 font-medium">Répartition des missions et statuts d'activité en temps réel.</p>
                 </div>
                 <span class="text-xs font-bold bg-blue-50 text-[#0062ff] px-3 py-1 rounded-full border border-blue-100">
-                  5 Agents Actifs
+                  6 Agents Actifs
                 </span>
               </div>
 
@@ -4719,6 +4726,180 @@
 
           </div>
 
+        </div>
+
+      </section>
+
+      <!-- 13. TAB SILENTWATCHER — AGENT DE SUPERVISION AUTONOME -->
+      <section id="tab-watcher" class="tab-pane hidden space-y-6">
+
+        <!-- En-tête Supérieur Style PBD : Titre & Actions Rapides -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-indigo-600">AGENT DE SUPERVISION AUTONOME</span>
+              <span id="watcher-badge-health" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Système Optimal
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">100% Passif &bull; Non-Intrusif</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">SilentWatcher Dashboard</h2>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium">Observation continue des performances des agents IA, détection préventive d'anomalies et rapports actionnables.</p>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <button onclick="loadWatcherDashboard()" id="btn-refresh-watcher" class="px-3.5 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>Actualiser</span>
+            </button>
+            <button onclick="triggerWatcherSessionReport()" class="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition cursor-pointer">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              <span>Générer un Rapport</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. SANTÉ DU SYSTÈME EN TEMPS RÉEL (BANDEAU SUPÉRIEUR) -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Score Global</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-score-global" class="text-2xl font-black text-indigo-600">--</span>
+              <span class="text-xs font-bold text-slate-400">/100</span>
+            </div>
+            <span id="watcher-score-badge" class="text-[10px] font-semibold text-emerald-600 mt-1">Évaluation active</span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Bugs Ouverts</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-bugs-count" class="text-2xl font-black text-rose-600">0</span>
+              <span class="text-xs font-bold text-slate-400">critiques</span>
+            </div>
+            <span class="text-[10px] font-semibold text-slate-500 mt-1">Sur 30 derniers jours</span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Temps Réponse Moy.</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-response-time" class="text-2xl font-black text-slate-900">--</span>
+              <span class="text-xs font-bold text-slate-400">sec</span>
+            </div>
+            <span class="text-[10px] font-semibold text-emerald-600 mt-1">Objectif &lt; 10 min</span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Conformité Guard</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-guard-conformity" class="text-2xl font-black text-blue-600">--</span>
+              <span class="text-xs font-bold text-slate-400">%</span>
+            </div>
+            <span class="text-[10px] font-semibold text-blue-600 mt-1">Règles d'or appliquées</span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Taux Fallback</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-fallback-rate" class="text-2xl font-black text-amber-600">0.0</span>
+              <span class="text-xs font-bold text-slate-400">%</span>
+            </div>
+            <span class="text-[10px] font-semibold text-slate-500 mt-1">Réponses génériques</span>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Total Échanges</span>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="watcher-total-exchanges" class="text-2xl font-black text-slate-900">0</span>
+              <span class="text-xs font-bold text-slate-400">obs.</span>
+            </div>
+            <span class="text-[10px] font-semibold text-slate-500 mt-1">Historique complet</span>
+          </div>
+        </div>
+
+        <!-- 2. CARTES DES 5 AGENTS SURVEILLÉS -->
+        <div>
+          <h3 class="text-xs font-black uppercase text-slate-400 tracking-wider mb-3">Cartes de Performance par Agent (5 Piliers)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-3" id="watcher-agent-cards-container">
+            <!-- Rempli dynamiquement par JS -->
+          </div>
+        </div>
+
+        <!-- 3. DEUX COLONNES : BUGS OUVERTS (Gauche) & DERNIERS RAPPORTS (Droite) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- COLONNE GAUCHE (7 cols) : REGISTRE DES BUGS ACTIONNABLES -->
+          <div class="lg:col-span-7 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="bug" class="w-4 h-4 text-rose-500"></i>
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Bugs Ouverts & Suggestions de Fix</h3>
+              </div>
+              <span id="watcher-bugs-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">0 ouverts</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs">
+              <div class="space-y-3" id="watcher-bugs-list">
+                <div class="text-center py-8 text-slate-400 text-xs font-medium">
+                  <i data-lucide="check-circle" class="w-8 h-8 mx-auto text-emerald-400 mb-2"></i>
+                  Aucun bug actif détecté. Le système fonctionne de manière nominale.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- COLONNE DROITE (5 cols) : RAPPORTS PÉRIODIQUES (2h, Quotidien, Hebdo) -->
+          <div class="lg:col-span-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <i data-lucide="file-check-2" class="w-4 h-4 text-indigo-600"></i>
+                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Derniers Rapports Produits</h3>
+              </div>
+              <span class="text-[10px] font-bold text-slate-400">JSON &bull; Actionnable</span>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3" id="watcher-reports-list">
+              <div class="text-center py-8 text-slate-400 text-xs font-medium">
+                <i data-lucide="file-text" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
+                Aucun rapport généré pour le moment.
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 4. FLUX D'OBSERVATIONS EN TEMPS RÉEL (POLLING 30S) -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+              <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">Flux d'Observations en Direct (30s)</h3>
+            </div>
+            <span class="text-[10px] font-bold text-slate-400">Analyse continue &bull; 0 latence</span>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+            <div class="overflow-x-auto max-h-[380px]">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400 sticky top-0">
+                  <tr>
+                    <th class="py-2.5 px-3">Date / Heure</th>
+                    <th class="py-2.5 px-3">Agent</th>
+                    <th class="py-2.5 px-3">Gravité</th>
+                    <th class="py-2.5 px-3">Titre de l'Observation</th>
+                    <th class="py-2.5 px-3">Détail & Extrait</th>
+                    <th class="py-2.5 px-3 text-right">Lead</th>
+                  </tr>
+                </thead>
+                <tbody id="watcher-observations-table" class="divide-y divide-slate-100 font-medium">
+                  <tr>
+                    <td colspan="6" class="text-center py-6 text-slate-400 text-xs">
+                      En attente des premières observations...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
 
       </section>

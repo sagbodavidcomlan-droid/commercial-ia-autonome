@@ -74,12 +74,22 @@ class SwarmStrategist:
                 "mission_actuelle": "Envoi des liens de formation, suivi J+7 & Enquêtes NPS",
                 "actions_aujourdhui": 19,
                 "derniere_action": f"{now_time} - Accès Pack délivré à Marcelle K. après validation Wave"
+            },
+            {
+                "id": "agent_watcher",
+                "role": "Agent 6 : SilentWatcher & Superviseur Autonome",
+                "avatar_icon": "shield-alert",
+                "status": "Observation continue",
+                "status_type": "active",
+                "mission_actuelle": "Surveillance non-intrusive des agents, audit qualité, détection d'anomalies & scoring",
+                "actions_aujourdhui": 36,
+                "derniere_action": f"{now_time} - Ronde d'inspection achevée : 100% conformité aux règles d'or"
             }
         ]
 
         return {
             "swarm_health": "100% Opérationnel",
-            "active_agents_count": 5,
+            "active_agents_count": len(agents),
             "total_collaborative_actions_today": sum(a["actions_aujourdhui"] for a in agents),
             "agents": agents
         }

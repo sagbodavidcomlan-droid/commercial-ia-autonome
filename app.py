@@ -51,6 +51,7 @@ from core.meta_messenger_sync import (
     send_messenger_message,
     send_whatsapp_cloud_message
 )
+from modules.silent_watcher import watcher_instance
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -78,6 +79,9 @@ creative_studio_engine = CreativeStudioEngine()
 
 # Démarrage de l'Autopilot 24h/24 en tâche de fond
 autopilot_daemon.start()
+
+# Démarrage de SilentWatcher (Superviseur Autonome)
+watcher_instance.start()
 
 
 class SalesPlatformHandler(SimpleHTTPRequestHandler):
@@ -124,7 +128,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         # 1. Page d'accueil / Console Web principale
-        if path == "/" or path == "/index.html":
+        if path == "/" or path == "/index.html" or path == "/watcher":
             self.serve_file(os.path.join(TEMPLATES_DIR, "index.html"), "text/html; charset=utf-8")
             return
 
@@ -241,6 +245,25 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_slide_svg(query)
         elif path == "/api/creative/post-visual-svg":
             self.handle_api_get_post_visual_svg(query)
+        elif path == "/api/watcher/status":
+            self.handle_api_watcher_status()
+        elif path == "/api/watcher/reports":
+            self.handle_api_watcher_reports(query)
+        elif path.startswith("/api/watcher/reports/") and path.endswith("/download"):
+            report_id = path.replace("/api/watcher/reports/", "").replace("/download", "").strip()
+            self.handle_api_watcher_report_download(report_id)
+        elif path.startswith("/api/watcher/reports/") and path.endswith("/html"):
+            report_id = path.replace("/api/watcher/reports/", "").replace("/html", "").strip()
+            self.handle_api_watcher_report_html(report_id)
+        elif path.startswith("/api/watcher/reports/"):
+            report_id = path.replace("/api/watcher/reports/", "").strip()
+            self.handle_api_watcher_report_detail(report_id)
+        elif path == "/api/watcher/bugs":
+            self.handle_api_watcher_bugs(query)
+        elif path == "/api/watcher/observations/latest":
+            self.handle_api_watcher_latest_observations(query)
+        elif path == "/api/watcher/conversations/scores":
+            self.handle_api_watcher_conversation_scores(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -383,8 +406,27 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_generate_omnichannel(body)
         elif path == "/api/creative/save-post":
             self.handle_api_save_creative_post(body)
+        elif path == "/api/watcher/reports/generate":
+            self.handle_api_watcher_generate_report(body)
+        elif path == "/api/watcher/bugs/update" or path.startswith("/api/watcher/bugs/"):
+            bug_id = path.replace("/api/watcher/bugs/", "").strip() if path.startswith("/api/watcher/bugs/") else body.get("bug_id")
+            self.handle_api_watcher_update_bug(bug_id, body)
         else:
             self.send_json_response({"error": "Route POST introuvable", "path": path}, status=404)
+
+    def do_PATCH(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        body = self.read_json_body()
+        if not self.is_authenticated():
+            self.send_json_response({"error": "Session invalide ou expirée.", "authenticated": False}, status=401)
+            return
+
+        if path.startswith("/api/watcher/bugs/"):
+            bug_id = path.replace("/api/watcher/bugs/", "").strip()
+            self.handle_api_watcher_update_bug(bug_id, body)
+        else:
+            self.send_json_response({"error": "Route PATCH introuvable", "path": path}, status=404)
 
     # --- UTILITAIRES SERVEUR ---
     def read_json_body(self):
@@ -2086,6 +2128,111 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(svg_code.encode("utf-8"))
+
+    # --- ROUTES API SILENTWATCHER ---
+    def handle_api_watcher_status(self):
+        try:
+            status = watcher_instance.get_system_status()
+            self.send_json_response({"success": True, "data": status})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_reports(self, query):
+        try:
+            limit = int(query.get("limit", [10])[0])
+            report_type = query.get("type", [None])[0]
+            reports = watcher_instance.get_reports(limit=limit, report_type=report_type)
+            self.send_json_response({"success": True, "data": reports})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_generate_report(self, body):
+        try:
+            report_type = (body.get("type") or "session").lower()
+            rep = watcher_instance.generate_structured_report(report_type=report_type)
+            self.send_json_response({"success": True, "data": rep})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_report_detail(self, report_id):
+        try:
+            rep_id_int = int(report_id)
+            report = watcher_instance.get_report_by_id(rep_id_int)
+            if report:
+                self.send_json_response({"success": True, "data": report})
+            else:
+                self.send_json_response({"success": False, "error": "Rapport introuvable"}, status=404)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_report_download(self, report_id):
+        try:
+            rep_id_int = int(report_id)
+            report = watcher_instance.get_report_by_id(rep_id_int)
+            if not report:
+                self.send_json_response({"success": False, "error": "Rapport introuvable"}, status=404)
+                return
+            content = json.dumps(report, ensure_ascii=False, indent=2).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Disposition", f'attachment; filename="rapport_silent_watcher_{report_id}.json"')
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_report_html(self, report_id):
+        try:
+            rep_id_int = int(report_id)
+            html = watcher_instance.generate_report_html(rep_id_int)
+            content = html.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_bugs(self, query):
+        try:
+            status = query.get("status", [None])[0]
+            limit = int(query.get("limit", [50])[0])
+            bugs = watcher_instance.get_bugs(status=status, limit=limit)
+            self.send_json_response({"success": True, "data": bugs})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_latest_observations(self, query):
+        try:
+            limit = int(query.get("limit", [50])[0])
+            agent_filter = query.get("agent", [None])[0]
+            obs = watcher_instance.get_latest_observations(limit=limit, agent_filter=agent_filter)
+            self.send_json_response({"success": True, "data": obs})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_conversation_scores(self, query):
+        try:
+            limit = int(query.get("limit", [50])[0])
+            scores = watcher_instance.get_conversation_scores(limit=limit)
+            self.send_json_response({"success": True, "data": scores})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_watcher_update_bug(self, bug_id, body):
+        try:
+            new_status = (body.get("status") or "").lower()
+            if new_status not in ("open", "investigating", "resolved", "ignored"):
+                self.send_json_response({"success": False, "error": "Statut invalide"}, status=400)
+                return
+            success = watcher_instance.update_bug_status(bug_id, new_status)
+            self.send_json_response({"success": success, "bug_id": bug_id, "status": new_status})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
 
 
 def run_server(port=7860):
