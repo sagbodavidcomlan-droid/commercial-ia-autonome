@@ -4026,19 +4026,19 @@ async function saveSettings(e) {
   }
 }
 
-async function testDiscordAlert() {
+async function testWhatsAppAlert() {
   try {
-    showToast("Envoi de l'alerte test en cours...", "info");
+    showToast("Envoi de l'alerte test WhatsApp sur votre téléphone...", "info");
     const res = await fetch("/api/alerts/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "closing" })
     });
     const data = await res.json();
-    if (data.discord_sent) {
-      showToast("Alerte Discord reçue avec succès sur votre canal !", "success");
+    if (data.whatsapp_sent) {
+      showToast("Alerte WhatsApp transmise avec succès sur votre téléphone personnel !", "success");
     } else {
-      showToast("Webhook Discord testé (configurez l'URL pour recevoir les pings).", "info");
+      showToast("Alerte générée ! Vérifiez que votre passerelle WhatsApp (+229 01 94 93 34 58) est connectée.", "info");
     }
   } catch (err) {
     showToast("Erreur lors du test d'alerte : " + err.message, "error");
