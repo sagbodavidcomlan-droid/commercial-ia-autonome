@@ -692,6 +692,18 @@ Réponds UNIQUEMENT en JSON :
                     fix_suggestion
                 ))
 
+                # Alerte en temps réel si sévérité critique ou error
+                try:
+                    from modules.realtime_notifier import get_notifier
+                    notifier = get_notifier()
+                    notifier.notify_watcher_anomaly(
+                        anomaly_type=f"[{agent.upper()}] {title}",
+                        details=f"Code: {bug_code} | Détail: {detail}\nSuggestion: {fix_suggestion[:300]}",
+                        severity=severity
+                    )
+                except Exception as ex_notif:
+                    logger.debug(f"Alerte bug notif: {ex_notif}")
+
             if self.db is None:
                 conn.commit()
                 conn.close()

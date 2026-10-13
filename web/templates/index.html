@@ -3494,6 +3494,44 @@
                 <div id="hubspot-test-result" class="text-xs"></div>
               </div>
 
+              <!-- Section 5 : Alerting d'Urgence Dave & Miroir CRM (Discord, Slack, Google Sheets) -->
+              <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
+                      <i data-lucide="bell-ring" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-black text-slate-900 tracking-tight">Alerting d'Urgence & Sauvegarde Miroir CRM</h3>
+                      <p class="text-xs text-slate-400 font-medium">Notifications instantanées sur Closing & anomalies SilentWatcher (Discord, Slack) et sauvegarde Google Sheets.</p>
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="button" onclick="testDiscordAlert()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition">
+                      <i data-lucide="send" class="w-3.5 h-3.5"></i> Test Alerte
+                    </button>
+                    <button type="button" onclick="triggerCrmMirrorSync()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition">
+                      <i data-lucide="sheet" class="w-3.5 h-3.5"></i> Sauvegarde Sheets
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">Webhook Discord (Canal Privé Dave)</label>
+                    <input type="url" id="setting-discord-webhook" placeholder="https://discord.com/api/webhooks/..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">Webhook Slack (Optionnel)</label>
+                    <input type="url" id="setting-slack-webhook" placeholder="https://hooks.slack.com/services/..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-slate-700 font-bold mb-1">Google Spreadsheet ID (Miroir Leads)</label>
+                    <input type="text" id="setting-sheets-id" placeholder="Ex: 1BxiMVs0XR..." class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 text-xs">
+                  </div>
+                </div>
+              </div>
+
               <!-- Bouton d'Enregistrement Principal -->
               <div class="flex justify-end pt-2">
                 <button type="submit" class="bg-[#0062ff] hover:bg-blue-600 text-white font-black py-3 px-8 rounded-2xl transition shadow-xs flex items-center gap-2">

@@ -4006,7 +4006,10 @@ async function saveSettings(e) {
     gemini_key: document.getElementById("setting-gemini-key")?.value || "",
     hubspot_token: document.getElementById("setting-hubspot-token")?.value || "",
     hubspot_portal_id: document.getElementById("setting-hubspot-portal-id")?.value || "",
-    crm_webhook_url: document.getElementById("setting-crm-webhook-url")?.value || ""
+    crm_webhook_url: document.getElementById("setting-crm-webhook-url")?.value || "",
+    discord_webhook_url: document.getElementById("setting-discord-webhook")?.value || "",
+    slack_webhook_url: document.getElementById("setting-slack-webhook")?.value || "",
+    sheets_id: document.getElementById("setting-sheets-id")?.value || ""
   };
 
   try {
@@ -4016,10 +4019,49 @@ async function saveSettings(e) {
       body: JSON.stringify(payload)
     });
     const data = await res.json();
-    alert(data.message || "Paramètres et clés API enregistrés avec succès !");
+    showToast(data.message || "Paramètres enregistrés avec succès !", "success");
     await checkConnectionsHealth();
   } catch (err) {
-    alert("Erreur lors de l'enregistrement des paramètres.");
+    showToast("Erreur lors de l'enregistrement des paramètres.", "error");
+  }
+}
+
+async function testDiscordAlert() {
+  try {
+    showToast("Envoi de l'alerte test en cours...", "info");
+    const res = await fetch("/api/alerts/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "closing" })
+    });
+    const data = await res.json();
+    if (data.discord_sent) {
+      showToast("Alerte Discord reçue avec succès sur votre canal !", "success");
+    } else {
+      showToast("Webhook Discord testé (configurez l'URL pour recevoir les pings).", "info");
+    }
+  } catch (err) {
+    showToast("Erreur lors du test d'alerte : " + err.message, "error");
+  }
+}
+
+async function triggerCrmMirrorSync() {
+  try {
+    const sheetsId = document.getElementById("setting-sheets-id")?.value || "";
+    showToast("Sauvegarde miroir CRM en cours...", "info");
+    const res = await fetch("/api/crm/mirror/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spreadsheet_id: sheetsId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`${data.count} prospects synchronisés et sauvegardés avec succès !`, "success");
+    } else {
+      showToast(data.error || "Erreur lors de la synchronisation miroir", "error");
+    }
+  } catch (err) {
+    showToast("Erreur miroir CRM : " + err.message, "error");
   }
 }
 

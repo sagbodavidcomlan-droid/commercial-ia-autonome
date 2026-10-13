@@ -226,7 +226,7 @@ class GoogleCalendarCloser:
 
         logger.info(f"Session de closing planifiée avec succès pour {contact_name} : {meet_link}")
 
-        return {
+        booking_res = {
             "success": True,
             "task_id": new_task_id,
             "google_event_id": gcal_event_id,
@@ -238,6 +238,16 @@ class GoogleCalendarCloser:
             "summary": summary,
             "message": f"Appel de closing planifié avec Google Meet ({meet_link})"
         }
+
+        # Déclenchement de l'alerte omnicanale instantanée à Dave
+        try:
+            from modules.realtime_notifier import get_notifier
+            notifier = get_notifier()
+            notifier.notify_meeting_booked(booking_res)
+        except Exception as e:
+            logger.warning(f"Notification booking error: {e}")
+
+        return booking_res
 
 
 calendar_closer_instance = GoogleCalendarCloser()
