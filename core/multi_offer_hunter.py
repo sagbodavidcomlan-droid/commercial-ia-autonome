@@ -165,27 +165,17 @@ class MultiOfferHunter:
         if "facebook_audience" in strategy["channels"]:
             for kw in strategy["fb_keywords"][:1]:
                 try:
-                    logger.info(f"[Facebook Ads Audience] Interception prospects réels pour '{kw}'...")
+                    logger.info(f"[Facebook Ads Audience] Interception prospects réels pour '{kw}' (Ciblant: {offer_name})...")
                     fb_leads = self.fb_collector.hunt_competitor_audience(
                         keywords=[kw],
                         countries=[country],
                         max_competitors=2,
-                        auto_ingest_crm=True
+                        auto_ingest_crm=True,
+                        target_offer=item
                     )
-                    # Mettre à jour l'offre matchée pour ces leads dans la base
-                    conn = get_connection()
-                    cur = conn.cursor()
                     for fbl in fb_leads:
-                        cid = fbl.get("crm_lead_id")
-                        if cid:
-                            cur.execute(
-                                "UPDATE crm_leads SET offre_matchee = ?, offre_matchee_id = ? WHERE id = ?",
-                                (offer_name, offer_id, cid)
-                            )
                         fbl["offre_matchee"] = offer_name
                         leads_acquired.append(fbl)
-                    conn.commit()
-                    conn.close()
                 except Exception as e:
                     logger.error(f"Erreur prospection Facebook Audience pour {offer_name}: {e}")
 

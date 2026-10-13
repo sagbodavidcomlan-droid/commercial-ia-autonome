@@ -1797,8 +1797,8 @@ def get_or_create_lead(
                     upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
                     upd_params.extend([full, full])
 
-            # Champs optionnels passés en kwargs (ex: email, whatsapp, telephone, facebook_psid)
-            for k in ["email", "whatsapp", "telephone", "facebook_psid", "linkedin_url"]:
+            # Champs optionnels passés en kwargs (ex: email, whatsapp, telephone, facebook_psid, offre_matchee, secteur_activite)
+            for k in ["email", "whatsapp", "telephone", "facebook_psid", "linkedin_url", "secteur_activite", "offre_matchee", "offre_matchee_id"]:
                 val = kwargs.get(k)
                 if val:
                     upd_fields.append(f"{k} = COALESCE({k}, ?)")
@@ -1877,6 +1877,9 @@ def get_or_create_lead(
             init_temperature = kwargs.get("temperature") or ("Chaud" if init_statut == "Chaud" else "Tiède")
             init_score_dur = int(kwargs.get("score_dur") or 0)
             init_score_qual = int(kwargs.get("score_qualification") or init_score_dur)
+            secteur_val = kwargs.get("secteur_activite")
+            offre_matchee_val = kwargs.get("offre_matchee")
+            offre_matchee_id_val = kwargs.get("offre_matchee_id")
 
             c.execute("""
                 INSERT INTO crm_leads (
@@ -1887,6 +1890,7 @@ def get_or_create_lead(
                     poste, douleur_identifiee,
                     score_dur, score_qualification,
                     notes, centre_interet,
+                    secteur_activite, offre_matchee, offre_matchee_id,
                     created_at, date_creation, last_contact_at, last_interaction, updated_at,
                     conversation_count
                 ) VALUES (
@@ -1897,6 +1901,7 @@ def get_or_create_lead(
                     ?, ?,
                     ?, ?,
                     ?, ?,
+                    ?, ?, ?,
                     datetime('now'), datetime('now'), datetime('now'), datetime('now'), datetime('now'),
                     1
                 )
@@ -1907,7 +1912,8 @@ def get_or_create_lead(
                 init_statut, init_temperature,
                 poste, douleur,
                 init_score_dur, init_score_qual,
-                notes, notes
+                notes, notes,
+                secteur_val, offre_matchee_val, offre_matchee_id_val
             ))
             new_id = c.lastrowid
             conn.commit()

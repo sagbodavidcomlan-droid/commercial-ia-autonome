@@ -13,8 +13,13 @@ import sys
 import json
 import logging
 import requests
+import urllib.request
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 # Importer la configuration de domaine dynamique
 from modules.config_loader import get_active_config
@@ -246,9 +251,256 @@ class FacebookAdsCollector:
         logger.info(f"👉 {len(parsed_comments)} commentaire(s) extrait(s).")
         return parsed_comments
 
-    def analyze_comment_for_lead(self, comment_text: str, user_profile: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def _get_gemini_key(self) -> Optional[str]:
+        """Récupère la clé API Gemini depuis l'environnement ou system_settings."""
+        key = os.getenv("GEMINI_API_KEY")
+        if not key:
+            try:
+                from core.database_store import get_connection
+                conn = get_connection()
+                c = conn.cursor()
+                c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'gemini_key'")
+                row = c.fetchone()
+                conn.close()
+                if row and row[0]:
+                    key = row[0].strip()
+            except Exception:
+                pass
+        return key
+
+    def qualify_lead_for_catalog_and_sector(
+        self,
+        comment_text: str,
+        post_text: str = "",
+        user_profile: Optional[Dict[str, Any]] = None,
+        competitor_name: str = "",
+        target_offer: Optional[Dict[str, Any]] = None,
+        active_catalog: Optional[List[Dict[str, Any]]] = None
+    ) -> Optional[Dict[str, Any]]:
         """
-        Analyse le commentaire d'un internaute pour évaluer s'il s'agit d'un prospect chaud.
+        FILTRE ET QUALIFIE LE PROSPECT SELON NOS SECTEURS ET NOTRE CATALOGUE D'OFFRES :
+        1. Vérifie si le commentaire + post correspondent à l'un de nos domaines d'activité.
+        2. Élimine les faux positifs (spams, vente d'habillement/voitures/perruques, commentaires hors sujet).
+        3. Identifie précisément l'offre correspondante dans le catalogue actif.
+        4. Valide l'adéquation ICP (Ideal Customer Profile).
+        """
+        if not comment_text:
+            return None
+
+        # 1. Récupération du catalogue actif si non passé
+        catalog = active_catalog
+        if catalog is None:
+            try:
+                from core.catalog_engine import CatalogEngine
+                ce = CatalogEngine()
+                catalog = ce.get_items(statut="Actif")
+            except Exception as e:
+                logger.warning(f"Impossible de charger le catalogue actif : {e}")
+                catalog = []
+
+        combined_text = f"{post_text} {comment_text}".lower().strip()
+        comment_lower = comment_text.lower().strip()
+
+        # Dictionnaire des signatures sectorielles de notre catalogue
+        SECTOR_SIGNATURES = {
+            "formation_canva": {
+                "keywords": ["canva", "graphisme", "graphiste", "affiche", "flyer", "visuel", "design", "conception graphique", "formation canva", "photoshop"],
+                "default_offer_id": 1,
+                "default_offer_name": "Pack Graphisme Pro & Canva pour Étudiants",
+                "secteur": "Formation Digitale"
+            },
+            "materiel_video": {
+                "keywords": ["kit vidéo", "kit video", "micro cravate", "tournage", "smartphone pro", "créateur", "createur", "vidéaste", "videaste", "tiktok", "reels", "trépied", "trepied", "ring light"],
+                "default_offer_id": 2,
+                "default_offer_name": "Kit Vidéaste & Créateur Smartphone Pro",
+                "secteur": "Matériel Créateur & Vidéo"
+            },
+            "site_web": {
+                "keywords": ["site web", "site internet", "vitrine", "site vitrine", "boutique en ligne", "wordpress", "développeur", "developpeur web", "agence web", "page de vente", "landing page"],
+                "default_offer_id": 3,
+                "default_offer_name": "Audit Digital & Conception Site Vitrine Express",
+                "secteur": "Développement Web & Digital"
+            },
+            "immobilier_foncier": {
+                "keywords": ["titre foncier", "parcelle", "terrain", "domaine foncier", "viabilisée", "viabilisee", "achat terrain", "foncier", "lotissement", "zone résidentielle", "immobilier"],
+                "default_offer_id": 4,
+                "default_offer_name": "Parcelle Viabilisée Titre Foncier (500m²)",
+                "secteur": "Immobilier & Foncier"
+            },
+            "audit_tunnel_vente": {
+                "keywords": ["tunnel de vente", "processus vente", "audit commercial", "optimiser ventes", "closer", "closing", "b2b", "leads", "directeur commercial", "perte de clients"],
+                "default_offer_id": 5,
+                "default_offer_name": "Audit Commercial & Tunnel de Vente Express",
+                "secteur": "Consulting Commercial"
+            },
+            "automatisation_whatsapp": {
+                "keywords": ["whatsapp", "automatisation whatsapp", "robot whatsapp", "bot whatsapp", "service client whatsapp", "répondeur whatsapp", "crm whatsapp", "automatiser messages", "wati"],
+                "default_offer_id": 7,
+                "default_offer_name": "Système d'Automatisation & Closing WhatsApp",
+                "secteur": "Automatisation & CRM"
+            }
+        }
+
+        # Liste de signaux d'exclusion stricts (Secteurs hors catalogue / Spams)
+        DISQUALIFYING_SECTOR_KEYWORDS = [
+            "robe", "chaussure", "pantalon", "tissu", "perruque", "mèche", "meche", "sac à main",
+            "voiture", "véhicule", "moto", "pièce détachée", "huile moteur", "pneu",
+            "restaurant", "livraison plat", "chawarma", "burger", "poulet", "repas", "nourriture",
+            "savon", "crème visage", "teint", "pommade", "lait de beauté", "parfum",
+            "médicament", "tisane", "faiblesse sexuelle", "voyance", "marabout"
+        ]
+
+        # Si le post ou le commentaire est manifestement sur un secteur non couvert (sans mention de nos offres)
+        for disq in DISQUALIFYING_SECTOR_KEYWORDS:
+            if disq in combined_text:
+                # Vérifier si ce n'est pas un commentaire demandant une automatisation ou un site pour ce domaine
+                is_our_service = any(k in combined_text for k in ["site web", "robot whatsapp", "tunnel de vente", "graphisme", "automatisation"])
+                if not is_our_service:
+                    logger.info(f"🚫 Prospect disqualifié (secteur exclu '{disq}') : '{comment_text[:60]}...'")
+                    return None
+
+        # Si une offre cible est expressément demandée (ex: par MultiOfferHunter)
+        if target_offer:
+            target_id = target_offer.get("id")
+            target_name = target_offer.get("nom", "")
+            target_cat = target_offer.get("categorie", "")
+            target_desc = target_offer.get("description", "").lower()
+
+            # Extraire les mots-clés de l'offre
+            t_keywords = [target_name.lower(), target_cat.lower()]
+            ft = target_offer.get("fiche_technique", {})
+            if isinstance(ft, dict):
+                t_keywords.extend([str(v).lower() for v in ft.get("mots_cles", []) if isinstance(v, str)])
+
+            # Vérifier la pertinence envers cette offre spécifique
+            matched = any(kw in combined_text for kw in t_keywords if kw and len(kw) > 3)
+            # Vérifier aussi la signature sectorielle associée
+            for sec_key, sec_data in SECTOR_SIGNATURES.items():
+                if sec_data["default_offer_id"] == target_id:
+                    if any(k in combined_text for k in sec_data["keywords"]):
+                        matched = True
+                        break
+
+            if not matched:
+                logger.info(f"⚠️ Commentaire rejeté (non aligné avec l'offre cible #{target_id} '{target_name}') : '{comment_text[:60]}'")
+                return None
+
+            # Trouver le secteur associé
+            secteur = target_cat or "Business & Solutions"
+            for s_data in SECTOR_SIGNATURES.values():
+                if s_data["default_offer_id"] == target_id:
+                    secteur = s_data["secteur"]
+                    break
+
+            return {
+                "matched_offer_id": target_id,
+                "matched_offer_name": target_name,
+                "secteur_activite": secteur,
+                "pertinence_score": 85,
+                "besoin_identifie": f"Intérêt direct pour {target_name} ({comment_text[:70]})"
+            }
+
+        # 2. Détection heuristique parmi toutes les offres actives du catalogue
+        best_match = None
+        highest_keyword_hits = 0
+
+        for sec_key, sec_data in SECTOR_SIGNATURES.items():
+            hits = sum(1 for kw in sec_data["keywords"] if kw in combined_text)
+            if hits > highest_keyword_hits:
+                highest_keyword_hits = hits
+                # Trouver si l'offre existe réellement dans le catalogue actif
+                cat_offer = next((i for i in catalog if i.get("id") == sec_data["default_offer_id"]), None)
+                best_match = {
+                    "matched_offer_id": cat_offer.get("id") if cat_offer else sec_data["default_offer_id"],
+                    "matched_offer_name": cat_offer.get("nom") if cat_offer else sec_data["default_offer_name"],
+                    "secteur_activite": sec_data["secteur"],
+                    "pertinence_score": 70 + min(hits * 10, 25),
+                    "besoin_identifie": f"Intérêt pour {sec_data['secteur']} via post concurrente"
+                }
+
+        if best_match and highest_keyword_hits >= 1:
+            return best_match
+
+        # 3. Arbitrage Sémantique Gemini Flash-Lite si le post/commentaire est ambigu
+        gemini_key = self._get_gemini_key()
+        if gemini_key and catalog:
+            catalog_summary = "\n".join([
+                f"- ID {item.get('id')} : {item.get('nom')} (Catégorie: {item.get('categorie')}, Prix: {item.get('prix')} FCFA)"
+                for item in catalog[:10]
+            ])
+            prompt = f"""Tu es un Directeur Commercial B2B expert en qualification de prospects.
+Évalue si ce commentaire de prospect sous une publication/publicité d'entreprise concurrente correspond à NOS offres et nos secteurs d'activité.
+
+NOS OFFRES EN CATALOGUE :
+{catalog_summary}
+
+PUBLICATION DU CONCURRENT ({competitor_name}) :
+\"\"\"{post_text[:350]}\"\"\"
+
+COMMENTAIRE DU PROSPECT :
+\"\"\"{comment_text}\"\"\"
+
+INSTRUCTIONS :
+1. Détermine si le prospect cherche un produit/service qui correspond à L'UNE DE NOS OFFRES.
+2. Si le commentaire ou la publication concerne un secteur totalement étranger (vêtements, perruques, fast-food, mécanique, arnaque), réponds `is_qualified: false`.
+3. Réponds UNIQUEMENT en JSON strict avec cette structure :
+{{
+  "is_qualified": true ou false,
+  "matched_offer_id": id_ou_null,
+  "matched_offer_name": "nom_offre_ou_null",
+  "secteur_activite": "secteur_activite",
+  "besoin_identifie": "résumé clair du besoin du prospect",
+  "pertinence_score": note_entre_0_et_100,
+  "raison_rejet": "explication si non qualifié"
+}}"""
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={gemini_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    cand = data.get("candidates", [{}])[0]
+                    parts = cand.get("content", {}).get("parts", [])
+                    raw_text = "".join([p.get("text", "") for p in parts if isinstance(p, dict)]).strip()
+                    res_json = json.loads(raw_text.replace("```json", "").replace("```", "").strip())
+
+                    if res_json.get("is_qualified") and res_json.get("pertinence_score", 0) >= 60:
+                        return {
+                            "matched_offer_id": res_json.get("matched_offer_id"),
+                            "matched_offer_name": res_json.get("matched_offer_name"),
+                            "secteur_activite": res_json.get("secteur_activite") or "Business & Solutions",
+                            "pertinence_score": res_json.get("pertinence_score", 75),
+                            "besoin_identifie": res_json.get("besoin_identifie") or comment_text[:80]
+                        }
+                    else:
+                        logger.info(f"❌ Rejet Gemini ({res_json.get('raison_rejet', 'hors cible')}) : '{comment_text[:60]}'")
+                        return None
+            except Exception as e:
+                logger.warning(f"Erreur évaluation Gemini Flash-Lite pour qualification : {e}")
+
+        # Si ni règle ni Gemini n'a validé d'adéquation sectorielle -> Disqualifié
+        logger.info(f"⚠️ Prospect non qualifié (aucun match sectoriel ou catalogue) : '{comment_text[:60]}'")
+        return None
+
+    def analyze_comment_for_lead(
+        self,
+        comment_text: str,
+        user_profile: Dict[str, Any],
+        post_text: str = "",
+        competitor_name: str = "",
+        target_offer: Optional[Dict[str, Any]] = None,
+        active_catalog: Optional[List[Dict[str, Any]]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Analyse le commentaire d'un internaute pour évaluer s'il s'agit d'un prospect chaud
+        ET qualifié pour nos offres / secteurs d'activité.
         Extrait les numéros de téléphone africains (+229, +225, +221, etc.) si présents.
         """
         if not comment_text:
@@ -270,12 +522,25 @@ class FacebookAdsCollector:
                 # Indicatif par défaut selon le contexte géographique
                 detected_phone = f"+229{detected_phone}" if len(detected_phone) == 8 else f"+{detected_phone}"
 
-        # Si un numéro est laissé, c'est automatiquement un prospect ultra-chaud
+        # Si aucun signal d'intention ni numéro de téléphone -> Rejet immédiat
         if not matched_triggers and not detected_phone:
             return None
 
-        # Estimation de la note d'intention DUR
-        intent_score = 55 + min(len(matched_triggers) * 12, 35)
+        # Qualification sectorielle & matching du catalogue d'offres
+        qualification = self.qualify_lead_for_catalog_and_sector(
+            comment_text=comment_text,
+            post_text=post_text,
+            user_profile=user_profile,
+            competitor_name=competitor_name,
+            target_offer=target_offer,
+            active_catalog=active_catalog
+        )
+
+        if not qualification:
+            return None
+
+        # Calcul de la note d'intention DUR
+        intent_score = 55 + min(len(matched_triggers) * 10, 30)
         if detected_phone:
             intent_score = min(intent_score + 15, 95)
 
@@ -295,7 +560,12 @@ class FacebookAdsCollector:
             "detected_intent": matched_triggers,
             "comment_sample": comment_text,
             "score_dur": intent_score,
-            "source_detail": f"Commentaire Public: '{comment_text[:80]}...'",
+            "source_detail": f"Commentaire Public ({qualification.get('secteur_activite', 'Général')}): '{comment_text[:80]}...'",
+            "secteur_activite": qualification.get("secteur_activite"),
+            "offre_matchee": qualification.get("matched_offer_name"),
+            "offre_matchee_id": qualification.get("matched_offer_id"),
+            "besoin_identifie": qualification.get("besoin_identifie"),
+            "pertinence_score": qualification.get("pertinence_score", 70),
             "timestamp": datetime.utcnow().isoformat()
         }
 
@@ -304,22 +574,28 @@ class FacebookAdsCollector:
         keywords: Optional[List[str]] = None,
         countries: Optional[List[str]] = None,
         max_competitors: int = 3,
-        auto_ingest_crm: bool = True
+        auto_ingest_crm: bool = True,
+        target_offer: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
         PIPELINE MAÎTRE DU DIGITAL BUSINESS DEVELOPER :
         1. Cherche les annonces de concurrents sur la niche active.
         2. Visite les pages des concurrents et aspire leurs posts récents.
         3. Extrait les commentaires des internautes sous ces posts.
-        4. Identifie les individus à fort intérêt (prix, participation, numéros WhatsApp).
+        4. Identifie et QUALIFIE les individus selon nos offres et secteurs d'activité.
         5. Ingeste directement les leads qualifiés dans le CRM (`crm_leads`) avec déduplication.
         """
         from core.database_store import get_or_create_lead, log_activity
+        from core.catalog_engine import CatalogEngine
 
         active_cfg = get_active_config()
         kw_list = keywords or active_cfg.get("mots_cles_prospection", {}).get("facebook_ads", SEARCH_KEYWORDS)
         target_countries = countries or active_cfg.get("cible", {}).get("pays", TARGET_COUNTRIES)
         primary_country = target_countries[0] if target_countries else "BJ"
+
+        # Chargement préalable du catalogue d'offres actives pour la session de traque
+        ce = CatalogEngine()
+        active_catalog = ce.get_items(statut="Actif")
 
         qualified_leads = []
         logger.info(f"🎯 Lancement de la traque d'audience sur {len(kw_list)} mots-clés dans {primary_country}...")
@@ -347,11 +623,16 @@ class FacebookAdsCollector:
                 if not post_url:
                     continue
 
+                post_text = post.get("text", "")
                 comments = self.get_post_comments(post_url)
                 for comment in comments:
                     lead_analysis = self.analyze_comment_for_lead(
                         comment_text=comment.get("text", ""),
-                        user_profile=comment
+                        user_profile=comment,
+                        post_text=post_text,
+                        competitor_name=comp_name,
+                        target_offer=target_offer,
+                        active_catalog=active_catalog
                     )
 
                     if lead_analysis:
@@ -372,8 +653,11 @@ class FacebookAdsCollector:
                                 whatsapp=lead_analysis.get("phone_detected"),
                                 telephone=lead_analysis.get("phone_detected"),
                                 facebook_psid=lead_analysis.get("author_id"),
-                                douleur_identifiee=f"Intention détectée sous pub {comp_name} : {', '.join(lead_analysis.get('detected_intent', []))}",
-                                notes=f"Interception d'audience : \"{lead_analysis.get('comment_sample')}\" | Source: {post_url}",
+                                secteur_activite=lead_analysis.get("secteur_activite"),
+                                offre_matchee=lead_analysis.get("offre_matchee"),
+                                offre_matchee_id=lead_analysis.get("offre_matchee_id"),
+                                douleur_identifiee=lead_analysis.get("besoin_identifie") or f"Intention détectée sous pub {comp_name} : {', '.join(lead_analysis.get('detected_intent', []))}",
+                                notes=f"Interception ciblée [{lead_analysis.get('secteur_activite', '')}] : \"{lead_analysis.get('comment_sample')}\" | Source: {post_url}",
                                 score_dur=lead_analysis.get("score_dur", 65),
                                 score_qualification=lead_analysis.get("score_dur", 65),
                                 statut_lead="Chaud" if lead_analysis.get("phone_detected") else "Nouveau"
@@ -384,14 +668,14 @@ class FacebookAdsCollector:
 
                             log_activity(
                                 category="PROSPECTION",
-                                action="Interception d'un prospect qualifié dans l'audience concurrente",
+                                action=f"Interception prospect qualifié ({lead_analysis.get('secteur_activite', 'Audience')})",
                                 lead_name=lead_analysis.get("nom_complet"),
                                 lead_phone=lead_analysis.get("phone_detected") or "N/A",
                                 status="SUCCESS",
-                                details=f"Intercepté sous annonce '{comp_name}' : \"{lead_analysis.get('comment_sample')}\""
+                                details=f"Match Offre: {lead_analysis.get('offre_matchee')} | Intercepté sous '{comp_name}' : \"{lead_analysis.get('comment_sample')}\""
                             )
 
-        logger.info(f"🏆 Fin de patrouille : {len(qualified_leads)} prospect(s) qualifié(s) extrait(s) et injecté(s) au CRM.")
+        logger.info(f"🏆 Fin de patrouille : {len(qualified_leads)} prospect(s) qualifié(s) et aligné(s) au catalogue injecté(s) au CRM.")
         return qualified_leads
 
     # Méthode rétrocompatible pour le code existant
