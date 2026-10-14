@@ -78,6 +78,7 @@ class Autopilot24hDaemon:
         self.orchestrator = AutopilotOrchestrator()
         self.sales_agent = AISalesAgent()
         self.logs: List[str] = []
+        self.started_at = time.time()
 
     def log_event(self, msg: str):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -88,6 +89,7 @@ class Autopilot24hDaemon:
 
     def start(self):
         self.is_running = True
+        self.started_at = time.time()
         set_autopilot_active(True)
         if self.thread and self.thread.is_alive():
             self.log_event("🚀 Autopilot réactivé (Mode 100% Autonome).")
@@ -124,9 +126,13 @@ class Autopilot24hDaemon:
         except Exception:
             pass
 
+        uptime_secs = int(time.time() - getattr(self, "started_at", time.time())) if self.is_running else 0
+
         return {
             "is_running": self.is_running,
             "mode": "PRODUCTION_REELLE" if is_prod else "SIMULATION",
+            "uptime_seconds": uptime_secs,
+            "started_at": getattr(self, "started_at", time.time()),
             "cycles_completed": self.cycles_completed,
             "leads_captured": self.leads_captured_session,
             "sales_converted": self.sales_converted_session,

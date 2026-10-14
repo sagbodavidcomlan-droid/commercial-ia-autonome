@@ -6042,11 +6042,53 @@ function resetSimulatorChat() {
 }
 
 // --- AUTOPILOT 24/7 & MONITORING EN DIRECT ---
+let autopilotUptimeSeconds = 0;
+let autopilotIsRunning = false;
+let autopilotTimerTicker = null;
+
+function renderAutopilotTimer() {
+  const timerEl = document.getElementById("dash-autopilot-timer");
+  if (!timerEl) return;
+
+  if (!autopilotIsRunning) {
+    timerEl.textContent = "EN PAUSE";
+    timerEl.classList.add("text-amber-300");
+    timerEl.classList.remove("text-white");
+    return;
+  }
+
+  timerEl.classList.remove("text-amber-300");
+  timerEl.classList.add("text-white");
+
+  const totalSecs = Math.max(0, Math.floor(autopilotUptimeSeconds));
+  const hrs = String(Math.floor(totalSecs / 3600)).padStart(2, '0');
+  const mins = String(Math.floor((totalSecs % 3600) / 60)).padStart(2, '0');
+  const secs = String(totalSecs % 60).padStart(2, '0');
+  timerEl.textContent = `${hrs}:${mins}:${secs}`;
+}
+
+function initAutopilotTimerTicker() {
+  if (autopilotTimerTicker) return;
+  autopilotTimerTicker = setInterval(() => {
+    if (autopilotIsRunning) {
+      autopilotUptimeSeconds++;
+      renderAutopilotTimer();
+    }
+  }, 1000);
+}
+
 async function refreshAutopilotStatus() {
   try {
     const res = await fetch("/api/autopilot/status");
     const data = await res.json();
     const d = data.daemon || {};
+
+    autopilotIsRunning = !!d.is_running;
+    if (typeof d.uptime_seconds === "number") {
+      autopilotUptimeSeconds = d.uptime_seconds;
+    }
+    renderAutopilotTimer();
+    initAutopilotTimerTicker();
 
     const cyclesEl = document.getElementById("autopilot-cycles-val");
     const leadsEl = document.getElementById("autopilot-leads-val");

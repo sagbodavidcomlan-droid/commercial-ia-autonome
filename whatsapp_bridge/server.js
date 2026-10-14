@@ -199,10 +199,20 @@ app.post('/send', async (req, res) => {
     }
 });
 
-// Nettoyage auth pour renouveler la session à neuf
-if (fs.existsSync(AUTH_DIR)) {
-    fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-}
+app.post('/logout', (req, res) => {
+    try {
+        if (fs.existsSync(AUTH_DIR)) {
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+        }
+        connectionStatus = 'DISCONNECTED';
+        connectedNumber = null;
+        sock = null;
+        res.json({ success: true, message: 'Session déconnectée' });
+        setTimeout(() => startWhatsApp('2290194933458'), 1000);
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`🚀 [WhatsApp Bridge] Écoute sur le port ${PORT}`);
