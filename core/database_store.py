@@ -310,12 +310,30 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS creative_studio_assets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        topic TEXT NOT NULL,
+        format_type TEXT DEFAULT '1:1', -- 1:1, 9:16, 16:9
+        style_preset TEXT,
+        prompt_used TEXT,
+        image_url TEXT NOT NULL,
+        s3url TEXT,
+        resolution TEXT DEFAULT '1K',
+        likes INTEGER DEFAULT 0,
+        metadata_json TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_agent ON watcher_observations(agent_name, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_severity ON watcher_observations(severity, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bugs_status ON watcher_bugs(status, severity)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conv_scores ON conversation_scores(lead_id, scored_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_lead ON crm_lead_calls(lead_id, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_status ON crm_lead_calls(status, call_type)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_creative_assets ON creative_studio_assets(created_at)")
 
     # Harmonisation & migration non-bloquante de la table crm_leads
     try:
@@ -2527,6 +2545,78 @@ def get_crm_stats() -> Dict[str, Any]:
     finally:
         conn.close()
 
+
+
+def get_setting(setting_key: str, default: Optional[str] = None) -> Optional[str]:
+    """Récupère une valeur de configuration dans system_settings."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT setting_value FROM system_settings WHERE setting_key = ?", (setting_key,))
+        row = c.fetchone()
+        conn.close()
+        return row["setting_value"] if row and row["setting_value"] is not None else default
+    except Exception as e:
+        logger.warning(f"Erreur get_setting({setting_key}): {e}")
+        return default
+
+
+def set_setting(setting_key: str, setting_value: str) -> bool:
+    """Enregistre ou met à jour un paramètre dans system_settings."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO system_settings (setting_key, setting_value, updated_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(setting_key) DO UPDATE SET
+                setting_value = excluded.setting_value,
+                updated_at = datetime('now')
+        """, (setting_key, str(setting_value)))
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur set_setting({setting_key}): {e}")
+        return False
+
+
+def save_creative_asset(
+    title: str,
+    topic: str,
+    image_url: str,
+    format_type: str = "1:1",
+    style_preset: str = "",
+    prompt_used: str = "",
+    s3url: str = "",
+    metadata: Optional[Dict[str, Any]] = None
+) -> int:
+    """Enregistre un visuel publicitaire dans creative_studio_assets."""
+    meta_json = json.dumps(metadata or {})
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO creative_studio_assets (title, topic, format_type, style_preset, prompt_used, image_url, s3url, metadata_json, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    """, (title, topic, format_type, style_preset, prompt_used, image_url, s3url, meta_json))
+    asset_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return asset_id
+
+
+def get_creative_assets(limit: int = 20) -> List[Dict[str, Any]]:
+    """Récupère la galerie des visuels créatifs récents."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM creative_studio_assets
+        ORDER BY id DESC
+        LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 if __name__ == "__main__":

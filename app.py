@@ -41,6 +41,7 @@ from poller import start_poller_thread, get_agent_poller_status, run_poller_cycl
 from modules.config_loader import get_active_config, set_active_domain, create_domain_profile
 from modules.ai_sales_agent import AISalesAgent
 from modules.creative_studio_engine import CreativeStudioEngine
+from core.creative_studio_engine import creative_engine as visual_creative_engine
 from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
 from core.database_store import get_lead_messages, get_lead_channels, get_lead_calls
 from core.meta_messenger_sync import (
@@ -285,6 +286,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_market_trend_reports()
         elif path == "/api/market-intel/battlecard-lead":
             self.handle_api_get_lead_battlecard(query)
+        elif path == "/api/creative/gallery":
+            self.handle_api_get_creative_gallery()
+        elif path == "/api/voice/profiles":
+            self.handle_api_get_voice_profiles()
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -402,6 +407,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_market_scan(body)
         elif path == "/api/market-intel/battlecard":
             self.handle_api_build_competitor_battlecard(body)
+        elif path == "/api/creative/generate-visual":
+            self.handle_api_generate_creative_visual(body)
+        elif path == "/api/voice/set-active":
+            self.handle_api_set_active_voice(body)
+        elif path == "/api/voice/clone-save":
+            self.handle_api_save_cloned_voice(body)
+        elif path == "/api/voice/preview":
+            self.handle_api_preview_voice(body)
         elif path == "/api/enrichment/disc":
             self.handle_api_enrich_disc(body)
         elif path == "/api/autopilot/run":
@@ -1226,6 +1239,57 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             return
         res = market_intelligence_engine.build_competitor_battlecard(name, website_url=url)
         self.send_json_response({"success": True, "battlecard": res})
+
+    def handle_api_get_creative_gallery(self):
+        assets = visual_creative_engine.get_gallery(limit=24)
+        self.send_json_response({"success": True, "assets": assets, "count": len(assets)})
+
+    def handle_api_generate_creative_visual(self, body):
+        topic = body.get("topic", "")
+        format_type = body.get("format_type", "1:1")
+        style_preset = body.get("style_preset", "saas_workspace")
+        target_audience = body.get("target_audience", "Entrepreneurs et PME")
+
+        res = visual_creative_engine.generate_advertising_visual(
+            topic=topic,
+            format_type=format_type,
+            style_preset=style_preset,
+            target_audience=target_audience
+        )
+        self.send_json_response(res)
+
+    def handle_api_get_voice_profiles(self):
+        active = voice_engine.get_active_voice()
+        available = voice_engine.get_available_voices()
+        self.send_json_response({"success": True, "active": active, "voices": available})
+
+    def handle_api_set_active_voice(self, body):
+        voice_id = body.get("voice_id", "")
+        profile_key = body.get("profile_key", "custom")
+        name = body.get("name", "")
+        if not voice_id:
+            self.send_json_response({"success": False, "error": "Paramètre voice_id requis."}, status=400)
+            return
+        res = voice_engine.set_active_voice(voice_id=voice_id, profile_key=profile_key, name=name)
+        self.send_json_response({"success": True, "active": res, "message": f"Voix active mise à jour : {res.get('name')}"})
+
+    def handle_api_save_cloned_voice(self, body):
+        voice_id = body.get("voice_id", "")
+        name = body.get("name", "Ma Voix Clonée")
+        if not voice_id:
+            self.send_json_response({"success": False, "error": "Voice ID ElevenLabs requis."}, status=400)
+            return
+        res = voice_engine.save_cloned_voice(voice_id=voice_id, name=name)
+        self.send_json_response({"success": True, "active": res, "message": f"Voix '{name}' enregistrée et activée avec succès !"})
+
+    def handle_api_preview_voice(self, body):
+        voice_id = body.get("voice_id", "")
+        text = body.get("text")
+        if not voice_id:
+            self.send_json_response({"success": False, "error": "voice_id requis."}, status=400)
+            return
+        res = voice_engine.preview_voice_sample(voice_id=voice_id, text=text)
+        self.send_json_response(res)
 
     def handle_api_anonymize_lead(self, body):
         phone = body.get("phone", "")

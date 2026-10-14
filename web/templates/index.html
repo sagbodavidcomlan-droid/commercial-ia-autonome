@@ -3541,6 +3541,75 @@
                 </div>
               </div>
 
+              <!-- Section : Studio Vocal & Clonage de Voix IA (ElevenLabs) -->
+              <div class="bg-white rounded-3xl p-6 sm:p-7 border border-slate-100 shadow-xs space-y-5">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 flex-wrap gap-2">
+                  <div>
+                    <h3 class="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                      <i data-lucide="mic" class="w-5 h-5 text-purple-600"></i>
+                      <span>Studio Vocal & Clonage de Voix IA (ElevenLabs)</span>
+                    </h3>
+                    <p class="text-xs text-slate-400 font-medium">Choisissez le profil vocal de Dave Sagbo ou clonez votre propre voix pour les notes WhatsApp et appels.</p>
+                  </div>
+                  <span class="text-xs font-bold bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-100 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                    <span id="voice-active-badge-label">Voix active : Adam (Posé)</span>
+                  </span>
+                </div>
+
+                <!-- Grille des Profils Vocaux Disponibles -->
+                <div class="space-y-3">
+                  <label class="block text-xs font-bold text-slate-700">Profils Vocaux Studio Disponibles</label>
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5" id="voice-profiles-container">
+                    <!-- Rendu dynamique via JS loadVoiceProfiles() -->
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 animate-pulse h-28"></div>
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 animate-pulse h-28"></div>
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 animate-pulse h-28"></div>
+                  </div>
+                </div>
+
+                <!-- Lecteur Audio d'Aperçu Invisible/Contrôlé -->
+                <audio id="voice-preview-player" class="hidden"></audio>
+
+                <!-- Bloc Clonage de Voix Personnelle -->
+                <div class="p-5 rounded-2xl bg-gradient-to-r from-purple-50/80 via-indigo-50/50 to-blue-50/50 border border-purple-200/80 space-y-4">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black shadow-xs">
+                        <i data-lucide="fingerprint" class="w-4 h-4"></i>
+                      </div>
+                      <div>
+                        <h4 class="text-xs font-black text-slate-900">Cloner Ma Propre Voix (Voice Cloning)</h4>
+                        <p class="text-[11px] text-slate-500">Renseignez votre Voice ID ElevenLabs pour que votre agent parle avec votre propre voix authentique.</p>
+                      </div>
+                    </div>
+                    <span class="text-[10px] font-bold text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full">Option VIP</span>
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label class="block text-slate-700 font-bold mb-1">Voice ID ElevenLabs Personnel</label>
+                      <input type="text" id="setting-cloned-voice-id" placeholder="Ex: 21m00Tcm4TlvDq8ikWAM" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs focus:border-purple-600 focus:outline-none">
+                    </div>
+                    <div>
+                      <label class="block text-slate-700 font-bold mb-1">Nom d'Affichage de la Voix</label>
+                      <input type="text" id="setting-cloned-voice-name" placeholder="Ex: Dave Sagbo (Ma Voix Réelle)" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 text-xs focus:border-purple-600 focus:outline-none">
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
+                    <p class="text-[10px] text-slate-500">
+                      💡 <em>Astuce : Vous pouvez créer votre clone vocal gratuitement sur ElevenLabs (rubrique VoiceLab) puis coller l'ID ici.</em>
+                    </p>
+                    <button type="button" onclick="saveClonedVoice()" id="btn-save-cloned-voice" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-2xs transition cursor-pointer">
+                      <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+                      <span>Enregistrer et Activer ma Voix</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
               <!-- Bouton d'Enregistrement Principal -->
               <div class="flex justify-end pt-2">
                 <button type="submit" class="bg-[#0062ff] hover:bg-blue-600 text-white font-black py-3 px-8 rounded-2xl transition shadow-xs flex items-center gap-2">
@@ -4341,6 +4410,120 @@
               <span>Planifier au Calendrier Éditorial</span>
             </button>
           </div>
+        </div>
+
+        <!-- SECTION 2.BIS : STUDIO VISUEL & AFFICHES PUBLICITAIRES HD (COMPOSIO GEMINI IMAGE AI) -->
+        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
+                <i data-lucide="image" class="w-6 h-6 text-white"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>Générateur d'Affiches Publicitaires HD & Visuels de Vente</span>
+                  <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200/80">Gemini Image Pro</span>
+                </h3>
+                <p class="text-xs text-slate-400 font-medium">Créez des visuels publicitaires professionnels percutants pour vos campagnes WhatsApp, Meta Ads et LinkedIn.</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="loadCreativeGallery()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Rafraîchir Galerie</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Formulaire de Génération Visuelle -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            
+            <!-- Colonne Contrôles (7 colonnes) -->
+            <div class="lg:col-span-7 space-y-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Sujet de l'Affiche ou Titre de l'Offre</label>
+                <div class="relative">
+                  <input type="text" id="visual-ad-topic" placeholder="Ex: Clôturer 5x plus de ventes sur WhatsApp sans prospecter manuellement" class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0062ff] focus:ring-4 focus:ring-[#0062ff]/10 rounded-2xl p-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Style Visuel & Ambiance</label>
+                  <select id="visual-ad-style" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
+                    <option value="saas_workspace">💻 SaaS Workspace (Minimaliste, Mac, Glassmorphism)</option>
+                    <option value="mobile_money_sales">📱 Mobile Money & Ventes (Commerçant, Succès, Afrique)</option>
+                    <option value="retail_commerce">🛍️ Retail & Commerce Moderne (Élégant, Produits, Pro)</option>
+                    <option value="authority_founder">👔 Leader & Fondateur d'Autorité (Studio B2B, Confiance)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Format & Ratio</label>
+                  <select id="visual-ad-ratio" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
+                    <option value="1:1">⏹️ Carré 1:1 (Feed WhatsApp, Instagram, LinkedIn)</option>
+                    <option value="9:16">📱 Vertical 9:16 (Statut WhatsApp, Reels, TikTok)</option>
+                    <option value="16:9">🖥️ Paysage 16:9 (Bannière Web, YouTube, Facebook)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Audience Cible</label>
+                <input type="text" id="visual-ad-audience" value="Entrepreneurs, Dirigeants PME et Commerçants Afrique Francophone" class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0062ff] rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none">
+              </div>
+
+              <div class="pt-2">
+                <button type="button" onclick="generateVisualAd()" id="btn-generate-visual-ad" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0062ff] via-indigo-600 to-purple-600 hover:from-blue-600 hover:to-indigo-700 active:scale-98 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition cursor-pointer">
+                  <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
+                  <span>Générer l'Affiche Publicitaire HD (Gemini AI)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Colonne Preview Actif (5 colonnes) -->
+            <div class="lg:col-span-5 bg-slate-50/80 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between min-h-[300px]">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-200/60">
+                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Rendu en Direct</span>
+                <span id="visual-ad-badge-status" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">En attente</span>
+              </div>
+              
+              <div id="visual-ad-preview-container" class="my-auto py-6 flex flex-col items-center justify-center text-center">
+                <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center shadow-xs mb-3">
+                  <i data-lucide="image" class="w-8 h-8 text-slate-300"></i>
+                </div>
+                <p class="text-xs font-bold text-slate-700">Aucun visuel publicitaire généré</p>
+                <p class="text-[11px] text-slate-400 max-w-xs mt-1">Configurez votre sujet et cliquez sur Générer pour créer une affiche commerciale haute définition.</p>
+              </div>
+
+              <div id="visual-ad-actions-container" class="hidden pt-3 border-t border-slate-200/60 flex items-center justify-between">
+                <span id="visual-ad-headline-preview" class="text-xs font-extrabold text-slate-800 truncate max-w-[200px]">Titre</span>
+                <a id="visual-ad-download-btn" href="#" target="_blank" download class="px-3 py-1.5 rounded-xl bg-[#0062ff] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs hover:bg-blue-600 transition">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  <span>Télécharger HD</span>
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Galerie des Affiches Créées -->
+          <div class="pt-4 border-t border-slate-100 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight flex items-center gap-1.5">
+                <i data-lucide="gallery-thumbnails" class="w-4 h-4 text-[#0062ff]"></i>
+                <span>Galerie des Affiches Publicitaires Générées</span>
+              </h4>
+              <span id="visual-gallery-count" class="text-[11px] font-bold text-slate-400">0 créations</span>
+            </div>
+
+            <div id="visual-gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-1">
+              <!-- Rempli dynamiquement par JS -->
+              <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center text-slate-400 text-xs col-span-full">
+                Chargement de la galerie créative...
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- 3. SECTION CALENDRIER ÉDITORIAL TIMEFRAME (HARMONISÉ INVO WHITE BRANDING) -->
@@ -5703,7 +5886,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Application Logic (Versionnée anti-cache) -->
-  <script src="/static/js/app.js?v=20.0"></script>
+  <script src="/static/js/app.js?v=21.0"></script>
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {

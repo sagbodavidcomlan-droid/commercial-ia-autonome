@@ -461,10 +461,12 @@ function showTab(tabId) {
   } else if (tabId === "settings") {
     loadSettings();
     loadComplianceRegistry();
+    loadVoiceProfiles();
   } else if (tabId === "history") {
     loadHistoryFeed();
   } else if (tabId === "creative") {
     loadCreativeCalendar();
+    loadCreativeGallery();
   } else if (tabId === "watcher") {
     loadWatcherDashboard();
   }
@@ -8748,5 +8750,383 @@ function copyBattlecardPitch() {
     showToast("Argumentaire copié dans le presse-papier !", "success");
   });
 }
+
+// =========================================================================
+// STUDIO VOCAL & CLONAGE DE VOIX IA (ELEVENLABS)
+// =========================================================================
+
+let currentPlayingVoiceAudio = null;
+
+async function loadVoiceProfiles() {
+  const container = document.getElementById("voice-profiles-container");
+  const badgeLabel = document.getElementById("voice-active-badge-label");
+
+  try {
+    const res = await fetch("/api/voice/profiles");
+    const data = await res.json();
+
+    if (!data.success) {
+      if (container) container.innerHTML = `<div class="p-3 text-xs text-rose-500 col-span-full">Erreur chargement voix: ${escapeHtml(data.error || "Inconnu")}</div>`;
+      return;
+    }
+
+    const active = data.active || {};
+    const voices = data.voices || [];
+
+    if (badgeLabel) {
+      badgeLabel.textContent = `Voix active : ${active.name || "Adam (Posé)"}`;
+    }
+
+    // Pré-remplir les inputs de clonage si une voix clonée existe
+    const clonedVoice = voices.find(v => v.is_cloned);
+    const clonedIdInput = document.getElementById("setting-cloned-voice-id");
+    const clonedNameInput = document.getElementById("setting-cloned-voice-name");
+    if (clonedVoice && clonedIdInput && !clonedIdInput.value) {
+      clonedIdInput.value = clonedVoice.voice_id || "";
+      if (clonedNameInput) clonedNameInput.value = clonedVoice.name || "";
+    }
+
+    if (!container) return;
+    container.innerHTML = "";
+
+    voices.forEach(voice => {
+      const isActive = voice.voice_id === active.voice_id;
+      const card = document.createElement("div");
+      card.className = `p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+        isActive 
+          ? "border-purple-600 bg-purple-50/70 shadow-sm ring-2 ring-purple-500/20" 
+          : "border-slate-200 bg-white hover:border-purple-300 hover:shadow-xs"
+      }`;
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-black text-slate-900">${escapeHtml(voice.name)}</span>
+            ${isActive 
+              ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-600 text-white flex items-center gap-1">
+                   <i data-lucide="check" class="w-3 h-3"></i> Active
+                 </span>`
+              : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">Disponible</span>`
+            }
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed mb-3">${escapeHtml(voice.description || "")}</p>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+          <button type="button" onclick="previewVoice('${escapeHtml(voice.voice_id)}', this)" class="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-purple-100 text-slate-700 hover:text-purple-700 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Écouter</span>
+          </button>
+          ${!isActive ? `
+            <button type="button" onclick="setActiveVoice('${escapeHtml(voice.voice_id)}', '${escapeHtml(voice.key)}', '${escapeHtml(voice.name)}')" class="flex-1 py-1.5 px-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1 transition cursor-pointer shadow-2xs">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+              <span>Choisir</span>
+            </button>
+          ` : `
+            <div class="flex-1 text-center py-1.5 text-xs font-bold text-purple-700 bg-purple-100/60 rounded-xl">
+              Sélectionnée
+            </div>
+          `}
+        </div>
+      `;
+      container.appendChild(card);
+    });
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("Erreur loadVoiceProfiles:", err);
+    if (container) container.innerHTML = `<div class="p-3 text-xs text-rose-500 col-span-full">Erreur réseau lors du chargement des profils vocaux.</div>`;
+  }
+}
+
+async function setActiveVoice(voiceId, profileKey, name) {
+  try {
+    const res = await fetch("/api/voice/set-active", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voice_id: voiceId, profile_key: profileKey, name: name })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`Voix configurée : ${name}`, "success");
+      loadVoiceProfiles();
+    } else {
+      showToast(data.error || "Erreur lors du changement de voix", "error");
+    }
+  } catch (err) {
+    showToast("Erreur de connexion serveur", "error");
+  }
+}
+
+async function previewVoice(voiceId, btnEl) {
+  const originalHtml = btnEl ? btnEl.innerHTML : "";
+  if (btnEl) {
+    btnEl.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Lecture...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    if (currentPlayingVoiceAudio) {
+      currentPlayingVoiceAudio.pause();
+      currentPlayingVoiceAudio = null;
+    }
+
+    const res = await fetch("/api/voice/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voice_id: voiceId })
+    });
+    const data = await res.json();
+
+    if (data.success && data.audio_url) {
+      const audio = new Audio(data.audio_url);
+      currentPlayingVoiceAudio = audio;
+      audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
+      audio.onended = () => {
+        if (btnEl) btnEl.innerHTML = originalHtml;
+        if (window.lucide) lucide.createIcons();
+      };
+    } else {
+      showToast(data.error || "Impossible de générer l'extrait audio", "error");
+      if (btnEl) btnEl.innerHTML = originalHtml;
+      if (window.lucide) lucide.createIcons();
+    }
+  } catch (err) {
+    showToast("Erreur lors de la lecture de l'extrait", "error");
+    if (btnEl) btnEl.innerHTML = originalHtml;
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+async function saveClonedVoice() {
+  const idInput = document.getElementById("setting-cloned-voice-id");
+  const nameInput = document.getElementById("setting-cloned-voice-name");
+  const btn = document.getElementById("btn-save-cloned-voice");
+
+  const voiceId = idInput ? idInput.value.trim() : "";
+  const name = nameInput && nameInput.value.trim() ? nameInput.value.trim() : "Dave Sagbo (Clonée)";
+
+  if (!voiceId) {
+    showToast("Veuillez renseigner un Voice ID ElevenLabs valide", "warning");
+    if (idInput) idInput.focus();
+    return;
+  }
+
+  const origBtnText = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Enregistrement...</span>`;
+    btn.disabled = true;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch("/api/voice/clone-save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voice_id: voiceId, name: name })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast(data.message || "Voix clonée activée avec succès !", "success");
+      loadVoiceProfiles();
+    } else {
+      showToast(data.error || "Erreur lors de l'enregistrement", "error");
+    }
+  } catch (err) {
+    showToast("Erreur réseau", "error");
+  } finally {
+    if (btn) {
+      btn.innerHTML = origBtnText;
+      btn.disabled = false;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+// =========================================================================
+// STUDIO CRÉATIF VISUEL HD (COMPOSIO GEMINI IMAGE AI)
+// =========================================================================
+
+async function generateVisualAd() {
+  const topicInput = document.getElementById("visual-ad-topic");
+  const ratioSelect = document.getElementById("visual-ad-ratio");
+  const styleSelect = document.getElementById("visual-ad-style");
+  const audienceInput = document.getElementById("visual-ad-audience");
+  const btn = document.getElementById("btn-generate-visual-ad");
+  const previewContainer = document.getElementById("visual-ad-preview-container");
+  const badgeStatus = document.getElementById("visual-ad-badge-status");
+  const actionsContainer = document.getElementById("visual-ad-actions-container");
+  const headlinePreview = document.getElementById("visual-ad-headline-preview");
+  const downloadBtn = document.getElementById("visual-ad-download-btn");
+
+  const topic = topicInput && topicInput.value.trim() ? topicInput.value.trim() : "Offre Spéciale Automatisation WhatsApp & Closing IA";
+  const ratio = ratioSelect ? ratioSelect.value : "1:1";
+  const style = styleSelect ? styleSelect.value : "saas_workspace";
+  const audience = audienceInput ? audienceInput.value : "Entrepreneurs et PME";
+
+  // Mise à jour de l'UI pendant la génération
+  const origBtnHtml = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Composition Haute Définition IA en cours...</span>`;
+    btn.disabled = true;
+  }
+  if (badgeStatus) {
+    badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 animate-pulse";
+    badgeStatus.textContent = "Génération IA...";
+  }
+  if (previewContainer) {
+    previewContainer.innerHTML = `
+      <div class="flex flex-col items-center justify-center p-6 space-y-3">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center animate-spin">
+          <i data-lucide="sparkles" class="w-6 h-6 text-[#0062ff]"></i>
+        </div>
+        <p class="text-xs font-bold text-slate-800">Conception de l'affiche publicitaire HD...</p>
+        <p class="text-[11px] text-slate-500 max-w-xs text-center">Gemini Image Pro & Composio génèrent le visuel photoréaliste et les éléments de conversion.</p>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    const res = await fetch("/api/creative/generate-visual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic: topic,
+        format_type: ratio,
+        style_preset: style,
+        target_audience: audience
+      })
+    });
+    const data = await res.json();
+
+    if (data.success && data.image_url) {
+      showToast("Affiche publicitaire HD générée avec succès !", "success");
+
+      if (badgeStatus) {
+        badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700";
+        badgeStatus.textContent = "✓ HD Prête";
+      }
+
+      if (previewContainer) {
+        const aspectClass = ratio === "9:16" ? "max-h-[380px] aspect-[9/16]" : ratio === "16:9" ? "max-h-[260px] aspect-[16/9]" : "max-h-[320px] aspect-square";
+        previewContainer.innerHTML = `
+          <div class="relative group rounded-2xl overflow-hidden border border-slate-200/80 shadow-md">
+            <img src="${escapeHtml(data.image_url)}" alt="${escapeHtml(data.headline || topic)}" class="${aspectClass} object-cover w-full transition-transform duration-500 group-hover:scale-105" />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 text-left">
+              <span class="text-[10px] font-black uppercase text-amber-300 tracking-wider">Format ${escapeHtml(ratio)} • ${escapeHtml(style)}</span>
+              <h4 class="text-xs sm:text-sm font-black text-white leading-tight mt-0.5">${escapeHtml(data.headline || topic)}</h4>
+              <p class="text-[10px] text-slate-200 line-clamp-1 mt-0.5">${escapeHtml(data.subline || "")}</p>
+            </div>
+          </div>
+        `;
+      }
+
+      if (actionsContainer) actionsContainer.classList.remove("hidden");
+      if (headlinePreview) headlinePreview.textContent = data.headline || topic;
+      if (downloadBtn) {
+        downloadBtn.href = data.image_url;
+        downloadBtn.setAttribute("download", `affiche_${Date.now()}.png`);
+      }
+
+      // Recharger la galerie pour inclure la nouvelle création
+      loadCreativeGallery();
+    } else {
+      showToast(data.error || "Échec de génération du visuel", "error");
+      if (badgeStatus) {
+        badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700";
+        badgeStatus.textContent = "Erreur";
+      }
+    }
+  } catch (err) {
+    console.error("Erreur generateVisualAd:", err);
+    showToast("Erreur réseau lors de la génération visuelle", "error");
+  } finally {
+    if (btn) {
+      btn.innerHTML = origBtnHtml;
+      btn.disabled = false;
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+async function loadCreativeGallery() {
+  const grid = document.getElementById("visual-gallery-grid");
+  const countLabel = document.getElementById("visual-gallery-count");
+  if (!grid) return;
+
+  try {
+    const res = await fetch("/api/creative/gallery");
+    const data = await res.json();
+
+    if (!data.success) {
+      grid.innerHTML = `<div class="p-3 text-xs text-rose-500 col-span-full">Erreur: ${escapeHtml(data.error || "Inconnu")}</div>`;
+      return;
+    }
+
+    const assets = data.assets || [];
+    if (countLabel) {
+      countLabel.textContent = `${assets.length} création${assets.length > 1 ? "s" : ""}`;
+    }
+
+    if (assets.length === 0) {
+      grid.innerHTML = `
+        <div class="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-slate-400 text-xs col-span-full">
+          Aucune affiche générée pour le moment. Utilisez le formulaire ci-dessus pour lancer votre première création.
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = "";
+    assets.forEach(asset => {
+      const card = document.createElement("div");
+      card.className = "group relative rounded-2xl border border-slate-200 overflow-hidden bg-slate-900 shadow-2xs hover:shadow-md transition-all cursor-pointer";
+      const aspectClass = asset.aspect_ratio === "9:16" ? "aspect-[9/16]" : asset.aspect_ratio === "16:9" ? "aspect-[16/9]" : "aspect-square";
+
+      card.innerHTML = `
+        <img src="${escapeHtml(asset.image_url)}" alt="${escapeHtml(asset.topic || "Affiche")}" class="${aspectClass} w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2.5 flex flex-col justify-between">
+          <div class="flex items-center justify-between">
+            <span class="text-[9px] font-black uppercase text-white bg-black/60 px-2 py-0.5 rounded-full">${escapeHtml(asset.aspect_ratio || "1:1")}</span>
+            <a href="${escapeHtml(asset.image_url)}" target="_blank" download class="w-6 h-6 rounded-lg bg-white/90 hover:bg-white text-slate-900 flex items-center justify-center transition shadow-xs">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            </a>
+          </div>
+          <p class="text-[11px] font-bold text-white line-clamp-2 leading-tight">${escapeHtml(asset.topic || "")}</p>
+        </div>
+      `;
+
+      card.onclick = (e) => {
+        if (e.target.closest("a")) return;
+        // Cliquer sur l'élément affiche le preview en grand dans le container principal
+        const previewContainer = document.getElementById("visual-ad-preview-container");
+        const actionsContainer = document.getElementById("visual-ad-actions-container");
+        const headlinePreview = document.getElementById("visual-ad-headline-preview");
+        const downloadBtn = document.getElementById("visual-ad-download-btn");
+
+        if (previewContainer) {
+          previewContainer.innerHTML = `
+            <div class="relative group rounded-2xl overflow-hidden border border-slate-200/80 shadow-md">
+              <img src="${escapeHtml(asset.image_url)}" alt="${escapeHtml(asset.topic)}" class="${aspectClass} object-cover w-full max-h-[340px]" />
+            </div>
+          `;
+        }
+        if (actionsContainer) actionsContainer.classList.remove("hidden");
+        if (headlinePreview) headlinePreview.textContent = asset.topic || "Affiche sélectionnée";
+        if (downloadBtn) downloadBtn.href = asset.image_url;
+      };
+
+      grid.appendChild(card);
+    });
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("Erreur loadCreativeGallery:", err);
+    grid.innerHTML = `<div class="p-3 text-xs text-rose-500 col-span-full">Erreur réseau lors du chargement de la galerie.</div>`;
+  }
+}
+
 
 

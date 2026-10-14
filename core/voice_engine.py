@@ -19,9 +19,9 @@ import time
 import logging
 import urllib.request
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from modules.composio_client import call_composio_tool
-from core.database_store import get_connection
+from core.database_store import get_connection, get_setting, set_setting
 
 logger = logging.getLogger("VoiceEngine")
 
@@ -57,13 +57,90 @@ VOICE_PROFILES = {
 
 class VoiceEngine:
     def __init__(self):
-        self.voice_id = DEFAULT_VOICE_ID
-        self.voice_settings = {
-            "stability": 0.75,
-            "similarity_boost": 0.85,
-            "style": 0.0,
-            "use_speaker_boost": True
+        self._load_active_voice()
+
+    def _load_active_voice(self):
+        saved_id = get_setting("active_voice_id", DEFAULT_VOICE_ID)
+        saved_profile = get_setting("active_voice_profile", "adam_pose")
+        self.voice_id = saved_id or DEFAULT_VOICE_ID
+        self.active_profile = saved_profile or "adam_pose"
+
+        if self.active_profile in VOICE_PROFILES:
+            self.voice_settings = VOICE_PROFILES[self.active_profile]["settings"]
+        else:
+            self.voice_settings = {
+                "stability": 0.75,
+                "similarity_boost": 0.85,
+                "style": 0.0,
+                "use_speaker_boost": True
+            }
+
+    def get_active_voice(self) -> Dict[str, Any]:
+        """Retourne la configuration de la voix actuellement active."""
+        self._load_active_voice()
+        profile_data = VOICE_PROFILES.get(self.active_profile, {})
+        custom_voice_id = get_setting("cloned_voice_id", "")
+        custom_voice_name = get_setting("cloned_voice_name", "Ma Voix Clonée")
+        return {
+            "active_voice_id": self.voice_id,
+            "active_profile": self.active_profile,
+            "name": profile_data.get("name") or (custom_voice_name if self.voice_id == custom_voice_id else "Voix Personnalisée"),
+            "settings": self.voice_settings,
+            "cloned_voice_id": custom_voice_id,
+            "cloned_voice_name": custom_voice_name
         }
+
+    def get_available_voices(self) -> List[Dict[str, Any]]:
+        """Retourne les profils disponibles avec indication de la voix active."""
+        self._load_active_voice()
+        cloned_id = get_setting("cloned_voice_id", "")
+        cloned_name = get_setting("cloned_voice_name", "Ma Voix Clonée")
+
+        voices = []
+        for key, p in VOICE_PROFILES.items():
+            voices.append({
+                "key": key,
+                "id": p["id"],
+                "name": p["name"],
+                "description": p["description"],
+                "is_active": (self.voice_id == p["id"]),
+                "is_cloned": False
+            })
+
+        if cloned_id:
+            voices.append({
+                "key": "custom_cloned",
+                "id": cloned_id,
+                "name": cloned_name,
+                "description": "Votre propre empreinte vocale clonée via ElevenLabs.",
+                "is_active": (self.voice_id == cloned_id),
+                "is_cloned": True
+            })
+
+        return voices
+
+    def set_active_voice(self, voice_id: str, profile_key: str = "custom", name: str = "") -> Dict[str, Any]:
+        """Définit la voix active du système et persiste le choix dans SQLite."""
+        set_setting("active_voice_id", voice_id.strip())
+        set_setting("active_voice_profile", profile_key.strip())
+        if name:
+            set_setting("active_voice_name", name.strip())
+        self._load_active_voice()
+        logger.info(f"Voix active mise à jour : id={voice_id}, profile={profile_key}")
+        return self.get_active_voice()
+
+    def save_cloned_voice(self, voice_id: str, name: str = "Ma Voix Clonée") -> Dict[str, Any]:
+        """Enregistre une voix clonée pour l'administrateur et l'active immédiatement."""
+        clean_id = voice_id.strip()
+        clean_name = name.strip() or "Ma Voix Clonée"
+        set_setting("cloned_voice_id", clean_id)
+        set_setting("cloned_voice_name", clean_name)
+        return self.set_active_voice(voice_id=clean_id, profile_key="custom_cloned", name=clean_name)
+
+    def preview_voice_sample(self, voice_id: str, text: Optional[str] = None) -> Dict[str, Any]:
+        """Synthétise un court échantillon de test pour écouter la voix avant de la valider."""
+        sample_text = text or "Bonjour... C'est Dave Sagbo. Voici un aperçu de mon intonation pour vos notes vocales WhatsApp."
+        return self.synthesize_voice_note(sample_text, voice_id=voice_id)
 
     def generate_voice_script(
         self,
