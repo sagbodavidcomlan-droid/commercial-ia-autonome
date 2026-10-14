@@ -42,7 +42,7 @@ from modules.config_loader import get_active_config, set_active_domain, create_d
 from modules.ai_sales_agent import AISalesAgent
 from modules.creative_studio_engine import CreativeStudioEngine
 from modules.omnichannel_messenger import omnichannel_messenger, SUPPORTED_CHANNELS
-from core.database_store import get_lead_messages, get_lead_channels
+from core.database_store import get_lead_messages, get_lead_channels, get_lead_calls
 from core.meta_messenger_sync import (
     verify_meta_token,
     handle_facebook_webhook_payload,
@@ -56,6 +56,7 @@ from modules.composio_enricher import get_enricher
 from modules.google_calendar_closer import get_calendar_closer
 from modules.realtime_notifier import get_notifier
 from modules.crm_mirror_sync import get_crm_mirror
+from core.telephony_engine import telephony_engine
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -270,6 +271,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_watcher_latest_observations(query)
         elif path == "/api/watcher/conversations/scores":
             self.handle_api_watcher_conversation_scores(query)
+        elif path == "/api/telephony/calls":
+            self.handle_api_get_calls(query)
+        elif path == "/api/telephony/config":
+            self.handle_api_get_telephony_config()
+        elif path == "/api/telephony/pending-confirmations":
+            self.handle_api_get_pending_confirmations()
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -295,6 +302,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "/api/payments/checkout",
             "/api/payments/webhook",
             "/api/compliance/optout",
+            "/api/telephony/webhook/call-events",
+            "/api/telephony/webhook",
             "/webhook/facebook",
             "/webhook/whatsapp"
         ]
@@ -373,6 +382,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_generate_simulator_voice_note(body)
         elif path == "/api/voice/generate":
             self.handle_api_generate_voice_script(body)
+        elif path == "/api/telephony/call/outbound":
+            self.handle_api_trigger_call(body)
+        elif path == "/api/telephony/config":
+            self.handle_api_save_telephony_config(body)
+        elif path in ("/api/telephony/webhook/call-events", "/api/telephony/webhook"):
+            self.handle_api_telephony_webhook(body)
+        elif path == "/api/telephony/cron/confirm-rdv":
+            self.handle_api_cron_confirm_rdv()
         elif path == "/api/enrichment/disc":
             self.handle_api_enrich_disc(body)
         elif path == "/api/autopilot/run":
@@ -1111,6 +1128,60 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             logger.error(f"Erreur handle_api_generate_simulator_voice_note : {e}")
             self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_get_calls(self, query):
+        lead_id_str = query.get("lead_id", [None])[0]
+        lead_id = int(lead_id_str) if lead_id_str else None
+        limit_str = query.get("limit", ["50"])[0]
+        limit = int(limit_str) if limit_str.isdigit() else 50
+        calls = get_lead_calls(lead_id=lead_id, limit=limit)
+        self.send_json_response({"success": True, "calls": calls})
+
+    def handle_api_get_telephony_config(self):
+        self.send_json_response(telephony_engine.get_config())
+
+    def handle_api_save_telephony_config(self, body):
+        res = telephony_engine.update_config(body)
+        self.send_json_response({"success": True, "config": res})
+
+    def handle_api_trigger_call(self, body):
+        lead_id = body.get("lead_id")
+        call_type = body.get("call_type", "QUALIFICATION")
+        override_to_number = body.get("to_number")
+
+        if not lead_id:
+            self.send_json_response({"success": False, "error": "Paramètre lead_id requis."}, status=400)
+            return
+
+        res = telephony_engine.trigger_outbound_call(
+            lead_id=int(lead_id),
+            call_type=call_type,
+            override_to_number=override_to_number
+        )
+        self.send_json_response(res)
+
+    def handle_api_telephony_webhook(self, body):
+        logger.info(f"Webhook téléphonie reçu : {body}")
+        res = telephony_engine.handle_call_webhook(body)
+        self.send_json_response(res)
+
+    def handle_api_get_pending_confirmations(self):
+        pending = telephony_engine.get_pending_rdv_confirmations()
+        self.send_json_response({"success": True, "pending_count": len(pending), "tasks": pending})
+
+    def handle_api_cron_confirm_rdv(self):
+        pending = telephony_engine.get_pending_rdv_confirmations()
+        calls_triggered = []
+        for task in pending:
+            lead_id = task.get("lead_id")
+            if lead_id:
+                call_res = telephony_engine.trigger_outbound_call(
+                    lead_id=lead_id,
+                    call_type="CONFIRMATION_RDV",
+                    override_to_number=task.get("telephone") or task.get("whatsapp")
+                )
+                calls_triggered.append({"task_id": task["task_id"], "lead_id": lead_id, "call_result": call_res})
+        self.send_json_response({"success": True, "triggered_count": len(calls_triggered), "calls": calls_triggered})
 
     def handle_api_anonymize_lead(self, body):
         phone = body.get("phone", "")

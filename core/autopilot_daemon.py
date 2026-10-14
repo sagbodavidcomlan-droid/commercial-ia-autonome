@@ -321,6 +321,22 @@ class Autopilot24hDaemon:
 
         self.log_event(f"✅ Patrouille #{self.cycles_completed} : {len(active_leads)} prospects surveillés, {relances_effectuees} relance(s) appliquée(s).")
 
+        # Confirmation téléphonique autonome des RDV Google Meet à venir (Anti No-Show)
+        try:
+            from core.telephony_engine import telephony_engine
+            pending_rdvs = telephony_engine.get_pending_rdv_confirmations()
+            for rdv in pending_rdvs[:2]:
+                l_id = rdv.get("lead_id")
+                if l_id:
+                    res_call = telephony_engine.trigger_outbound_call(
+                        lead_id=l_id,
+                        call_type="CONFIRMATION_RDV",
+                        override_to_number=rdv.get("telephone") or rdv.get("whatsapp")
+                    )
+                    self.log_event(f"📞 Appel IA Anti No-Show effectué pour {rdv.get('contact_name')} (RDV {rdv.get('time_slot')}).")
+        except Exception as e_tel:
+            logger.warning(f"Erreur patrouille confirmations RDV téléphonie : {e_tel}")
+
     def _trigger_autonomous_sale(self):
         """
         Simule la finalisation d'un achat direct via page de vente (réservé aux tests de démo)

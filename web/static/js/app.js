@@ -2731,6 +2731,42 @@ function renderConversationChannelTabs(availableChannels, activeChannel) {
 
 function formatMessageContentHtml(rawText, isSelf = false) {
   if (!rawText) return "";
+
+  // Détection d'un compte-rendu d'appel téléphonique IA
+  if (rawText.includes("📞 Compte-rendu Appel IA")) {
+    const lines = rawText.split("\n");
+    const header = lines[0] || "Compte-rendu Appel Vocal IA";
+    const metaLine = lines[1] || "";
+    const summaryLine = lines[2] || "";
+    const transcriptIdx = rawText.indexOf("📝 Transcription :");
+    const transcriptText = transcriptIdx !== -1 ? rawText.substring(transcriptIdx + "📝 Transcription :".length).trim() : "";
+
+    return `
+      <div class="space-y-2 p-1">
+        <div class="flex items-center justify-between gap-2 border-b border-amber-200/80 pb-1.5">
+          <span class="font-bold text-amber-900 text-xs flex items-center gap-1.5">
+            <i data-lucide="phone-call" class="w-3.5 h-3.5 text-amber-600"></i> ${escapeHtml(header)}
+          </span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black uppercase tracking-wider">Appel Terminé</span>
+        </div>
+        <div class="text-[11px] text-slate-700 font-semibold bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/50 space-y-1">
+          <div class="text-slate-600 font-medium">${escapeHtml(metaLine)}</div>
+          <div class="mt-1 text-slate-800 font-bold">${escapeHtml(summaryLine)}</div>
+        </div>
+        ${transcriptText ? `
+          <details class="text-[11px] bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs">
+            <summary class="font-bold text-slate-700 cursor-pointer select-none flex items-center gap-1 text-[10px] uppercase">
+              <i data-lucide="file-text" class="w-3 h-3 text-[#0062ff]"></i> Voir la transcription complète
+            </summary>
+            <div class="mt-2 text-slate-700 font-sans text-[11px] leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+              ${escapeHtml(transcriptText)}
+            </div>
+          </details>
+        ` : ''}
+      </div>
+    `;
+  }
+
   const audioRegex = /\[AUDIO:\s*([^\]]+)\]/i;
   const match = rawText.match(audioRegex);
 
@@ -2806,6 +2842,7 @@ function renderConversationMessages(messages, leadName) {
     if (ch.includes("MESSENGER") || ch.includes("FACEBOOK")) return "facebook";
     if (ch.includes("LINKEDIN")) return "linkedin";
     if (ch.includes("EMAIL")) return "mail";
+    if (ch.includes("TEL") || ch.includes("APPEL")) return "phone-call";
     return "message-square";
   }
 
@@ -2815,6 +2852,7 @@ function renderConversationMessages(messages, leadName) {
     if (ch.includes("MESSENGER") || ch.includes("FACEBOOK")) return "Messenger";
     if (ch.includes("LINKEDIN")) return "LinkedIn";
     if (ch.includes("EMAIL")) return "Email";
+    if (ch.includes("TEL") || ch.includes("APPEL")) return "Téléphone IA";
     return channel;
   }
 
@@ -3054,6 +3092,51 @@ async function generateLeadVoiceNote() {
   } catch (err) {
     console.error("Erreur generateLeadVoiceNote :", err);
     showToast("Échec de la génération vocale : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+async function triggerLeadPhoneCall(callType = 'QUALIFICATION') {
+  if (!activeConversationLeadId) {
+    showToast("Veuillez sélectionner un prospect.", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btn-modal-phone-call");
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-amber-600"></i><span>Appel en cours...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    showToast(`Lancement de l'appel téléphonique IA (${callType})...`, "info");
+    const res = await fetch("/api/telephony/call/outbound", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeConversationLeadId,
+        call_type: callType
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || "Appel téléphonique IA terminé !", "success");
+      openLeadConversation(activeConversationLeadId, activeConversationChannel);
+      if (typeof loadHistoryFeed === "function") loadHistoryFeed();
+      if (typeof fetchCrmLeads === "function") fetchCrmLeads();
+    } else {
+      showToast(data.error || "Erreur lors du déclenchement de l'appel.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur triggerLeadPhoneCall :", err);
+    showToast("Échec de la communication téléphonique : " + err.message, "error");
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -3807,6 +3890,52 @@ async function generateDrawerVoiceNote() {
   } catch (err) {
     console.error("Erreur generateDrawerVoiceNote :", err);
     showToast("Échec de la génération vocale : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+}
+
+async function triggerDrawerLeadPhoneCall(callType = 'QUALIFICATION') {
+  if (!activeDrawerLeadId) {
+    showToast("Veuillez sélectionner un prospect.", "warning");
+    return;
+  }
+
+  const btnId = callType === 'CONFIRMATION_RDV' ? 'btn-drawer-call-confirm' : 'btn-drawer-call-qualif';
+  const btn = document.getElementById(btnId);
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-amber-600"></i><span>Appel en cours...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  try {
+    showToast(`Déclenchement de l'appel téléphonique IA (${callType})...`, "info");
+    const res = await fetch("/api/telephony/call/outbound", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeDrawerLeadId,
+        call_type: callType
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message || "Appel vocal IA exécuté avec succès !", "success");
+      await openDrawer(activeDrawerLeadId);
+      if (typeof loadHistoryFeed === "function") loadHistoryFeed();
+      if (typeof fetchCrmLeads === "function") fetchCrmLeads();
+    } else {
+      showToast(data.error || "Erreur lors du déclenchement de l'appel.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur triggerDrawerLeadPhoneCall :", err);
+    showToast("Échec de la communication téléphonique : " + err.message, "error");
   } finally {
     if (btn) {
       btn.disabled = false;

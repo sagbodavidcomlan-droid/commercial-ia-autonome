@@ -287,10 +287,35 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS crm_lead_calls (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER,
+        direction TEXT DEFAULT 'OUTBOUND',
+        call_type TEXT DEFAULT 'QUALIFICATION',
+        from_number TEXT,
+        to_number TEXT,
+        status TEXT DEFAULT 'INITIATED',
+        duration_seconds INTEGER DEFAULT 0,
+        recording_url TEXT,
+        transcript TEXT,
+        summary TEXT,
+        sentiment TEXT,
+        qualification_result TEXT,
+        provider TEXT DEFAULT 'RETELLAI',
+        external_call_id TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        ended_at TEXT,
+        FOREIGN KEY(lead_id) REFERENCES crm_leads(id)
+    )
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_agent ON watcher_observations(agent_name, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_severity ON watcher_observations(severity, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bugs_status ON watcher_bugs(status, severity)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_conv_scores ON conversation_scores(lead_id, scored_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_lead ON crm_lead_calls(lead_id, created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_status ON crm_lead_calls(status, call_type)")
 
     # Harmonisation & migration non-bloquante de la table crm_leads
     try:
@@ -1025,6 +1050,96 @@ def get_lead_channels(lead_id: int) -> List[str]:
         conn.close()
         return channels
     except Exception:
+        return []
+
+def log_lead_call(
+    lead_id: Optional[int],
+    direction: str = "OUTBOUND",
+    call_type: str = "QUALIFICATION",
+    from_number: str = "",
+    to_number: str = "",
+    status: str = "INITIATED",
+    provider: str = "RETELLAI",
+    external_call_id: Optional[str] = None,
+    summary: str = "",
+    transcript: str = "",
+    sentiment: str = "NEUTRAL"
+) -> int:
+    """Enregistre un appel vocal IA dans la table crm_lead_calls."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO crm_lead_calls (
+                lead_id, direction, call_type, from_number, to_number,
+                status, provider, external_call_id, summary, transcript,
+                sentiment, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        """, (
+            lead_id, direction, call_type, from_number, to_number,
+            status, provider, external_call_id, summary, transcript, sentiment
+        ))
+        call_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return call_id
+    except Exception as e:
+        logger.error(f"Erreur log_lead_call : {e}")
+        return 0
+
+def update_lead_call(call_id: int, updates: Dict[str, Any]) -> bool:
+    """Met à jour un appel vocal avec sa durée, son statut, son enregistrement, etc."""
+    if not call_id or not updates:
+        return False
+    try:
+        allowed = {
+            "status", "duration_seconds", "recording_url", "transcript",
+            "summary", "sentiment", "qualification_result", "external_call_id",
+            "ended_at"
+        }
+        filtered = {k: v for k, v in updates.items() if k in allowed}
+        if not filtered:
+            return False
+        
+        fields = ", ".join([f"{k} = ?" for k in filtered.keys()])
+        values = list(filtered.values()) + [call_id]
+
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute(f"UPDATE crm_lead_calls SET {fields} WHERE id = ?", values)
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur update_lead_call : {e}")
+        return False
+
+def get_lead_calls(lead_id: Optional[int] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Récupère l'historique des appels téléphoniques IA."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        if lead_id:
+            c.execute("""
+                SELECT c.*, l.nom_complet as lead_name, l.entreprise
+                FROM crm_lead_calls c
+                LEFT JOIN crm_leads l ON c.lead_id = l.id
+                WHERE c.lead_id = ?
+                ORDER BY c.id DESC LIMIT ?
+            """, (lead_id, limit))
+        else:
+            c.execute("""
+                SELECT c.*, l.nom_complet as lead_name, l.entreprise
+                FROM crm_lead_calls c
+                LEFT JOIN crm_leads l ON c.lead_id = l.id
+                ORDER BY c.id DESC LIMIT ?
+            """, (limit,))
+        rows = c.fetchall()
+        calls = [dict(r) for r in rows]
+        conn.close()
+        return calls
+    except Exception as e:
+        logger.error(f"Erreur get_lead_calls : {e}")
         return []
 
 def seed_omnichannel_conversations(conn):
