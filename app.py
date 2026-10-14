@@ -57,6 +57,8 @@ from modules.google_calendar_closer import get_calendar_closer
 from modules.realtime_notifier import get_notifier
 from modules.crm_mirror_sync import get_crm_mirror
 from core.telephony_engine import telephony_engine
+from core.market_intelligence_engine import market_intelligence_engine
+from core.database_store import get_competitors_intel, get_market_trend_reports
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -277,6 +279,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_get_telephony_config()
         elif path == "/api/telephony/pending-confirmations":
             self.handle_api_get_pending_confirmations()
+        elif path == "/api/market-intel/competitors":
+            self.handle_api_get_competitors_intel()
+        elif path == "/api/market-intel/reports":
+            self.handle_api_get_market_trend_reports()
+        elif path == "/api/market-intel/battlecard-lead":
+            self.handle_api_get_lead_battlecard(query)
         else:
             self.send_json_response({"error": "Route introuvable", "path": path}, status=404)
 
@@ -390,6 +398,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_telephony_webhook(body)
         elif path == "/api/telephony/cron/confirm-rdv":
             self.handle_api_cron_confirm_rdv()
+        elif path == "/api/market-intel/scan":
+            self.handle_api_market_scan(body)
+        elif path == "/api/market-intel/battlecard":
+            self.handle_api_build_competitor_battlecard(body)
         elif path == "/api/enrichment/disc":
             self.handle_api_enrich_disc(body)
         elif path == "/api/autopilot/run":
@@ -1182,6 +1194,38 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 )
                 calls_triggered.append({"task_id": task["task_id"], "lead_id": lead_id, "call_result": call_res})
         self.send_json_response({"success": True, "triggered_count": len(calls_triggered), "calls": calls_triggered})
+
+    def handle_api_get_competitors_intel(self):
+        comps = get_competitors_intel()
+        self.send_json_response({"success": True, "competitors": comps, "count": len(comps)})
+
+    def handle_api_get_market_trend_reports(self):
+        reports = get_market_trend_reports()
+        self.send_json_response({"success": True, "reports": reports, "count": len(reports)})
+
+    def handle_api_get_lead_battlecard(self, query):
+        lead_id = query.get("lead_id", [None])[0]
+        competitor = query.get("competitor", [None])[0]
+        if not lead_id:
+            self.send_json_response({"error": "Paramètre lead_id requis"}, status=400)
+            return
+        res = market_intelligence_engine.generate_lead_battlecard(int(lead_id), competitor_name=competitor)
+        self.send_json_response(res)
+
+    def handle_api_market_scan(self, body):
+        q = body.get("query", "logiciel automatisation prospection whatsapp b2b afrique")
+        sector = body.get("sector", "SaaS B2B & Prospection WhatsApp")
+        res = market_intelligence_engine.scan_market(query=q, sector=sector)
+        self.send_json_response(res)
+
+    def handle_api_build_competitor_battlecard(self, body):
+        name = body.get("competitor_name", "")
+        url = body.get("website_url", "")
+        if not name:
+            self.send_json_response({"error": "Nom du concurrent requis"}, status=400)
+            return
+        res = market_intelligence_engine.build_competitor_battlecard(name, website_url=url)
+        self.send_json_response({"success": True, "battlecard": res})
 
     def handle_api_anonymize_lead(self, body):
         phone = body.get("phone", "")

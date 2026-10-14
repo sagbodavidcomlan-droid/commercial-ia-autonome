@@ -14,7 +14,7 @@ import os
 import sqlite3
 import json
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger("DatabaseStore")
@@ -649,6 +649,40 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_guard_lead ON guard_quality_logs(lead_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_guard_date ON guard_quality_logs(created_at)")
 
+    # 15. Table d'intelligence concurrentielle & Battlecards (Market Intelligence Engine)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS market_competitor_intel (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        competitor_name TEXT NOT NULL UNIQUE,
+        website_url TEXT,
+        core_offer TEXT,
+        pricing_model TEXT,
+        target_audience TEXT,
+        strengths TEXT,
+        weaknesses TEXT,
+        kill_points TEXT,
+        battlecard_json TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_comp_name ON market_competitor_intel(competitor_name)")
+
+    # 16. Table des rapports de veille marché et tendances
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS market_trend_reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT NOT NULL,
+        sector TEXT,
+        summary TEXT,
+        insights_json TEXT,
+        actionable_recommendations TEXT,
+        sources_json TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_trend_topic ON market_trend_reports(topic)")
+
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide
@@ -675,10 +709,100 @@ def init_db():
         if cursor.fetchone()[0] == 0:
             seed_activity_logs(conn)
 
+    # Ensemencement garanti du lead test David SAGBO et synchronisation CRM
+    ensure_test_leads(conn)
+
     # Ensemencement garanti des conversations omnicanales pour tout lead actif sans message
     seed_omnichannel_conversations(conn)
 
     conn.close()
+
+def ensure_test_leads(conn):
+    """Garantit la présence et la visibilité immédiate du lead test David SAGBO dans le CRM avec statut Chaud et RDV Confirmé."""
+    cursor = conn.cursor()
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    
+    # 1. Vérification et injection / mise à jour de David SAGBO
+    cursor.execute("SELECT id FROM crm_leads WHERE telephone LIKE '%53315348%' OR email = 'c.davidsagbo@gmail.com' OR id = 99904")
+    row = cursor.fetchone()
+    
+    if row:
+        lead_id = row[0]
+        cursor.execute("""
+            UPDATE crm_leads
+            SET nom_complet = 'David SAGBO',
+                nom_lead = 'David SAGBO',
+                prenom = 'David',
+                nom = 'SAGBO',
+                telephone = '+2290153315348',
+                whatsapp = '+2290153315348',
+                email = 'c.davidsagbo@gmail.com',
+                entreprise = 'SAGBO Tech Solutions',
+                poste = 'Fondateur & Dirigeant',
+                statut_lead = 'RDV Confirmé',
+                temperature = 'Chaud',
+                score_qualification = 100,
+                score_dur = 95,
+                douleur_identifiee = 'Temps perdu sur les relances et no-shows sur les démos',
+                centre_interet = 'Automatisation prospection et closing B2B',
+                offre_matchee = 'Pack Solution IA & Closing Omnicanal',
+                canal_source = 'WHATSAPP',
+                canal_actuel = 'WHATSAPP',
+                last_contact_at = ?,
+                updated_at = ?
+            WHERE id = ?
+        """, (now_str, now_str, lead_id))
+    else:
+        cursor.execute("""
+            INSERT INTO crm_leads (
+                id, nom_complet, nom_lead, prenom, nom, telephone, whatsapp, email,
+                entreprise, poste, statut_lead, temperature, score_qualification, score_dur,
+                douleur_identifiee, centre_interet, offre_matchee, canal_source, canal_actuel, canal_id,
+                created_at, date_creation, last_contact_at, updated_at
+            ) VALUES (
+                99904, 'David SAGBO', 'David SAGBO', 'David', 'SAGBO', '+2290153315348', '+2290153315348', 'c.davidsagbo@gmail.com',
+                'SAGBO Tech Solutions', 'Fondateur & Dirigeant', 'RDV Confirmé', 'Chaud', 100, 95,
+                'Temps perdu sur les relances et no-shows sur les démos', 'Automatisation prospection et closing B2B',
+                'Pack Solution IA & Closing Omnicanal', 'WHATSAPP', 'WHATSAPP', '+2290153315348',
+                ?, ?, ?, ?
+            )
+        """, (now_str, now_str, now_str, now_str))
+        lead_id = 99904
+
+    # 2. Vérification d'un rendez-vous Google Meet dans agenda_tasks
+    cursor.execute("SELECT COUNT(*) FROM agenda_tasks WHERE contact_name = 'David SAGBO'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO agenda_tasks (
+                task_date, time_slot, task_title, task_description,
+                channel, status, execution_output, event_type,
+                contact_name, meeting_link, created_at
+            ) VALUES (
+                date('now'), 'Immédiat (30 min)', 'Session de Démo & Closing VIP - Dave Sagbo & David SAGBO',
+                'Démonstration opérationnelle du Système Commercial IA Autonome et calibration des canaux WhatsApp, Téléphonie et Google Meet.',
+                'Google Meet', 'planifie', 'Lien Meet actif et prêt', 'closing',
+                'David SAGBO', 'https://meet.google.com/closing-dave-99904', ?
+            )
+        """, (now_str,))
+
+    # 3. Vérification des logs d'appels dans crm_lead_calls
+    cursor.execute("SELECT COUNT(*) FROM crm_lead_calls WHERE lead_id = ?", (lead_id,))
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO crm_lead_calls (
+                lead_id, direction, call_type, from_number, to_number,
+                status, duration_seconds, transcript, summary, sentiment, qualification_result,
+                provider, created_at
+            ) VALUES (
+                ?, 'OUTBOUND', 'QUALIFICATION', '+22900000000', '+2290153315348',
+                'COMPLETED', 115,
+                '[Dave Sagbo] : Bonjour David, c\''est Dave Sagbo au téléphone. Je vous appelle suite à votre demande sur l\''automatisation commerciale.\n[David] : Bonjour Dave. Oui parfait, je cherchais justement comment éliminer les relances manuelles.',
+                'Lead qualifié chaud chez SAGBO Tech Solutions. Accord démo validé.', 'POSITIVE', 'CHAUD',
+                'SIMULATED_RETELL', ?
+            )
+        """, (lead_id, now_str))
+
+    conn.commit()
 
 def seed_calendar_schedule(conn):
     cursor = conn.cursor()
@@ -1140,6 +1264,168 @@ def get_lead_calls(lead_id: Optional[int] = None, limit: int = 50) -> List[Dict[
         return calls
     except Exception as e:
         logger.error(f"Erreur get_lead_calls : {e}")
+        return []
+
+def save_competitor_intel(data: Dict[str, Any]) -> int:
+    """Enregistre ou met à jour les informations d'un concurrent avec sa Battlecard."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO market_competitor_intel (
+                competitor_name, website_url, core_offer, pricing_model,
+                target_audience, strengths, weaknesses, kill_points, battlecard_json, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(competitor_name) DO UPDATE SET
+                website_url = excluded.website_url,
+                core_offer = excluded.core_offer,
+                pricing_model = excluded.pricing_model,
+                target_audience = excluded.target_audience,
+                strengths = excluded.strengths,
+                weaknesses = excluded.weaknesses,
+                kill_points = excluded.kill_points,
+                battlecard_json = excluded.battlecard_json,
+                updated_at = datetime('now')
+        """, (
+            data.get("competitor_name", "Inconnu"),
+            data.get("website_url", ""),
+            data.get("core_offer", ""),
+            data.get("pricing_model", ""),
+            data.get("target_audience", ""),
+            data.get("strengths", ""),
+            data.get("weaknesses", ""),
+            data.get("kill_points", ""),
+            json.dumps(data.get("battlecard_json", {}), ensure_ascii=False) if isinstance(data.get("battlecard_json"), (dict, list)) else str(data.get("battlecard_json", ""))
+        ))
+        row_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return row_id
+    except Exception as e:
+        logger.error(f"Erreur save_competitor_intel : {e}")
+        return 0
+
+def get_competitors_intel(limit: int = 50) -> List[Dict[str, Any]]:
+    """Récupère l'ensemble des concurrents et leurs battlecards."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, competitor_name, website_url, core_offer, pricing_model,
+                   target_audience, strengths, weaknesses, kill_points, battlecard_json,
+                   created_at, updated_at
+            FROM market_competitor_intel
+            ORDER BY updated_at DESC LIMIT ?
+        """, (limit,))
+        rows = c.fetchall()
+        competitors = []
+        for r in rows:
+            b_json = {}
+            if r["battlecard_json"]:
+                try:
+                    b_json = json.loads(r["battlecard_json"])
+                except Exception:
+                    pass
+            competitors.append({
+                "id": r["id"],
+                "competitor_name": r["competitor_name"],
+                "website_url": r["website_url"],
+                "core_offer": r["core_offer"],
+                "pricing_model": r["pricing_model"],
+                "target_audience": r["target_audience"],
+                "strengths": r["strengths"],
+                "weaknesses": r["weaknesses"],
+                "kill_points": r["kill_points"],
+                "battlecard": b_json,
+                "created_at": r["created_at"],
+                "updated_at": r["updated_at"]
+            })
+        conn.close()
+        return competitors
+    except Exception as e:
+        logger.error(f"Erreur get_competitors_intel : {e}")
+        return []
+
+def get_competitor_by_name(name: str) -> Optional[Dict[str, Any]]:
+    """Récupère un concurrent par son nom."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT * FROM market_competitor_intel
+            WHERE LOWER(competitor_name) LIKE ? LIMIT 1
+        """, (f"%{name.lower()}%",))
+        row = c.fetchone()
+        conn.close()
+        if not row:
+            return None
+        res = dict(row)
+        if res.get("battlecard_json"):
+            try:
+                res["battlecard"] = json.loads(res["battlecard_json"])
+            except Exception:
+                res["battlecard"] = {}
+        return res
+    except Exception as e:
+        logger.error(f"Erreur get_competitor_by_name : {e}")
+        return None
+
+def save_market_trend_report(
+    topic: str,
+    sector: str = "B2B / Vente",
+    summary: str = "",
+    insights: Any = None,
+    recommendations: str = "",
+    sources: Any = None
+) -> int:
+    """Sauvegarde un rapport de veille sectorielle."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO market_trend_reports (
+                topic, sector, summary, insights_json, actionable_recommendations, sources_json
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            topic,
+            sector,
+            summary,
+            json.dumps(insights, ensure_ascii=False) if isinstance(insights, (dict, list)) else str(insights or ""),
+            recommendations,
+            json.dumps(sources, ensure_ascii=False) if isinstance(sources, (dict, list)) else str(sources or "")
+        ))
+        row_id = c.lastrowid
+        conn.commit()
+        conn.close()
+        return row_id
+    except Exception as e:
+        logger.error(f"Erreur save_market_trend_report : {e}")
+        return 0
+
+def get_market_trend_reports(limit: int = 10) -> List[Dict[str, Any]]:
+    """Récupère les derniers rapports de veille marché."""
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT * FROM market_trend_reports ORDER BY id DESC LIMIT ?
+        """, (limit,))
+        rows = [dict(r) for r in c.fetchall()]
+        for r in rows:
+            if r.get("insights_json"):
+                try:
+                    r["insights"] = json.loads(r["insights_json"])
+                except Exception:
+                    r["insights"] = r["insights_json"]
+            if r.get("sources_json"):
+                try:
+                    r["sources"] = json.loads(r["sources_json"])
+                except Exception:
+                    r["sources"] = []
+        conn.close()
+        return rows
+    except Exception as e:
+        logger.error(f"Erreur get_market_trend_reports : {e}")
         return []
 
 def seed_omnichannel_conversations(conn):

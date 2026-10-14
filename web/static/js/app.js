@@ -8585,3 +8585,137 @@ async function fetchWatcherObservations() {
   }
 }
 
+// ============================================================================
+// VEILLE CONCURRENTIELLE & BATTLECARDS LEAD (EXA / COMPOSIO)
+// ============================================================================
+
+let currentLeadBattlecardPitch = "";
+
+async function openDrawerLeadBattlecard() {
+  if (!activeDrawerLeadId) {
+    showToast("Veuillez sélectionner un prospect d'abord.", "warning");
+    return;
+  }
+
+  const modal = document.getElementById("modal-lead-battlecard");
+  const content = document.getElementById("battlecard-modal-content");
+  const subtitle = document.getElementById("battlecard-lead-subtitle");
+  if (!modal || !content) return;
+
+  modal.classList.remove("hidden");
+  content.innerHTML = `
+    <div class="py-12 text-center text-slate-400">
+      <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-3 text-indigo-600"></i>
+      <p class="font-bold text-slate-700">Analyse du marché et des concurrents pour ce prospect...</p>
+      <p class="text-xs text-slate-400 mt-1">Interrogation Exa Intelligence & Synthèse Dave Sagbo</p>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    const res = await fetch(`/api/market-intel/battlecard-lead?lead_id=${activeDrawerLeadId}`);
+    const data = await res.json();
+
+    if (!data.success || !data.battlecard) {
+      content.innerHTML = `
+        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-center">
+          <p class="font-bold">Impossible de générer la battlecard pour le moment.</p>
+          <p class="text-xs mt-1">${escapeHtml(data.error || "Erreur inconnue")}</p>
+        </div>
+      `;
+      return;
+    }
+
+    const b = data.battlecard;
+    currentLeadBattlecardPitch = b.suggested_dave_pitch || "";
+
+    if (subtitle) {
+      subtitle.innerText = `Analyse pour ${b.lead_name} (${b.entreprise || 'Entreprise'})`;
+    }
+
+    content.innerHTML = `
+      <!-- En-tête de comparaison -->
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Alternative Comparée</span>
+          <h4 class="font-black text-sm text-slate-900 mt-0.5 flex items-center gap-1.5">
+            <span>${escapeHtml(b.competitor_compared)}</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">Concurrent</span>
+          </h4>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Douleur Clé du Prospect</span>
+          <p class="text-xs font-bold text-rose-600 truncate max-w-xs mt-0.5">${escapeHtml(b.lead_core_pain)}</p>
+        </div>
+      </div>
+
+      <!-- Pourquoi le concurrent échoue pour ce lead -->
+      <div class="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200/80">
+        <div class="flex items-center gap-2 text-rose-800 font-bold text-xs mb-1.5">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-600"></i>
+          <span>Pourquoi l'alternative échoue pour ce prospect</span>
+        </div>
+        <p class="text-xs text-rose-950 leading-relaxed font-medium">
+          ${escapeHtml(b.why_competitor_fails)}
+        </p>
+      </div>
+
+      <!-- Notre avantage décisif -->
+      <div class="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
+        <div class="flex items-center gap-2 text-emerald-800 font-bold text-xs mb-1.5">
+          <i data-lucide="zap" class="w-4 h-4 text-emerald-600"></i>
+          <span>Notre Avantage Décisif (Dave Sagbo)</span>
+        </div>
+        <p class="text-xs text-emerald-950 leading-relaxed font-medium">
+          ${escapeHtml(b.our_unfair_advantage)}
+        </p>
+      </div>
+
+      <!-- Argumentaire d'attaque suggéré -->
+      <div class="p-4 rounded-xl bg-indigo-50/80 border border-indigo-200">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-indigo-900 font-bold text-xs">
+            <i data-lucide="message-square-quote" class="w-4 h-4 text-indigo-600"></i>
+            <span>Argumentaire d'Attaque Commerciale (Empathie Tactique)</span>
+          </div>
+          <button onclick="copyBattlecardPitch()" class="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer">
+            <i data-lucide="clipboard" class="w-3.5 h-3.5"></i> Copier
+          </button>
+        </div>
+        <div class="p-3 rounded-lg bg-white border border-indigo-100 text-xs text-slate-800 font-medium leading-relaxed italic select-all">
+          "${escapeHtml(b.suggested_dave_pitch)}"
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("Erreur openDrawerLeadBattlecard:", err);
+    content.innerHTML = `<div class="p-4 rounded-xl bg-rose-50 text-rose-700 text-xs">Erreur de connexion.</div>`;
+  }
+}
+
+function closeBattlecardModal() {
+  const modal = document.getElementById("modal-lead-battlecard");
+  if (modal) modal.classList.add("hidden");
+}
+
+function injectBattlecardPitchToDrawer() {
+  if (!currentLeadBattlecardPitch) return;
+  const replyInput = document.getElementById("drawer-reply-input");
+  if (replyInput) {
+    replyInput.value = currentLeadBattlecardPitch;
+    replyInput.focus();
+    showToast("Argumentaire inséré dans la zone de réponse !", "success");
+    closeBattlecardModal();
+  }
+}
+
+function copyBattlecardPitch() {
+  if (!currentLeadBattlecardPitch) return;
+  navigator.clipboard.writeText(currentLeadBattlecardPitch).then(() => {
+    showToast("Argumentaire copié dans le presse-papier !", "success");
+  });
+}
+
+
