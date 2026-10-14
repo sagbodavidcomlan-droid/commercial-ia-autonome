@@ -2320,6 +2320,10 @@
                       <i data-lucide="external-link" class="w-3 h-3 text-emerald-600"></i>
                       <span>Lien Catalogue</span>
                     </button>
+                    <button type="button" onclick="generateLeadVoiceNote()" id="btn-generate-voice-note" class="px-2.5 py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-[11px] font-bold flex items-center gap-1 transition" title="Générer une note vocale WhatsApp ultra-réaliste (Voix Dave Sagbo via ElevenLabs)">
+                      <i data-lucide="mic" class="w-3 h-3 text-purple-600"></i>
+                      <span>🎙️ Vocal WhatsApp</span>
+                    </button>
                     <span class="text-[10px] text-slate-400 font-medium pl-1 hidden sm:inline" id="conv-active-channel-label">Canal : WhatsApp</span>
                   </div>
 
@@ -5603,9 +5607,14 @@
           <i data-lucide="shield-check" class="w-3 h-3 text-[#0062ff]"></i>
           Émetteur : Dave Sagbo
         </span>
-        <button onclick="generateDrawerAiReply()" class="text-[#0062ff] hover:underline font-bold text-[11px] flex items-center gap-1">
-          <i data-lucide="sparkles" class="w-3 h-3"></i> Suggérer IA
-        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="generateDrawerAiReply()" class="text-[#0062ff] hover:underline font-bold text-[11px] flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3"></i> Suggérer IA
+          </button>
+          <button onclick="generateDrawerVoiceNote()" id="btn-drawer-voice-note" class="text-purple-600 hover:text-purple-700 font-bold text-[11px] flex items-center gap-1" title="Générer une note vocale WhatsApp ultra-réaliste">
+            <i data-lucide="mic" class="w-3 h-3 text-purple-600"></i> Vocal WhatsApp
+          </button>
+        </div>
       </div>
       <div class="flex items-end gap-2">
         <textarea 
@@ -5630,7 +5639,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Application Logic (Versionnée anti-cache) -->
-  <script src="/static/js/app.js?v=15.0"></script>
+  <script src="/static/js/app.js?v=16.0"></script>
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {

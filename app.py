@@ -345,6 +345,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_send_lead_message(body)
         elif path == "/api/crm/leads/conversation/generate-ai":
             self.handle_api_generate_ai_reply(body)
+        elif path == "/api/crm/leads/voice-note":
+            self.handle_api_generate_lead_voice_note(body)
         elif path == "/api/compliance/optout":
             self.handle_api_test_optout(body)
         elif path == "/api/settings":
@@ -367,6 +369,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_simulator_chat(body)
         elif path == "/api/simulator/interactive":
             self.handle_api_simulator_interactive(body)
+        elif path in ("/api/simulator/voice-note", "/api/voice/synthesize"):
+            self.handle_api_generate_simulator_voice_note(body)
         elif path == "/api/voice/generate":
             self.handle_api_generate_voice_script(body)
         elif path == "/api/enrichment/disc":
@@ -1068,6 +1072,45 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "suggested_message": pitch,
             "channel": channel
         })
+
+    def handle_api_generate_lead_voice_note(self, body):
+        lead_id = body.get("lead_id")
+        context_type = body.get("context_type", "accroche_decouverte")
+        custom_text = body.get("custom_text")
+        channel = body.get("channel", "WHATSAPP")
+
+        if not lead_id:
+            self.send_json_response({"success": False, "error": "lead_id requis."}, status=400)
+            return
+
+        try:
+            res = voice_engine.generate_and_save_voice_note(
+                lead_id=int(lead_id),
+                context_type=context_type,
+                custom_text=custom_text,
+                channel=channel
+            )
+            if res.get("success"):
+                messages = get_lead_messages(int(lead_id), channel)
+                res["messages"] = messages
+            self.send_json_response(res)
+        except Exception as e:
+            logger.error(f"Erreur handle_api_generate_lead_voice_note : {e}")
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_generate_simulator_voice_note(self, body):
+        text = body.get("text", "")
+        voice_id = body.get("voice_id")
+        if not text:
+            self.send_json_response({"success": False, "error": "Paramètre 'text' requis."}, status=400)
+            return
+
+        try:
+            res = voice_engine.synthesize_voice_note(text=text, voice_id=voice_id)
+            self.send_json_response(res)
+        except Exception as e:
+            logger.error(f"Erreur handle_api_generate_simulator_voice_note : {e}")
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
 
     def handle_api_anonymize_lead(self, body):
         phone = body.get("phone", "")

@@ -1,102 +1,247 @@
 #!/usr/bin/env python3
 """
-Voice Notes & Audio Pitch Studio Engine
+Voice Notes & Audio Pitch Studio Engine (ElevenLabs & Composio)
+================================================================================
 Générateur de scripts et d'enregistrements vocaux personnalisés pour WhatsApp :
-- Les notes vocales WhatsApp convertissent 3x plus que les messages écrits
-- Personnalisation vocale avec prénom, intonation dynamique et pauses naturelles
-- Connecteurs TTS (Text-to-Speech ElevenLabs / OpenAI Audio) ou génération de scripts optimisés
-Auteur : Agent IA Commercial
+- Les notes vocales WhatsApp convertissent jusqu'à 3x plus que les messages écrits
+- Personnalisation vocale authentique incarnant Dave Sagbo (vouvoiement, ton chaleureux)
+- Synthèse audio MP3 haute fidélité via ElevenLabs sur l'infrastructure instantanée Composio
+- Mise en cache locale dans web/static/audio/voice_notes/ pour lecture web et partage direct
+- Sauvegarde systématique dans l'historique des interactions crm_lead_messages
+
+Auteur : Dave Sagbo - Système Commercial IA
 """
 
 import os
+import re
 import json
+import time
 import logging
-from typing import Dict, Any
+import urllib.request
+from pathlib import Path
+from typing import Dict, Any, Optional
+from modules.composio_client import call_composio_tool
+from core.database_store import get_connection
 
 logger = logging.getLogger("VoiceEngine")
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+AUDIO_STORAGE_DIR = BASE_DIR / "web" / "static" / "audio" / "voice_notes"
+AUDIO_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Voix masculine francophone / internationale chaleureuse et énergique sur ElevenLabs Composio
+DEFAULT_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID", "TX3LPaxmHKxFdv7VOQHJ")
+
+
 class VoiceEngine:
     def __init__(self):
-        self.tts_provider = os.getenv("TTS_PROVIDER", "openai_tts")
+        self.voice_id = DEFAULT_VOICE_ID
 
-    def generate_voice_script(self, lead_data: Any = None, context_type: str = "accroche_initiale", **kwargs) -> Dict[str, Any]:
+    def generate_voice_script(
+        self,
+        lead_data: Optional[Dict[str, Any]] = None,
+        context_type: str = "accroche_decouverte",
+        custom_instructions: str = ""
+    ) -> Dict[str, Any]:
         """
-        Génère un script vocal dynamique avec annotations d'inflexion et de rythme
-        spécialement calibré pour l'oreille ouest-africaine (chaleureux, respectueux, dynamique).
+        Génère un script vocal court, naturel et percutant incarnant Dave Sagbo.
+        Calibré pour une écoute sur WhatsApp (15 à 30 secondes max).
         """
-        data = {}
-        if isinstance(lead_data, dict):
-            data = lead_data
-        elif lead_data is not None:
-            data = {"name": str(lead_data)}
-        data.update(kwargs)
-
-        prenom = data.get("first_name") or data.get("nom_lead") or data.get("name", "Champion")
-        if isinstance(prenom, str) and " " in prenom:
-            prenom = prenom.split()[0]
-        interet = data.get("centre_interet") or data.get("point_douleur") or data.get("interet", "le digital")
-        disc = data.get("disc_code") or data.get("style", "S")
-        if isinstance(disc, str) and len(disc) > 1:
-            disc = disc[0].upper()
+        data = lead_data or {}
+        nom = data.get("nom_complet") or data.get("nom_lead") or "Cher Partenaire"
+        prenom = data.get("prenom") or nom.split()[0]
+        poste = data.get("poste") or "Responsable"
+        interet = data.get("centre_interet") or data.get("notes") or "votre développement commercial"
+        entreprise = data.get("entreprise") or data.get("nom_entreprise") or ""
 
         script_text = ""
         speech_notes = ""
 
-        if context_type == "accroche_initiale":
-            if disc == "D":
-                # Profil Dominant : Court, percutant, ROI
-                script_text = (
-                    f"Hello {prenom} ! C'est David. [pause 0.5s] "
-                    f"J'ai vu que tu veux maîtriser {interet} pour lancer tes prestations. "
-                    f"Franchement, le pack a été conçu pour ça : tu pratiques dès le premier soir, et dès ton premier client, tu es rentabilisé. [pause 0.5s] "
-                    f"Dis-moi si tu as un objectif précis en tête, je te dis direct si c'est adapté pour toi !"
-                )
-                speech_notes = "Débit rapide, ton énergique et assuré, zéro hésitation."
-            elif disc == "C":
-                # Profil Consciencieux : Détails et rigueur
-                script_text = (
-                    f"Hello {prenom}, j'espère que tu vas bien ! [pause 0.5s] "
-                    f"Concernant le pack sur {interet}, je voulais te rassurer : c'est un programme vidéo 100% pas-à-pas. "
-                    f"Chaque module fait entre 10 et 15 minutes, accessible 24h/24. [pause 0.5s] "
-                    f"Tu veux que je t'envoie le sommaire détaillé pour que tu voies le plan exact ?"
-                )
-                speech_notes = "Ton calme, posé, articulateur et méthodique."
-            else:
-                # Profil Standard / Chaleureux (I et S)
-                script_text = (
-                    f"Hello {prenom} ! 👋 C'est David, j'espère que tu as la super forme aujourd'hui ! [pause 0.5s] "
-                    f"Je voyais ton message à propos de {interet}, et je voulais te féliciter pour cette démarche. [sourire dans la voix] "
-                    f"C'est exactement pendant les vacances qu'il faut acquérir la bonne compétence pour faire la différence. "
-                    f"Rassure-toi, même si tu démarres avec un simple smartphone, on t'accompagne pas-à-pas dans notre groupe d'entraide. [pause 0.5s] "
-                    f"Tu as déjà des bases ou tu préfères qu'on parte de zéro absolu ensemble ?"
-                )
-                speech_notes = "Ton fraternel, très chaleureux, grand sourire dans la voix."
-
-        elif context_type == "relance_closing":
+        if context_type == "accroche_decouverte":
+            ent_mention = f" chez {entreprise}" if entreprise else ""
             script_text = (
-                f"{prenom}, petit vocal rapide pour toi ! [pause 0.5s] "
-                f"On clôture la session spéciale vacances ce soir à 23h59. "
-                f"Je t'ai réservé le tarif solidaire avec accès direct par Mobile Money. "
-                f"Si tu veux qu'on valide ensemble, fais-moi signe d'ici ce soir pour ne pas perdre ta place !"
+                f"Bonjour {prenom}, c'est Dave Sagbo. "
+                f"Je vous laisse ce petit vocal pour faire votre connaissance{ent_mention}. "
+                f"J'ai vu votre intérêt concernant {interet}. "
+                f"Dites-moi, vous développez quelle activité en ce moment ?"
             )
-            speech_notes = "Ton bienveillant mais ferme, sentiment d'urgence raisonnée."
+            speech_notes = "Ton chaleureux, posé, bienveillant et curieux."
 
-        estimated_duration_sec = round(len(script_text.split()) / 2.5)  # ~150 mots/min
+        elif context_type == "relance_valeur":
+            script_text = (
+                f"Bonjour {prenom}, c'est Dave. "
+                f"Petit vocal rapide pour prendre de vos nouvelles. "
+                f"Dans la plupart des commerces et agences qu'on accompagne sur {interet}, "
+                f"le plus gros frein se situe souvent sur la conversion des contacts en clients. "
+                f"Est-ce que c'est un point sur lequel vous avancez cette semaine ?"
+            )
+            speech_notes = "Ton direct d'entrepreneur à entrepreneur, axé valeur et écoute."
+
+        elif context_type == "cloture_demo":
+            script_text = (
+                f"Bonjour {prenom}, c'est Dave Sagbo. "
+                f"Au vu de nos échanges, je suis convaincu qu'on peut vous faire gagner un temps précieux et sécuriser vos ventes. "
+                f"Seriez-vous partant pour 15 minutes de démo sans engagement demain ou après-demain ?"
+            )
+            speech_notes = "Ton assuré, professionnel et cordial."
+
+        else:
+            # Script sur-mesure ou général
+            script_text = (
+                f"Bonjour {prenom}, c'est Dave Sagbo. "
+                f"Ravi d'échanger avec vous. "
+                f"Je suis disponible pour échanger sur vos objectifs et voir comment propulser vos résultats."
+            )
+            speech_notes = "Ton naturel et énergique."
+
+        # Nettoyage pour la synthèse TTS (retirer éventuels emojis et balises)
+        clean_text = re.sub(r'[^\w\s\.,\?!éèêëàâäôöûüùçîïÉÈÊÀÂÔÛÎÇ\'-]', '', script_text).strip()
+        word_count = len(clean_text.split())
+        estimated_duration = max(5, round(word_count / 2.3))
 
         return {
             "lead_name": prenom,
             "context": context_type,
             "script_text": script_text,
+            "clean_text": clean_text,
             "speech_notes": speech_notes,
-            "estimated_duration_seconds": estimated_duration_sec,
-            "audio_ready_for_whatsapp": True
+            "estimated_duration_seconds": estimated_duration
         }
 
-if __name__ == "__main__":
-    voice = VoiceEngine()
-    test_lead = {"name": "Roland", "centre_interet": "Graphisme Canva", "disc_code": "I"}
-    res = voice.generate_voice_script(test_lead)
-    print("=== Script Vocal WhatsApp Personnalisé ===")
-    print(res["script_text"])
-    print(f"Durée estimée : {res['estimated_duration_seconds']} secondes")
-    print(f"Directives vocales : {res['speech_notes']}")
+    def synthesize_voice_note(
+        self,
+        text: str,
+        lead_id: Optional[int] = None,
+        voice_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Envoie le texte à ElevenLabs via Composio, télécharge le fichier MP3
+        dans web/static/audio/voice_notes/ et renvoie l'URL locale et S3.
+        """
+        target_voice = voice_id or self.voice_id
+        clean_text = re.sub(r'[^\w\s\.,\?!éèêëàâäôöûüùçîïÉÈÊÀÂÔÛÎÇ\'-]', '', text).strip()
+
+        if not clean_text:
+            return {"success": False, "error": "Texte vocal vide"}
+
+        try:
+            logger.info(f"Synthèse vocale ElevenLabs via Composio (Voice ID: {target_voice}, {len(clean_text)} car)...")
+            res = call_composio_tool("ELEVENLABS_TEXT_TO_SPEECH", {
+                "voice_id": target_voice,
+                "text": clean_text
+            }, timeout=40)
+
+            if not res or not isinstance(res, dict):
+                return {"success": False, "error": "Aucune réponse de synthèse ElevenLabs"}
+
+            # Extraction de l'URL S3 ou fichier retourné
+            s3url = None
+            if "file" in res and isinstance(res["file"], dict):
+                s3url = res["file"].get("s3url") or res["file"].get("url")
+            elif "s3url" in res:
+                s3url = res.get("s3url")
+            elif "audio_url" in res:
+                s3url = res.get("audio_url")
+
+            if not s3url:
+                logger.warning(f"Retour inattendu Composio TTS : {res}")
+                return {"success": False, "error": "Fichier audio non trouvé dans la réponse", "raw": res}
+
+            # Nom de fichier unique pour le stockage local
+            ts = int(time.time())
+            lead_tag = f"lead_{lead_id}_" if lead_id else "sim_"
+            filename = f"vocal_{lead_tag}{ts}.mp3"
+            local_path = AUDIO_STORAGE_DIR / filename
+
+            # Téléchargement du MP3 généré
+            req = urllib.request.Request(s3url, headers={"User-Agent": "Sales-Voice-Engine/1.0"})
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                with open(local_path, "wb") as f:
+                    f.write(resp.read())
+
+            local_url = f"/static/audio/voice_notes/{filename}"
+            logger.info(f"Note vocale MP3 générée et sauvegardée : {local_url} ({os.path.getsize(local_path)} octets)")
+
+            return {
+                "success": True,
+                "filename": filename,
+                "audio_url": local_url,
+                "s3url": s3url,
+                "text": clean_text,
+                "voice_id": target_voice
+            }
+        except Exception as e:
+            logger.error(f"Erreur synthèse ElevenLabs ({target_voice}) : {e}")
+            return {"success": False, "error": str(e)}
+
+    def generate_and_save_voice_note(
+        self,
+        lead_id: int,
+        context_type: str = "accroche_decouverte",
+        custom_text: Optional[str] = None,
+        channel: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Point d'entrée complet pour générer, synthétiser et enregistrer
+        une note vocale pour un prospect dans crm_lead_messages.
+        """
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+        row = c.fetchone()
+        conn.close()
+
+        lead = dict(row) if row else {}
+        if not lead:
+            return {"success": False, "error": f"Prospect #{lead_id} non trouvé"}
+
+        # Génération ou utilisation du texte personnalisé
+        if custom_text and len(custom_text.strip()) > 5:
+            script_data = {
+                "script_text": custom_text.strip(),
+                "clean_text": custom_text.strip(),
+                "context": context_type
+            }
+        else:
+            script_data = self.generate_voice_script(lead, context_type=context_type)
+
+        synth_res = self.synthesize_voice_note(script_data["clean_text"], lead_id=lead_id)
+        if not synth_res.get("success"):
+            return synth_res
+
+        audio_url = synth_res["audio_url"]
+        message_formatted = f"🎙️ Note vocale Dave Sagbo : {script_data['script_text']}\n[AUDIO: {audio_url}]"
+
+        # Sauvegarde dans SQLite crm_lead_messages
+        try:
+            canal = channel or lead.get("canal_actuel") or lead.get("source_canal") or "WHATSAPP"
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO crm_lead_messages (lead_id, channel, sender, message, status, timestamp)
+                VALUES (?, ?, 'Dave Sagbo (Vocal WhatsApp)', ?, 'DELIVERED', datetime('now'))
+            """, (lead_id, canal, message_formatted))
+            c.execute("""
+                UPDATE crm_leads
+                SET last_interaction = datetime('now'),
+                    updated_at = datetime('now')
+                WHERE id = ?
+            """, (lead_id,))
+            conn.commit()
+            conn.close()
+        except Exception as e_db:
+            logger.warning(f"Erreur enregistrement message vocal dans crm_lead_messages : {e_db}")
+
+        return {
+            "success": True,
+            "lead_id": lead_id,
+            "audio_url": audio_url,
+            "s3url": synth_res.get("s3url"),
+            "script_text": script_data["script_text"],
+            "message_formatted": message_formatted,
+            "context": context_type
+        }
+
+
+# Instance globale réutilisable
+voice_engine = VoiceEngine()

@@ -2729,6 +2729,39 @@ function renderConversationChannelTabs(availableChannels, activeChannel) {
   lucide.createIcons();
 }
 
+function formatMessageContentHtml(rawText, isSelf = false) {
+  if (!rawText) return "";
+  const audioRegex = /\[AUDIO:\s*([^\]]+)\]/i;
+  const match = rawText.match(audioRegex);
+
+  if (!match) {
+    return escapeHtml(rawText);
+  }
+
+  const audioUrl = match[1].trim();
+  const textWithoutAudio = rawText.replace(audioRegex, "").trim();
+
+  const bgClass = isSelf ? "bg-white/15 border border-white/20" : "bg-purple-50 border border-purple-200/80";
+  const titleClass = isSelf ? "text-white" : "text-purple-900";
+  const iconColor = isSelf ? "text-white" : "text-purple-600";
+
+  return `
+    <div>${escapeHtml(textWithoutAudio)}</div>
+    <div class="mt-2.5 p-2.5 rounded-2xl ${bgClass} space-y-1.5 shadow-2xs">
+      <div class="flex items-center justify-between gap-2 text-[10px] font-bold ${titleClass}">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="mic" class="w-3.5 h-3.5 ${iconColor}"></i>
+          <span>Note vocale Dave Sagbo (WhatsApp)</span>
+        </span>
+        <a href="${escapeHtml(audioUrl)}" download target="_blank" class="hover:underline flex items-center gap-1 opacity-80 hover:opacity-100" title="Télécharger le vocal MP3">
+          <i data-lucide="download" class="w-2.5 h-2.5"></i>
+        </a>
+      </div>
+      <audio controls preload="metadata" src="${escapeHtml(audioUrl)}" class="w-full h-8 rounded-lg outline-none"></audio>
+    </div>
+  `;
+}
+
 function renderConversationMessages(messages, leadName) {
   const feed = document.getElementById("conv-messages-feed");
   if (!feed) return;
@@ -2816,7 +2849,7 @@ function renderConversationMessages(messages, leadName) {
           </div>
           <div class="space-y-1.5 flex-1">
             <div class="p-4 rounded-3xl rounded-tl-sm bg-white text-slate-800 text-xs border border-slate-200/90 shadow-xs leading-relaxed whitespace-pre-wrap font-medium">
-              ${escapeHtml(m.message)}
+              ${formatMessageContentHtml(m.message, false)}
             </div>
             <div class="text-[10px] text-slate-400 pl-2 font-medium flex items-center gap-2">
               <span>${escapeHtml(timeOnly)}</span>
@@ -2862,7 +2895,7 @@ function renderConversationMessages(messages, leadName) {
           </div>
           <div class="space-y-1.5 text-right flex-1">
             <div class="p-4 rounded-3xl rounded-tr-sm ${bubbleBg} text-xs shadow-xs leading-relaxed text-left whitespace-pre-wrap font-medium">
-              ${escapeHtml(m.message)}
+              ${formatMessageContentHtml(m.message, true)}
             </div>
             <div class="text-[10px] text-slate-400 pr-2 font-medium flex items-center justify-end gap-2 flex-wrap">
               <span>${escapeHtml(timeOnly)}</span>
@@ -2973,6 +3006,60 @@ async function generateAiConversationReply() {
   } catch (err) {
     console.error("Erreur suggestion Dave Sagbo :", err);
     if (input) input.value = "";
+  }
+}
+
+async function generateLeadVoiceNote() {
+  if (!activeConversationLeadId) {
+    showToast("Veuillez sélectionner un prospect.", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btn-generate-voice-note");
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-purple-600"></i><span>Synthèse ElevenLabs...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  const input = document.getElementById("conv-input-message");
+  const customText = input ? input.value.trim() : "";
+
+  try {
+    showToast("Génération de la note vocale WhatsApp avec la voix de Dave Sagbo...", "info");
+    const res = await fetch("/api/crm/leads/voice-note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeConversationLeadId,
+        context_type: "accroche_decouverte",
+        custom_text: customText || undefined,
+        channel: activeConversationChannel || "WHATSAPP"
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (input) input.value = "";
+      if (data.messages) {
+        renderConversationMessages(data.messages, activeConversationData?.lead?.nom_complet);
+      } else {
+        openLeadConversation(activeConversationLeadId, activeConversationChannel);
+      }
+      showToast("Note vocale WhatsApp générée avec succès !", "success");
+      if (typeof loadHistoryFeed === "function") loadHistoryFeed();
+    } else {
+      showToast(data.error || "Erreur de génération vocale.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur generateLeadVoiceNote :", err);
+    showToast("Échec de la génération vocale : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
   }
 }
 
@@ -3571,7 +3658,7 @@ function renderDrawerMessages(messages, leadName) {
             ${initials}
           </div>
           <div class="p-2.5 rounded-2xl rounded-tl-xs bg-white text-slate-800 text-xs border border-slate-200 shadow-2xs leading-relaxed whitespace-pre-wrap">
-            ${escapeHtml(m.text || m.message || "")}
+            ${formatMessageContentHtml(m.text || m.message || "", false)}
             <div class="text-[9px] text-slate-400 mt-1 text-right">${escapeHtml(timeOnly)}</div>
           </div>
         </div>
@@ -3580,7 +3667,7 @@ function renderDrawerMessages(messages, leadName) {
       return divider + `
         <div class="flex items-start justify-end gap-2 max-w-[90%] ml-auto">
           <div class="p-2.5 rounded-2xl rounded-tr-xs bg-[#0062ff] text-white text-xs shadow-2xs leading-relaxed whitespace-pre-wrap">
-            ${escapeHtml(m.text || m.message || "")}
+            ${formatMessageContentHtml(m.text || m.message || "", true)}
             <div class="text-[9px] text-blue-200 mt-1 text-right">Dave Sagbo • ${escapeHtml(timeOnly)}</div>
           </div>
           <div class="w-6 h-6 rounded-full bg-[#0062ff] text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -3672,6 +3759,60 @@ async function generateDrawerAiReply() {
   } catch (err) {
     console.error("Erreur generateDrawerAiReply:", err);
     if (input) input.value = "";
+  }
+}
+
+async function generateDrawerVoiceNote() {
+  if (!activeDrawerLeadId) {
+    showToast("Veuillez sélectionner un prospect.", "warning");
+    return;
+  }
+
+  const btn = document.getElementById("btn-drawer-voice-note");
+  const originalHTML = btn ? btn.innerHTML : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-purple-600"></i><span>Synthèse ElevenLabs...</span>`;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  const input = document.getElementById("drawer-reply-input");
+  const customText = input ? input.value.trim() : "";
+
+  try {
+    showToast("Génération de la note vocale WhatsApp avec la voix de Dave Sagbo...", "info");
+    const res = await fetch("/api/crm/leads/voice-note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lead_id: activeDrawerLeadId,
+        context_type: "accroche_decouverte",
+        custom_text: customText || undefined,
+        channel: activeDrawerChannel || "WHATSAPP"
+      })
+    });
+    const data = await res.json();
+    if (data.success) {
+      if (input) input.value = "";
+      if (data.messages) {
+        renderDrawerMessages(data.messages, getLeadFullName(activeDrawerData?.lead));
+      } else {
+        await openDrawer(activeDrawerLeadId);
+      }
+      showToast("Note vocale WhatsApp générée avec succès !", "success");
+      if (typeof loadHistoryFeed === "function") loadHistoryFeed();
+    } else {
+      showToast(data.error || "Erreur de génération vocale.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur generateDrawerVoiceNote :", err);
+    showToast("Échec de la génération vocale : " + err.message, "error");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHTML;
+      if (window.lucide) lucide.createIcons();
+    }
   }
 }
 
@@ -5936,9 +6077,13 @@ async function handleSimulatorSubmit(e) {
           <div class="bg-white border border-slate-200/90 rounded-3xl rounded-tl-sm p-4 sm:p-5 text-xs text-slate-800 shadow-xs whitespace-pre-wrap leading-relaxed font-medium">
 ${escapeHtml(replyText)}
           </div>
-          <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold">
+          <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold flex-wrap">
             <button onclick="navigator.clipboard.writeText(this.closest('.space-y-2').querySelector('.bg-white').innerText); showToast('Copié !', 'success');" class="hover:text-slate-700 flex items-center gap-1 transition">
               <i data-lucide="copy" class="w-3 h-3"></i> Copier
+            </button>
+            <span>&bull;</span>
+            <button onclick="synthesizeSimulatorAudio(this)" class="hover:text-purple-600 text-purple-600 flex items-center gap-1 transition font-bold" title="Écouter cette réplique en vocal avec la voix de Dave Sagbo">
+              <i data-lucide="volume-2" class="w-3 h-3 text-purple-600"></i> 🎙️ Écouter le vocal
             </button>
             <span>&bull;</span>
             <button onclick="document.getElementById('sim-input-text').value='Pouvez-vous préciser ce point ?'; document.getElementById('sim-input-text').focus();" class="hover:text-[#0062ff] flex items-center gap-1 transition">
@@ -5958,6 +6103,60 @@ ${escapeHtml(replyText)}
   } catch (err) {
     if (typing) typing.classList.add("hidden");
     showToast("Erreur de dialogue : " + err.message, "error");
+  }
+}
+
+async function synthesizeSimulatorAudio(btn) {
+  const bubble = btn.closest(".space-y-2");
+  if (!bubble) return;
+  const textEl = bubble.querySelector(".bg-white");
+  const text = textEl ? textEl.innerText.trim() : "";
+  if (!text) return;
+
+  const originalHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin text-purple-600"></i> Synthèse...`;
+  if (window.lucide) lucide.createIcons();
+
+  try {
+    showToast("Synthèse vocale ElevenLabs en cours...", "info");
+    const res = await fetch("/api/simulator/voice-note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text })
+    });
+    const data = await res.json();
+    if (data.success && data.audio_url) {
+      let playerContainer = bubble.querySelector(".sim-audio-player");
+      if (!playerContainer) {
+        playerContainer = document.createElement("div");
+        playerContainer.className = "sim-audio-player mt-2 p-2.5 rounded-2xl bg-purple-50 border border-purple-200/80 space-y-1.5";
+        bubble.appendChild(playerContainer);
+      }
+      playerContainer.innerHTML = `
+        <div class="flex items-center justify-between text-[10px] font-bold text-purple-900">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="mic" class="w-3 h-3 text-purple-600"></i>
+            <span>Voix Dave Sagbo (ElevenLabs)</span>
+          </span>
+          <a href="${escapeHtml(data.audio_url)}" download target="_blank" class="hover:underline flex items-center gap-1 opacity-80 hover:opacity-100" title="Télécharger le fichier MP3">
+            <i data-lucide="download" class="w-2.5 h-2.5"></i>
+          </a>
+        </div>
+        <audio controls autoplay src="${escapeHtml(data.audio_url)}" class="w-full h-8 rounded-lg outline-none"></audio>
+      `;
+      if (window.lucide) lucide.createIcons();
+      showToast("Vocal Dave Sagbo prêt !", "success");
+    } else {
+      showToast(data.error || "Erreur de synthèse vocale.", "error");
+    }
+  } catch (err) {
+    console.error("Erreur synthesizeSimulatorAudio :", err);
+    showToast("Erreur de synthèse vocale : " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHTML;
+    if (window.lucide) lucide.createIcons();
   }
 }
 
