@@ -114,7 +114,7 @@ class GoogleCalendarCloser:
         lead_info = {}
         if lead_id:
             c.execute("""
-                SELECT id, nom_complet, email, telephone, whatsapp, entreprise, poste, offre_recommandee
+                SELECT id, nom_complet, email, telephone, whatsapp, entreprise, poste, offre_matchee
                 FROM crm_leads WHERE id = ?
             """, (lead_id,))
             row = c.fetchone()
