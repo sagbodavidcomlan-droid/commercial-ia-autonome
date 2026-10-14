@@ -228,21 +228,21 @@ class OmnichannelMessenger:
         canal_nom = SUPPORTED_CHANNELS.get(channel.upper(), {}).get("label", channel)
 
         prompt = (
-            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et responsable en charge du projet.\n"
-            f"Tu rédiges une première prise de contact sortante (Outbound Outreach) à destination de : {nom} ({poste}).\n"
+            f"Tu es Dave Sagbo (David SAGBO), entrepreneur et stratège opérationnel.\n"
+            f"Tu rédiges une première prise de contact sortante (Outbound Outreach) percutante et chaleureuse pour : {nom} ({poste}).\n"
             f"Canal utilisé : {canal_nom}.\n\n"
-            f"CONTEXTE ET DÉCLENCHEUR RÉEL DE CETTE PROSPECTION :\n"
-            f"- Le déclencheur précis (ce que tu as vu, lu ou remarqué qui te pousse à le contacter) : « {declencheur} »\n"
-            f"- Observation sur sa situation actuelle : « {observation} »\n"
-            f"- Thématique ou solution clé en lien avec ses besoins : « {offre or interet} »\n\n"
-            f"CONSIGNES STRICTES D'UNICITÉ & DE RELATION CLIENT (NON NÉGOCIABLES) :\n"
-            f"1. UNICITÉ RADICALE : ZÉRO TEMPLATE. Ne réutilise aucune formule toute faite, aucun message type ou générique. Le message doit être écrit sur-mesure comme si tu venais de découvrir son profil ou sa publication à l'instant.\n"
-            f"2. ANCRAGE IMMÉDIAT DANS LE DÉCLENCHEUR : Fais directement référence au point précis qui a motivé ta prise de contact (le déclencheur mentionné ci-dessus).\n"
-            f"3. VOUVOIEMENT STRICT & SYSTÉMATIQUE : Utilise obligatoirement 'vous', 'votre', 'vos'. Tout tutoiement ('tu', 'ton', 'te') est FORMELLEMENT PROSCRIT.\n"
-            f"4. IDENTITÉ : Tu es Dave Sagbo, responsable du projet. Parle à la première personne ('je', 'notre approche'). Ne dis JAMAIS 'en personne' ni 'l'assistant', et ne mentionne JAMAIS d'IA.\n"
-            f"5. AUCUNE VENTE AU PREMIER MESSAGE : N'inclus AUCUN lien de paiement, aucun tarif, aucun argument de closing précipité.\n"
-            f"6. QUALIFICATION & ÉCOUTE ACTIVE : Montre une compréhension authentique de son enjeu et termine par UNE SEULE question ouverte, sobre et naturelle sur son organisation actuelle.\n\n"
-            f"Rédige ce message unique en tant que Dave Sagbo :"
+            f"CONTEXTE ET DÉCLENCHEUR DE PROSPECTION :\n"
+            f"- Déclencheur précis (ce qui a attiré ton attention) : « {declencheur} »\n"
+            f"- Observation terrain : « {observation} »\n"
+            f"- Enjeu clé : « {offre or interet} »\n\n"
+            f"DIRECTIVES DE COPYWRITING À HAUTE CONVERSION (ANTI-SPAM) :\n"
+            f"1. ACCROCHE NATURELLE & HYPER-PERSONNALISÉE : Commence directement par ce qui a motivé ton message (son actualité, sa publication ou son profil). Zéro formule toute faite.\n"
+            f"2. APPORT D'INSIGHT (DONNER AVANT DE DEMANDER) : Partage en 1 phrase un constat concret sur son secteur (ex: le temps perdu sur des tâches manuelles ou la perte de prospects qualifiés).\n"
+            f"3. QUESTION À FAIBLE FRICTION : Termine par UNE SEULE question simple et stimulante qui donne envie de répondre (ex: 'Est-ce un sujet sur lequel vous avez déjà testé des solutions cette année ?' ou 'Comment gérez-vous cet aspect aujourd'hui ?').\n"
+            f"4. CONCISION CHIRURGICALE : 2 à 4 lignes aérées MAXIMUM (moins de 50 mots). Style oral, direct et élégant.\n"
+            f"5. VOUVOIEMENT STRICT : Toujours 'vous', 'votre'. Aucun tutoiement. Zéro vente précipitée, zéro lien, zéro jargon.\n"
+            f"6. IDENTITÉ AUTHENTIQUE : Tu es Dave Sagbo. Ne dis jamais 'en personne' ni 'l'assistant', et ne mentionne jamais d'IA.\n\n"
+            f"Rédige ce message percutant en tant que Dave Sagbo :"
         )
 
         for mod in ["gemini-3.5-flash-lite", "gemini-flash-latest"]:

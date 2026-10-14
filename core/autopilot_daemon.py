@@ -231,6 +231,14 @@ class Autopilot24hDaemon:
 
         relances_effectuees = 0
         for lead in active_leads:
+            # Enrichissement Composio (Exa & Apollo) si non enrichi
+            if not lead.get("declencheur_prospection") and lead.get("id"):
+                try:
+                    from modules.composio_intelligence import composio_intelligence
+                    composio_intelligence.enrich_lead_hook(lead)
+                except Exception:
+                    pass
+
             lead_id = lead["id"]
             nom = lead.get("nom_complet") or lead.get("nom_lead") or "Prospect"
             tel = lead.get("telephone") or lead.get("whatsapp") or ""
