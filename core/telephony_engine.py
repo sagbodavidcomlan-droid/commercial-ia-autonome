@@ -42,13 +42,18 @@ class TelephonyEngine:
 
     def get_config(self) -> Dict[str, Any]:
         """Retourne la configuration actuelle de téléphonie."""
+        has_twilio = bool(os.getenv("TWILIO_ACCOUNT_SID") and os.getenv("TWILIO_AUTH_TOKEN"))
+        has_retell = bool(os.getenv("RETELL_API_KEY"))
         return {
             "provider": self.provider,
             "from_number": self.from_number,
             "agent_id": self.agent_id,
-            "has_retell_key": bool(os.getenv("RETELL_API_KEY")),
+            "has_twilio_key": has_twilio,
+            "has_retell_key": has_retell,
             "has_elevenlabs_key": bool(os.getenv("ELEVENLABS_API_KEY")),
             "elevenlabs_agent_id": DEFAULT_ELEVENLABS_AGENT_ID,
+            "is_live_ready": has_twilio or has_retell,
+            "mode": "REAL_GSM" if (has_twilio or has_retell) else "SIMULATION_COGNITIVE",
             "features": {
                 "outbound_qualification": True,
                 "appointment_confirmation": True,
@@ -66,6 +71,14 @@ class TelephonyEngine:
             self.provider = str(config_data["provider"]).strip().upper()
         if "agent_id" in config_data:
             self.agent_id = str(config_data["agent_id"]).strip()
+        if "twilio_account_sid" in config_data:
+            os.environ["TWILIO_ACCOUNT_SID"] = str(config_data["twilio_account_sid"]).strip()
+        if "twilio_auth_token" in config_data:
+            os.environ["TWILIO_AUTH_TOKEN"] = str(config_data["twilio_auth_token"]).strip()
+        if "twilio_phone_number" in config_data:
+            os.environ["TWILIO_PHONE_NUMBER"] = str(config_data["twilio_phone_number"]).strip()
+        if "retell_api_key" in config_data:
+            os.environ["RETELL_API_KEY"] = str(config_data["retell_api_key"]).strip()
         return self.get_config()
 
     def build_call_script_context(self, lead: Dict[str, Any], call_type: str = "QUALIFICATION") -> Dict[str, Any]:
@@ -179,11 +192,47 @@ class TelephonyEngine:
 
         logger.info(f"Lancement appel vocal IA #{call_id} vers {dest_phone} ({call_type})...")
 
-        # 2. Tentative d'appel réel via RetellAI sur Composio
-        composio_success = False
-        external_id = None
-        composio_err = None
+        # 2.A. Tentative d'appel réel via Twilio Voice direct (si configuré)
+        twilio_sid = self._try_real_twilio_call(dest_phone, script_ctx["first_message"])
+        if twilio_sid:
+            logger.info(f"Appel Twilio GSM réel déclenché avec succès : sid={twilio_sid}")
+            update_lead_call(call_id, {
+                "status": "RINGING",
+                "external_call_id": twilio_sid,
+                "provider": "TWILIO"
+            })
+            return {
+                "success": True,
+                "call_id": call_id,
+                "external_call_id": twilio_sid,
+                "status": "RINGING",
+                "provider": "TWILIO",
+                "to_number": dest_phone,
+                "is_real_call": True,
+                "message": f"Appel GSM réel en cours d'acheminement vers {dest_phone} via Twilio !"
+            }
 
+        # 2.B. Tentative d'appel réel via RetellAI direct (si clé API fournie)
+        retell_call_id = self._try_real_retell_call(dest_phone, script_ctx)
+        if retell_call_id:
+            logger.info(f"Appel RetellAI réel déclenché avec succès : id={retell_call_id}")
+            update_lead_call(call_id, {
+                "status": "RINGING",
+                "external_call_id": retell_call_id,
+                "provider": "RETELLAI"
+            })
+            return {
+                "success": True,
+                "call_id": call_id,
+                "external_call_id": retell_call_id,
+                "status": "RINGING",
+                "provider": "RETELLAI",
+                "to_number": dest_phone,
+                "is_real_call": True,
+                "message": f"Appel IA réel en cours d'acheminement vers {dest_phone} via RetellAI !"
+            }
+
+        # 2.C. Tentative d'appel réel via RetellAI sur Composio
         try:
             res_comp = call_composio_tool("RETELLAI_CREATE_A_NEW_OUTBOUND_PHONE_CALL", {
                 "from_number": self.from_number,
@@ -198,29 +247,27 @@ class TelephonyEngine:
             }, timeout=15)
 
             if res_comp and isinstance(res_comp, dict) and "call_id" in res_comp:
-                composio_success = True
                 external_id = res_comp["call_id"]
                 logger.info(f"Appel RetellAI Composio connecté avec succès : call_id={external_id}")
                 update_lead_call(call_id, {
                     "status": "RINGING",
-                    "external_call_id": external_id
+                    "external_call_id": external_id,
+                    "provider": "RETELLAI_COMPOSIO"
                 })
                 return {
                     "success": True,
                     "call_id": call_id,
                     "external_call_id": external_id,
                     "status": "RINGING",
-                    "provider": "RETELLAI",
+                    "provider": "RETELLAI_COMPOSIO",
                     "to_number": dest_phone,
-                    "message": f"Appel téléphonique en cours d'acheminement vers {dest_phone} !"
+                    "is_real_call": True,
+                    "message": f"Appel téléphonique GSM en cours d'acheminement vers {dest_phone} !"
                 }
-            else:
-                composio_err = str(res_comp)
         except Exception as e_comp:
-            composio_err = str(e_comp)
             logger.info(f"Composio RetellAI nécessitant souscription ou non configuré : {e_comp}")
 
-        # 3. Fallback Simulation Cognitive Haut Débit (Gemini)
+        # 3. Fallback Simulation Cognitive Haut Débit (Mode Démo CRM)
         # Permet de tester et de démontrer le flux complet d'appel sans payer d'opérateur
         logger.info(f"Bascule en mode simulation cognitive enrichie pour l'appel #{call_id}")
         sim_result = self._simulate_cognitive_call(lead, call_type, dest_phone, script_ctx)
@@ -250,13 +297,98 @@ class TelephonyEngine:
             "status": "COMPLETED",
             "provider": "SIMULATED_RETELL",
             "to_number": dest_phone,
+            "is_real_call": False,
+            "is_simulation": True,
             "duration_seconds": sim_result["duration_seconds"],
             "summary": sim_result["summary"],
             "transcript": sim_result["transcript"],
             "sentiment": sim_result["sentiment"],
             "qualification_result": sim_result["qualification_result"],
-            "message": f"Appel téléphonique de {call_type.lower()} terminé avec succès ({sim_result['duration_seconds']}s) !"
+            "message": (
+                f"Mode Démo : Échange simulé par l'IA et consigné dans le CRM ({sim_result['duration_seconds']}s). "
+                f"Remarque : Le smartphone physique {dest_phone} ne sonne pas car aucun opérateur GSM (Twilio / RetellAI) n'est encore raccordé."
+            )
         }
+
+    def _try_real_twilio_call(self, to_number: str, message_text: str) -> Optional[str]:
+        """Tente de déclencher un appel vocal sortant via Twilio Voice API."""
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        from_number = os.getenv("TWILIO_PHONE_NUMBER") or self.from_number
+
+        if not (account_sid and auth_token and from_number):
+            logger.debug("Identifiants Twilio non configurés, bascule vers Retell/Simulation.")
+            return None
+
+        try:
+            import urllib.request
+            import urllib.parse
+            import base64
+            from xml.sax.saxutils import escape
+
+            twiml = f"<Response><Say voice='alice' language='fr-FR'>{escape(message_text)}</Say></Response>"
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
+
+            data = urllib.parse.urlencode({
+                "To": to_number,
+                "From": from_number,
+                "Twiml": twiml
+            }).encode("utf-8")
+
+            auth_header = base64.b64encode(f"{account_sid}:{auth_token}".encode("utf-8")).decode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={
+                    "Authorization": f"Basic {auth_header}",
+                    "Content-Type": "application/x-www-form-urlencoded"
+                }
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                sid = res.get("sid")
+                logger.info(f"Appel Twilio GSM initié avec succès : sid={sid}")
+                return sid
+        except Exception as e:
+            logger.warning(f"Échec tentative d'appel Twilio : {e}")
+            return None
+
+    def _try_real_retell_call(self, to_number: str, script_ctx: Dict[str, Any]) -> Optional[str]:
+        """Tente de déclencher un appel vocal sortant via l'API REST Retell AI."""
+        api_key = os.getenv("RETELL_API_KEY")
+        agent_id = os.getenv("RETELL_AGENT_ID", self.agent_id)
+        from_number = os.getenv("RETELL_FROM_NUMBER", self.from_number)
+
+        if not api_key:
+            logger.debug("Clé RETELL_API_KEY non configurée.")
+            return None
+
+        try:
+            import urllib.request
+            url = "https://api.retellai.com/v2/create-phone-call"
+            payload = {
+                "from_number": from_number,
+                "to_number": to_number,
+                "override_agent_id": agent_id,
+                "retell_llm_dynamic_variables": script_ctx.get("variables", {})
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                }
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                call_id = res.get("call_id")
+                logger.info(f"Appel Retell AI initié avec succès : call_id={call_id}")
+                return call_id
+        except Exception as e:
+            logger.warning(f"Échec tentative d'appel Retell AI : {e}")
+            return None
 
     def _simulate_cognitive_call(
         self,

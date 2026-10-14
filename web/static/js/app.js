@@ -3127,7 +3127,11 @@ async function triggerLeadPhoneCall(callType = 'QUALIFICATION') {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(data.message || "Appel téléphonique IA terminé !", "success");
+      if (data.is_simulation) {
+        showToast(data.message || "Mode Simulation : Compte-rendu consigné au CRM (ligne GSM réelle non raccordée)", "warning");
+      } else {
+        showToast(data.message || "Appel téléphonique GSM en cours d'acheminement !", "success");
+      }
       openLeadConversation(activeConversationLeadId, activeConversationChannel);
       if (typeof loadHistoryFeed === "function") loadHistoryFeed();
       if (typeof fetchCrmLeads === "function") fetchCrmLeads();
@@ -3926,7 +3930,11 @@ async function triggerDrawerLeadPhoneCall(callType = 'QUALIFICATION') {
     });
     const data = await res.json();
     if (data.success) {
-      showToast(data.message || "Appel vocal IA exécuté avec succès !", "success");
+      if (data.is_simulation) {
+        showToast(data.message || "Mode Démo : Appel simulé par l'IA et consigné au CRM (smartphone non appelé car opérateur GSM non configuré)", "warning");
+      } else {
+        showToast(data.message || "Appel vocal IA GSM réel en cours !", "success");
+      }
       await openDrawer(activeDrawerLeadId);
       if (typeof loadHistoryFeed === "function") loadHistoryFeed();
       if (typeof fetchCrmLeads === "function") fetchCrmLeads();
