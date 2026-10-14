@@ -2775,25 +2775,48 @@ function formatMessageContentHtml(rawText, isSelf = false) {
   }
 
   const audioUrl = match[1].trim();
-  const textWithoutAudio = rawText.replace(audioRegex, "").trim();
+
+  // Extraction propre de la transcription pour l'accordéon interne
+  const transcriptMatch = rawText.match(/\[TRANSCRIPT:\s*([^\]]+)\]/is);
+  let internalTranscript = transcriptMatch ? transcriptMatch[1].trim() : "";
+
+  // Rétrocompatibilité avec les anciens messages de test
+  if (!internalTranscript) {
+    const legacyMatch = rawText.replace(audioRegex, "").match(/🎙️\s*Note vocale[^:]*:\s*(.*)/is);
+    if (legacyMatch) {
+      internalTranscript = legacyMatch[1].trim();
+    }
+  }
 
   const bgClass = isSelf ? "bg-white/15 border border-white/20" : "bg-purple-50 border border-purple-200/80";
   const titleClass = isSelf ? "text-white" : "text-purple-900";
   const iconColor = isSelf ? "text-white" : "text-purple-600";
 
+  // RÈGLE : Soit le message écrit, soit la note vocale, mais pas les deux ensemble.
+  // La note vocale affiche UNIQUEMENT le lecteur audio WhatsApp élégant.
   return `
-    <div>${escapeHtml(textWithoutAudio)}</div>
-    <div class="mt-2.5 p-2.5 rounded-2xl ${bgClass} space-y-1.5 shadow-2xs">
+    <div class="p-2.5 rounded-2xl ${bgClass} space-y-2 shadow-2xs">
       <div class="flex items-center justify-between gap-2 text-[10px] font-bold ${titleClass}">
         <span class="flex items-center gap-1.5">
           <i data-lucide="mic" class="w-3.5 h-3.5 ${iconColor}"></i>
-          <span>Note vocale Dave Sagbo (WhatsApp)</span>
+          <span>Note vocale WhatsApp (Dave Sagbo)</span>
         </span>
         <a href="${escapeHtml(audioUrl)}" download target="_blank" class="hover:underline flex items-center gap-1 opacity-80 hover:opacity-100" title="Télécharger le vocal MP3">
-          <i data-lucide="download" class="w-2.5 h-2.5"></i>
+          <i data-lucide="download" class="w-3 h-3"></i>
         </a>
       </div>
       <audio controls preload="metadata" src="${escapeHtml(audioUrl)}" class="w-full h-8 rounded-lg outline-none"></audio>
+      ${internalTranscript ? `
+        <details class="text-[10px] opacity-75 pt-1">
+          <summary class="cursor-pointer select-none font-medium hover:opacity-100 flex items-center gap-1">
+            <i data-lucide="file-text" class="w-2.5 h-2.5"></i>
+            <span>Lire la transcription (usage interne)</span>
+          </summary>
+          <div class="mt-1 p-2 rounded bg-black/5 text-[10px] italic leading-relaxed">
+            "${escapeHtml(internalTranscript)}"
+          </div>
+        </details>
+      ` : ''}
     </div>
   `;
 }
