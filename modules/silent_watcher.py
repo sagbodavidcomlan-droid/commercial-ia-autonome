@@ -1616,6 +1616,13 @@ Réponds UNIQUEMENT en JSON :
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
         Rapport officiel produit de manière autonome par SilentWatcher &bull; Plateforme Commerciale IA Dave Sagbo
     </div>
+    <script>
+        if (new URLSearchParams(window.location.search).get('autoprint') === '1') {{
+            window.addEventListener('load', function() {{
+                setTimeout(function() {{ window.print(); }}, 400);
+            }});
+        }}
+    </script>
 </body>
 </html>"""
         return html

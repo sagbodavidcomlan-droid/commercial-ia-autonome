@@ -887,6 +887,14 @@ async function loadDirectorTab() {
         prodSelect.value = String(goals.product_id);
       }
       onGoalProductChange();
+
+      const drawerSelect = document.getElementById("drawer-goal-product");
+      if (drawerSelect) {
+        drawerSelect.innerHTML = opts;
+        if (goals.product_id !== undefined && goals.product_id !== null) {
+          drawerSelect.value = String(goals.product_id);
+        }
+      }
     }
 
     // Bannière offre active
@@ -995,8 +1003,95 @@ function onGoalProductChange() {
   }
 }
 
-async function saveDirectorGoals(e) {
+function openDirectorAssignDrawer() {
+  const drawer = document.getElementById("director-assign-drawer");
+  if (!drawer) return;
+  drawer.classList.remove("hidden");
+
+  // Synchroniser les champs du drawer avec les champs principaux
+  const prodMain = document.getElementById("goal-product");
+  const prodDrawer = document.getElementById("drawer-goal-product");
+  if (prodMain && prodDrawer) {
+    if (prodDrawer.children.length <= 1 && prodMain.children.length > 1) {
+      prodDrawer.innerHTML = prodMain.innerHTML;
+    }
+    prodDrawer.value = prodMain.value;
+  }
+
+  const periodMain = document.getElementById("goal-period");
+  const periodDrawer = document.getElementById("drawer-goal-period");
+  if (periodMain && periodDrawer) periodDrawer.value = periodMain.value;
+
+  const revMain = document.getElementById("goal-revenue");
+  const revDrawer = document.getElementById("drawer-goal-revenue");
+  if (revMain && revDrawer) revDrawer.value = revMain.value;
+
+  const leadsMain = document.getElementById("goal-leads");
+  const leadsDrawer = document.getElementById("drawer-goal-leads");
+  if (leadsMain && leadsDrawer) leadsDrawer.value = leadsMain.value;
+
+  const convMain = document.getElementById("goal-conversions");
+  const convDrawer = document.getElementById("drawer-goal-conversions");
+  if (convMain && convDrawer) convDrawer.value = convMain.value;
+
+  syncDrawerProductChange();
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeDirectorAssignDrawer() {
+  const drawer = document.getElementById("director-assign-drawer");
+  if (drawer) drawer.classList.add("hidden");
+}
+
+function syncDrawerProductChange() {
+  const select = document.getElementById("drawer-goal-product");
+  const hint = document.getElementById("drawer-goal-hint");
+  if (!select || !hint) return;
+  const selOpt = select.options[select.selectedIndex];
+  const price = parseFloat(selOpt?.getAttribute("data-price") || 0);
+  const targetRev = parseFloat(document.getElementById("drawer-goal-revenue")?.value || 0);
+
+  if (select.value === "0" || price <= 0) {
+    hint.innerHTML = `<strong>Objectif Global :</strong> L'Agent IA orientera ses efforts de closing sur l'ensemble du catalogue.`;
+  } else {
+    const requiredConversions = Math.ceil(targetRev / price);
+    hint.innerHTML = `<strong>Stratégie Dédiée :</strong> Pour atteindre <strong>${targetRev.toLocaleString()} FCFA</strong> avec un tarif de <strong>${price.toLocaleString()} FCFA/unité</strong>, l'IA doit conclure <strong>${requiredConversions} ventes</strong> de cette offre spécifique.`;
+    const convInput = document.getElementById("drawer-goal-conversions");
+    if (convInput && (convInput.value === "25" || !convInput.value)) {
+      convInput.value = requiredConversions;
+    }
+  }
+}
+
+async function handleDrawerSaveGoals(e) {
   e.preventDefault();
+  // Transférer les valeurs du drawer vers les champs principaux
+  const prodDrawer = document.getElementById("drawer-goal-product");
+  const prodMain = document.getElementById("goal-product");
+  if (prodDrawer && prodMain) prodMain.value = prodDrawer.value;
+
+  const periodDrawer = document.getElementById("drawer-goal-period");
+  const periodMain = document.getElementById("goal-period");
+  if (periodDrawer && periodMain) periodMain.value = periodDrawer.value;
+
+  const revDrawer = document.getElementById("drawer-goal-revenue");
+  const revMain = document.getElementById("goal-revenue");
+  if (revDrawer && revMain) revMain.value = revDrawer.value;
+
+  const leadsDrawer = document.getElementById("drawer-goal-leads");
+  const leadsMain = document.getElementById("goal-leads");
+  if (leadsDrawer && leadsMain) leadsMain.value = leadsDrawer.value;
+
+  const convDrawer = document.getElementById("drawer-goal-conversions");
+  const convMain = document.getElementById("goal-conversions");
+  if (convDrawer && convMain) convMain.value = convDrawer.value;
+
+  closeDirectorAssignDrawer();
+  await saveDirectorGoals(e);
+}
+
+async function saveDirectorGoals(e) {
+  if (e && e.preventDefault) e.preventDefault();
   const prodSelect = document.getElementById("goal-product");
   const selectedProdId = prodSelect ? parseInt(prodSelect.value, 10) : 0;
   let selectedProdName = "Toutes les Offres (Catalogue Global)";
@@ -1029,28 +1124,112 @@ async function saveDirectorGoals(e) {
   }
 }
 
-async function loadReportsHistory() {
-  const res = await fetch("/api/reports");
-  const reports = await res.json();
-  const container = document.getElementById("reports-list-container");
+let currentReportsFilter = 'all'; // 'all', 'director', 'watcher'
+let cachedDirectorReports = [];
+let cachedWatcherReports = [];
 
-  if (!reports || reports.length === 0) {
-    container.innerHTML = "<p class='text-slate-500'>Aucun rapport archivé pour le moment.</p>";
+function filterDirectorReports(filter) {
+  currentReportsFilter = filter;
+  ['all', 'dir', 'watcher'].forEach(k => {
+    const btn = document.getElementById(`filter-rep-${k}`);
+    if (btn) {
+      if ((filter === 'all' && k === 'all') || (filter === 'director' && k === 'dir') || (filter === 'watcher' && k === 'watcher')) {
+        btn.className = "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-[#0062ff] text-white transition shadow-2xs cursor-pointer";
+      } else {
+        btn.className = "px-2.5 py-1 rounded-xl text-[11px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition cursor-pointer";
+      }
+    }
+  });
+  renderCombinedReports();
+}
+
+async function loadReportsHistory() {
+  const container = document.getElementById("reports-list-container");
+  if (!container) return;
+
+  try {
+    const [resDir, resWatch] = await Promise.all([
+      fetch("/api/reports"),
+      fetch("/api/watcher/reports?limit=10")
+    ]);
+    cachedDirectorReports = resDir.ok ? await resDir.json() : [];
+    const watchJson = resWatch.ok ? await resWatch.json() : {};
+    cachedWatcherReports = watchJson.success ? (watchJson.data || []) : [];
+    renderCombinedReports();
+  } catch (err) {
+    console.error("Erreur loadReportsHistory:", err);
+  }
+}
+
+function renderCombinedReports() {
+  const container = document.getElementById("reports-list-container");
+  if (!container) return;
+
+  let combined = [];
+
+  if (currentReportsFilter === 'all' || currentReportsFilter === 'director') {
+    (cachedDirectorReports || []).forEach(r => {
+      combined.push({
+        type: 'director',
+        id: r.id,
+        title: r.title || 'Rapport Exécutif Commercial',
+        summary: r.summary || '',
+        grade: r.performance_grade || 'A',
+        score: null,
+        created_at: r.created_at,
+        onclick: `viewStoredReport(${r.id})`
+      });
+    });
+  }
+
+  if (currentReportsFilter === 'all' || currentReportsFilter === 'watcher') {
+    (cachedWatcherReports || []).forEach(r => {
+      combined.push({
+        type: 'watcher',
+        id: r.id,
+        title: `Audit SilentWatcher — ${(r.report_type || 'Session').toUpperCase()}`,
+        summary: r.summary || 'Rapport d\'évaluation et de supervision de l\'essaim IA.',
+        grade: null,
+        score: r.global_score || 85,
+        created_at: r.created_at,
+        onclick: `openWatcherReportModal(${r.id})`
+      });
+    });
+  }
+
+  // Trier par date décroissante
+  combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+  if (combined.length === 0) {
+    container.innerHTML = "<p class='text-slate-400 text-xs py-4 text-center'>Aucun rapport disponible pour ce filtre.</p>";
     return;
   }
 
-  container.innerHTML = reports.map(r => `
-    <div onclick="viewStoredReport(${r.id})" class="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer transition-all flex items-center justify-between shadow-2xs group">
-      <div>
-        <div class="font-bold text-slate-900 group-hover:text-blue-700 text-xs transition-colors">${escapeHtml(r.title || 'Rapport Exécutif')}</div>
-        <div class="text-[11px] text-slate-500">${escapeHtml((r.summary || '').substring(0, 100))}...</div>
+  container.innerHTML = combined.map(r => {
+    const isWatcher = r.type === 'watcher';
+    const tag = isWatcher
+      ? `<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase flex items-center gap-1"><i data-lucide="shield-alert" class="w-3 h-3 text-indigo-600"></i> Audit ${r.score}/100</span>`
+      : `<span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-lg text-[10px] font-bold">Grade ${escapeHtml(r.grade)}</span>`;
+
+    const hoverBorder = isWatcher ? 'hover:border-indigo-400 hover:bg-indigo-50/40' : 'hover:border-blue-400 hover:bg-blue-50/40';
+
+    return `
+      <div onclick="${r.onclick}" class="p-3 rounded-xl bg-slate-50 border border-slate-200 ${hoverBorder} cursor-pointer transition-all flex items-center justify-between shadow-2xs group">
+        <div class="pr-2">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-900 group-hover:text-blue-700 text-xs transition-colors">${escapeHtml(r.title)}</span>
+            <span class="text-[10px] text-slate-400 font-mono">${(r.created_at || '').substring(0, 10)}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5">${escapeHtml((r.summary || '').substring(0, 110))}...</div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          ${tag}
+          <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform"></i>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-lg text-xs font-bold">Grade ${escapeHtml(r.performance_grade || 'A')}</span>
-        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform"></i>
-      </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
+
   if (window.lucide) lucide.createIcons();
 }
 
@@ -8609,7 +8788,7 @@ async function resolveWatcherBug(bugId) {
 
 async function fetchWatcherReports() {
   try {
-    const res = await fetch("/api/watcher/reports?limit=5");
+    const res = await fetch("/api/watcher/reports?limit=10");
     const json = await res.json();
     if (!json.success) return;
     const reports = json.data || [];
@@ -8625,45 +8804,244 @@ async function fetchWatcherReports() {
         </div>
       `;
     } else {
-      list.innerHTML = reports.map(r => `
-        <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50 flex items-center justify-between">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-black text-slate-900 uppercase">${r.report_type}</span>
-              <span class="text-[10px] text-slate-400 font-mono">${(r.generated_at || '').substring(0, 16)}</span>
+      list.innerHTML = reports.map(r => {
+        const dateStr = (r.created_at || r.generated_at || '').replace('T', ' ').substring(0, 16);
+        const score = r.global_score || 85;
+        const totalObs = r.total_exchanges || (r.critical_count + r.error_count + r.warning_count + r.info_count) || 0;
+        return `
+          <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-indigo-50/30 hover:border-indigo-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs group">
+            <div onclick="openWatcherReportModal(${r.id})" class="cursor-pointer flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full uppercase">${r.report_type || 'SESSION'}</span>
+                <span class="text-[11px] text-slate-400 font-mono">${dateStr}</span>
+                <span class="text-[11px] font-bold text-slate-700 ml-auto sm:ml-0 bg-white px-2 py-0.5 rounded-lg border border-slate-200">Score ${score}/100</span>
+              </div>
+              <div class="text-[11px] text-slate-600 font-medium mt-1.5 line-clamp-2">
+                ${escapeHtml((r.summary || 'Rapport d\'évaluation continue SilentWatcher').substring(0, 140))}...
+              </div>
+              <div class="text-[10px] text-slate-400 font-bold mt-1">
+                ${totalObs} observations &bull; ${r.critical_count || 0} critique(s) &bull; ${r.error_count || 0} erreur(s)
+              </div>
             </div>
-            <div class="text-[11px] text-slate-600 font-medium mt-0.5">
-              Score: <strong>${r.global_score || '--'}/100</strong> &bull; Échanges: ${r.total_exchanges || 0}
+            <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+              <button onclick="openWatcherReportModal(${r.id})" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                <span>Consulter</span>
+              </button>
+              <button onclick="window.open('/api/watcher/reports/${r.id}/html?autoprint=1', '_blank')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1" title="Imprimer ou enregistrer en PDF">
+                <i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-600"></i>
+                <span>PDF</span>
+              </button>
+              <button onclick="window.open('/api/watcher/reports/${r.id}/download', '_blank')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1" title="Télécharger le fichier JSON">
+                <i data-lucide="download" class="w-3.5 h-3.5 text-slate-400"></i>
+                <span>JSON</span>
+              </button>
             </div>
           </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="window.open('/api/watcher/reports/${r.id}/html', '_blank')" class="px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-200 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer" title="Voir le rapport imprimable / PDF">
-              PDF / Imprimer
-            </button>
-            <button onclick="window.open('/api/watcher/reports/${r.id}/download', '_blank')" class="px-2 py-1 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition cursor-pointer" title="Télécharger le rapport JSON">
-              Télécharger
-            </button>
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
-    lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
   } catch (e) {
     console.error("Erreur fetchWatcherReports:", e);
   }
 }
 
-async function viewWatcherReportDetail(reportId) {
+async function openWatcherReportModal(reportId) {
+  const modal = document.getElementById("modal-watcher-report");
+  const body = document.getElementById("modal-watcher-body");
+  const typeBadge = document.getElementById("modal-watcher-badge-type");
+  const dateEl = document.getElementById("modal-watcher-date");
+  const scoreBadge = document.getElementById("modal-watcher-score-badge");
+  const btnPdf = document.getElementById("btn-watcher-download-pdf");
+  const btnJson = document.getElementById("btn-watcher-download-json");
+
+  if (!modal || !body) return;
+  modal.classList.remove("hidden");
+  body.innerHTML = `
+    <div class="py-12 text-center text-slate-400 text-xs">
+      <i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto mb-2 text-indigo-600"></i>
+      Chargement du rapport d'audit SilentWatcher #${reportId}...
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+
   try {
     const res = await fetch(`/api/watcher/reports/${reportId}`);
     const json = await res.json();
-    if (json.success && json.data) {
-      const rep = json.data;
-      alert(`RAPPORT SILENTWATCHER #${rep.id} (${rep.report_type.toUpperCase()})\nScore Global: ${rep.global_score}/100\nDate: ${rep.generated_at}\n\nRecommandations:\n${JSON.stringify(rep.recommendations, null, 2)}`);
+    if (!json.success || !json.data) {
+      body.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 rounded-xl">Impossible de charger le rapport #${reportId}.</div>`;
+      return;
     }
-  } catch (e) {
-    alert("Erreur consultation rapport: " + e.message);
+
+    const r = json.data;
+    const rJson = r.report_json || {};
+    const score = r.global_score || rJson.score_global || 85;
+    const dateFormatted = (r.created_at || '').replace('T', ' à ').substring(0, 19);
+
+    if (typeBadge) typeBadge.textContent = (r.report_type || 'SESSION').toUpperCase();
+    if (dateEl) dateEl.textContent = dateFormatted ? `Émis le ${dateFormatted}` : '';
+    if (scoreBadge) scoreBadge.textContent = `${score}/100`;
+
+    if (btnPdf) {
+      btnPdf.onclick = () => window.open(`/api/watcher/reports/${reportId}/html?autoprint=1`, '_blank');
+    }
+    if (btnJson) {
+      btnJson.onclick = () => window.open(`/api/watcher/reports/${reportId}/download`, '_blank');
+    }
+
+    const etat = (rJson.etat_global || 'bon').toUpperCase();
+    const tendance = (rJson.tendance || 'stable').toUpperCase();
+    const etatColor = etat === 'EXCELLENT' || etat === 'BON' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-amber-700 bg-amber-50 border-amber-200';
+
+    // Tableau de performance des agents surveillés
+    const perfAgents = rJson.performance_agents || {};
+    let agentsRows = "";
+    for (const [agName, agData] of Object.entries(perfAgents)) {
+      if (typeof agData === "object" && agData !== null) {
+        agentsRows += `
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+            <td class="py-2.5 px-3 font-bold text-slate-900">${agName}</td>
+            <td class="py-2.5 px-3 font-black text-indigo-600">${agData.score !== undefined ? agData.score : '--'}/10</td>
+            <td class="py-2.5 px-3 font-bold text-emerald-600">${agData.fiabilite || 90}%</td>
+            <td class="py-2.5 px-3 text-slate-600 text-[11px]">${escapeHtml(agData.ok || 'Nominal')}</td>
+            <td class="py-2.5 px-3 text-rose-600 text-[11px] font-medium">${escapeHtml(agData.problemes || 'Aucun')}</td>
+          </tr>
+        `;
+      }
+    }
+
+    // Bugs
+    const bugs = rJson.bugs_prioritaires || [];
+    let bugsHtml = "";
+    if (bugs.length > 0) {
+      bugsHtml = bugs.map(b => `
+        <div class="p-3 rounded-xl border border-rose-200 bg-rose-50/60 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-mono text-[10px] font-bold text-rose-800 bg-rose-100 px-2 py-0.5 rounded">${escapeHtml(b.code || 'BUG')}</span>
+            <span class="text-[10px] font-bold text-rose-700 uppercase">${escapeHtml(b.urgence || 'cette_semaine')}</span>
+          </div>
+          <div class="font-bold text-slate-900 text-xs">${escapeHtml(b.titre || '')}</div>
+          <div class="text-[11px] text-slate-600 font-mono"><strong class="text-rose-900 font-sans">Fix recommandé :</strong> ${escapeHtml(b.fix || 'Analyse en cours')}</div>
+        </div>
+      `).join("");
+    } else {
+      bugsHtml = `<div class="p-3 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-200 text-xs font-medium">✓ Aucun bug critique ouvert répertorié sur cette session.</div>`;
+    }
+
+    // Recommandations
+    const recomms = rJson.recommandations || [];
+    let recommsHtml = "";
+    if (recomms.length > 0) {
+      recommsHtml = recomms.map(rc => `
+        <div class="p-3.5 rounded-xl border-l-4 border-l-indigo-600 border border-slate-200 bg-slate-50 space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-900 text-xs">Priorité ${rc.priorite || 1} : ${escapeHtml(rc.action || '')}</span>
+            <span class="text-[10px] text-slate-400 font-bold">Effort : ${escapeHtml(rc.effort_estime || '1h')}</span>
+          </div>
+          <div class="text-[11px] text-slate-600">Impact attendu : <strong class="text-indigo-700">${escapeHtml(rc.impact_attendu || 'Amélioration opérationnelle')}</strong></div>
+        </div>
+      `).join("");
+    } else {
+      recommsHtml = `<div class="p-3 bg-slate-50 text-slate-500 rounded-xl text-xs">Poursuivre la surveillance nominale.</div>`;
+    }
+
+    // Cibles
+    const targets = rJson.metriques_cibles_prochaine_periode || {};
+
+    body.innerHTML = `
+      <div class="space-y-5">
+        <!-- État & Synthèse -->
+        <div class="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Diagnostic Système :</span>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black border ${etatColor}">${etat}</span>
+              <span class="text-[10px] font-bold text-slate-500">Tendance : <strong>${tendance}</strong></span>
+            </div>
+            <div class="text-[10px] font-bold text-slate-400">Observations : <strong>${r.total_exchanges || (r.critical_count + r.error_count + r.warning_count + r.info_count) || 0}</strong></div>
+          </div>
+          <p class="text-xs text-slate-800 leading-relaxed font-medium">
+            ${escapeHtml(r.summary || rJson.resume_executif || 'Rapport complet d\'audit SilentWatcher')}
+          </p>
+        </div>
+
+        <!-- Performances des Agents -->
+        <div class="space-y-2">
+          <h4 class="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Évaluation des 5 Pôles Surveillés</span>
+          </h4>
+          <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs text-slate-600">
+                <thead class="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-400">
+                  <tr>
+                    <th class="py-2.5 px-3">Agent</th>
+                    <th class="py-2.5 px-3">Score</th>
+                    <th class="py-2.5 px-3">Fiabilité</th>
+                    <th class="py-2.5 px-3">Points Forts</th>
+                    <th class="py-2.5 px-3">Points d'Attention</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 font-medium">
+                  ${agentsRows || '<tr><td colspan="5" class="py-3 text-center text-slate-400">Aucune métrique agent</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deux Colonnes : Bugs & Recommandations -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <h4 class="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+              <i data-lucide="bug" class="w-3.5 h-3.5 text-rose-500"></i>
+              <span>Bugs Prioritaires & Corrections</span>
+            </h4>
+            <div class="space-y-2">
+              ${bugsHtml}
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <h4 class="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>Recommandations Immédiates</span>
+            </h4>
+            <div class="space-y-2">
+              ${recommsHtml}
+            </div>
+          </div>
+        </div>
+
+        <!-- Cibles Prochaine Période -->
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between flex-wrap gap-3">
+          <span class="text-xs font-black text-slate-900">Cap Opérationnel Cible :</span>
+          <div class="flex items-center gap-3 text-[11px] text-slate-600 font-bold">
+            <span>Score Cible : <strong class="text-indigo-600">${targets.score_conversation_cible || '8.8'}/10</strong></span>
+            <span>&bull;</span>
+            <span>Réponse &lt;5min : <strong class="text-emerald-600">${targets.taux_reponse_sous_5min_cible || '95%'}</strong></span>
+            <span>&bull;</span>
+            <span>Conformité Guard : <strong class="text-blue-600">${targets.guard_score_cible || '9.0'}/10</strong></span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    body.innerHTML = `<div class="p-4 bg-rose-50 text-rose-700 rounded-xl">Erreur lors de la lecture du rapport : ${err.message}</div>`;
   }
+}
+
+function closeWatcherReportModal() {
+  const modal = document.getElementById("modal-watcher-report");
+  if (modal) modal.classList.add("hidden");
+}
+
+function viewWatcherReportDetail(reportId) {
+  openWatcherReportModal(reportId);
 }
 
 async function triggerWatcherSessionReport() {
