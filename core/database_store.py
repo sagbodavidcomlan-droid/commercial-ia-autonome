@@ -431,6 +431,7 @@ def init_db():
             ("conversation_paused", "INTEGER DEFAULT 0"),
             ("pause_reason", "TEXT"),
             ("paused_at", "TEXT"),
+            ("contact_direction", "TEXT DEFAULT 'inbound'"),
             ("updated_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
@@ -662,8 +663,12 @@ def init_db():
             cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN processed INTEGER DEFAULT 0")
         if "is_waiting_response" not in msg_cols:
             cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN is_waiting_response INTEGER DEFAULT 0")
+        if "role" not in msg_cols:
+            cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN role TEXT")
+        if "created_at" not in msg_cols:
+            cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN created_at TEXT")
     except Exception as e_proc:
-        logger.warning(f"Note migration processed/is_waiting_response sur crm_lead_messages : {e_proc}")
+        logger.warning(f"Note migration processed/is_waiting_response/role sur crm_lead_messages : {e_proc}")
 
 
     # 11. Table des verrous de traitement anti-doublon pour le Poller 24/7
@@ -1170,10 +1175,17 @@ def log_lead_message(lead_id: int, channel: str, sender: str, message: str, stat
         c = conn.cursor()
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         meta_json = json.dumps(metadata) if metadata else None
-        c.execute("""
-        INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (lead_id, channel.upper(), sender.upper(), message, now_str, status, meta_json))
+        role = "user" if sender.upper() in ("LEAD", "USER", "PROSPECT", "CLIENT") else "assistant"
+        try:
+            c.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json, role, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (lead_id, channel.upper(), sender.upper(), message, now_str, status, meta_json, role, now_str))
+        except Exception:
+            c.execute("""
+            INSERT INTO crm_lead_messages (lead_id, channel, sender, message, timestamp, status, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (lead_id, channel.upper(), sender.upper(), message, now_str, status, meta_json))
         msg_id = c.lastrowid
         conn.commit()
         conn.close()
@@ -2335,6 +2347,10 @@ def get_or_create_lead(
             secteur_val = kwargs.get("secteur_activite")
             offre_matchee_val = kwargs.get("offre_matchee")
             offre_matchee_id_val = kwargs.get("offre_matchee_id")
+            contact_dir_val = kwargs.get("contact_direction")
+            if not contact_dir_val:
+                src_combined = f"{canal_source} {kwargs.get('source_contact', '')}".lower()
+                contact_dir_val = "outbound" if ("outbound" in src_combined or "prospection" in src_combined) else "inbound"
 
             c.execute("""
                 INSERT INTO crm_leads (
@@ -2346,6 +2362,7 @@ def get_or_create_lead(
                     score_dur, score_qualification,
                     notes, centre_interet,
                     secteur_activite, offre_matchee, offre_matchee_id,
+                    contact_direction,
                     created_at, date_creation, last_contact_at, last_interaction, updated_at,
                     conversation_count
                 ) VALUES (
@@ -2357,6 +2374,7 @@ def get_or_create_lead(
                     ?, ?,
                     ?, ?,
                     ?, ?, ?,
+                    ?,
                     datetime('now'), datetime('now'), datetime('now'), datetime('now'), datetime('now'),
                     1
                 )
@@ -2368,7 +2386,8 @@ def get_or_create_lead(
                 poste, douleur,
                 init_score_dur, init_score_qual,
                 notes, notes,
-                secteur_val, offre_matchee_val, offre_matchee_id_val
+                secteur_val, offre_matchee_val, offre_matchee_id_val,
+                contact_dir_val
             ))
             new_id = c.lastrowid
             if lc_row:
@@ -2380,6 +2399,48 @@ def get_or_create_lead(
             return new_id, True
     finally:
         conn.close()
+
+
+def determine_contact_direction(lead_id: int) -> str:
+    """
+    Détermine si le contact est 'inbound' (le prospect a écrit en premier)
+    ou 'outbound' (l'agent a initié le contact).
+    """
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        
+        # 1. Vérification du premier message historique
+        first_message = c.execute("""
+            SELECT role, sender FROM crm_lead_messages
+            WHERE lead_id = ?
+            ORDER BY COALESCE(created_at, timestamp, id) ASC, id ASC
+            LIMIT 1
+        """, (lead_id,)).fetchone()
+        
+        if first_message:
+            role = str(first_message['role'] or '').strip().lower()
+            sender = str(first_message['sender'] or '').strip().lower()
+            conn.close()
+            if role == 'user' or sender in ('user', 'lead', 'prospect', 'client'):
+                return 'inbound'
+            return 'outbound'
+            
+        # 2. Si aucun message consigné, inspection de crm_leads
+        lead_row = c.execute("SELECT contact_direction, source_contact, canal_source FROM crm_leads WHERE id = ?", (lead_id,)).fetchone()
+        conn.close()
+        if lead_row:
+            cd = str(lead_row['contact_direction'] or '').strip().lower()
+            if cd in ('inbound', 'outbound'):
+                return cd
+            src = str(lead_row['source_contact'] or lead_row['canal_source'] or '').lower()
+            if 'outbound' in src or 'prospection' in src:
+                return 'outbound'
+        return 'inbound'
+    except Exception as e:
+        logger.error(f"Erreur determine_contact_direction({lead_id}): {e}")
+        return 'inbound'
 
 
 def calculer_score_dur(lead_id: int) -> int:

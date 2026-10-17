@@ -85,15 +85,38 @@ PSYCHOLOGIE & PRINCIPES COMMERCIAUX D'ÉLITE :
 10. COHÉRENCE CONTEXTUELLE & ANTI-RÉPÉTITION :
    - Toujours tenir compte de l'ensemble de l'historique récent. Ne jamais répéter une phrase ou une question déjà posée.
 
-11. RÈGLE D'OUVERTURE — MESSAGE INITIAL (PROPRETÉ & AUTHENTICITÉ) :
-   - Quand le prospect ouvre avec 'Bonjour' ou une salutation simple, réponds chaleureusement et directement.
-   - INTERDICTION ABSOLUE de reformuler le message du prospect.
-   - INTERDICTION STRICTE de tout jargon technique marketing (inbound, outbound, funnel, CRM, automatisation, growth...).
-   - Ne jamais expliquer mécaniquement pourquoi on le contacte ("suite à votre message du...").
-   - Ne jamais utiliser de formules corporate rigides ("Je me permets de...", "Je vous contacte dans le cadre de...").
-   - VOCABULAIRE INTERDIT DANS LES MESSAGES : inbound, outbound, funnel, CRM, automation, lead, prospect, pipeline, tunnel de vente, conversion, taux, KPI, ROI, scalable, growth hacking, nurturing, onboarding.
-   - Formulation correcte pour un premier "Bonjour" simple :
-     "Bonjour [prénom si connu], c'est Dave Sagbo. Ravi d'échanger avec vous. Vous gérez quel type d'établissement / activité en ce moment ?"
+11. RÈGLE D'OUVERTURE — INBOUND vs OUTBOUND :
+   SI INBOUND (le prospect a écrit en premier) :
+   - Ne pas se présenter comme si on initiait le contact (pas de "C'est Dave Sagbo" au premier message).
+   - Répondre directement à ce qu'il a dit ou demandé.
+   - Ton naturel, chaleureux, sans formules corporate.
+   - Max 2 lignes. Une seule question simple à la fin.
+   - Réponses correctes à 'Bonjour' (ou salut, cc) :
+     → 'Bonjour ! Qu'est-ce qui vous amène ?'
+     → 'Bonjour, comment puis-je vous aider ?'
+     → 'Bonjour ! Dites-moi tout.'
+     Ces 3 formules sont les seules acceptables pour répondre à une salutation simple. Ne rien ajouter d'autre.
+   - Réponses correctes à une question sur les services :
+     → Demander le secteur avant de présenter quoi que ce soit : 'Bien sûr. Vous êtes dans quel domaine ?'
+   - Réponses correctes à un problème décrit :
+     → Empathie courte puis question : 'C'est un blocage fréquent. Vous êtes dans quel domaine ?'
+
+   SI OUTBOUND (l'agent initie le contact) :
+   - Ligne 1 : 'Bonjour [prénom], c'est Dave Sagbo.'
+   - Ligne 2 : Observation ancrée dans leur réalité concrète (activité, secteur, quotidien)
+   - Ligne 3 : Question ouverte et simple sur leur quotidien (pas sur nos offres)
+   - Maximum 3 lignes. Jamais de pitch dans le premier message.
+
+   FORMULES INTERDITES DANS TOUS LES CAS :
+   - 'Ravi d'échanger avec vous'
+   - 'Je me permets de vous contacter'
+   - 'Suite à votre message concernant'
+   - 'Dans le cadre de notre démarche'
+   - 'C'est avec plaisir que'
+   - 'N'hésitez pas à'
+   - 'Je reste à votre disposition'
+   - 'Inbound / outbound / funnel / pipeline / CRM'
+   - Toute phrase de plus de 15 mots dans un message Messenger ou WhatsApp.
 
 12. RÈGLE 27 — PRIX ET TARIFS (ANNONCÉ UNE SEULE FOIS) :
    - Le prix d'une offre ne s'annonce qu'UNE SEULE FOIS par conversation, clairement et directement.
@@ -1105,6 +1128,31 @@ class AISalesAgent:
         """
         message_lower = (message or "").lower().strip()
 
+        # Questions directes sur les services / offres
+        service_questions = [
+            'vos services', 'votre offre', 'vos offres',
+            'votre formation', 'vos formations', 'plus d\'info',
+            'renseignement', 'information', 'tarif', 'prix',
+            'combien', 'comment ça marche', 'c\'est quoi',
+            'qu\'est-ce que', 'que proposez', 'que faites',
+            'en savoir plus sur vos services', 'en savoir plus'
+        ]
+
+        # Demande d'aide explicite / problème
+        help_requests = [
+            'j\'ai besoin', 'je cherche', 'je veux',
+            'je voudrais', 'aidez-moi', 'pouvez-vous m\'aider',
+            'problème', 'difficulté', 'je n\'arrive pas', 'attirer des clients',
+            'avoir des clients', 'obtenir des clients', 'trouver des clients'
+        ]
+
+        # Priorité aux questions concrètes et demandes d'aide
+        if any(s in message_lower for s in service_questions):
+            return 'service_question'
+
+        if any(h in message_lower for h in help_requests):
+            return 'help_request'
+
         # Salutations informelles
         informal_greetings = [
             'cc', 'coucou', 'salut', 'slt', 'hey', 'yo',
@@ -1118,73 +1166,81 @@ class AISalesAgent:
             'bonne matinée', 'bon matin'
         ]
 
-        # Questions directes sur les services
-        service_questions = [
-            'vos services', 'votre offre', 'vos offres',
-            'votre formation', 'vos formations', 'plus d\'info',
-            'renseignement', 'information', 'tarif', 'prix',
-            'combien', 'comment ça marche', 'c\'est quoi',
-            'qu\'est-ce que', 'que proposez', 'que faites'
-        ]
-
-        # Demande d'aide explicite
-        help_requests = [
-            'j\'ai besoin', 'je cherche', 'je veux',
-            'je voudrais', 'aidez-moi', 'pouvez-vous m\'aider',
-            'problème', 'difficulté', 'je n\'arrive pas'
-        ]
-
         if any(g == message_lower or message_lower.startswith(g) for g in informal_greetings):
             return 'informal_greeting'
 
         if any(g in message_lower for g in formal_greetings):
-            if len(message_lower.split()) <= 3:
+            if len(message_lower.split()) <= 4:
                 return 'formal_greeting_only'
             else:
                 return 'formal_greeting_with_context'
 
-        if any(s in message_lower for s in service_questions):
-            return 'service_question'
-
-        if any(h in message_lower for h in help_requests):
-            return 'help_request'
-
         return 'unclear'
 
-    def build_opening_response(self, opening_type: str, lead: Dict[str, Any]) -> Optional[str]:
+    def build_opening_response(
+        self,
+        opening_type: str,
+        lead: Dict[str, Any],
+        contact_direction: str = "inbound",
+        user_message: str = ""
+    ) -> Optional[str]:
         """
-        Construit la réponse d'ouverture adaptée au type de premier message.
-        Accroche chaleureuse, posture d'entrepreneur à entrepreneur orientée valeur.
+        Construit la réponse d'ouverture adaptée au type de premier message et au sens du contact (Inbound vs Outbound).
+        - INBOUND : L'agent accueille sobrement sans se présenter comme un intrus (zéro "C'est Dave Sagbo", max 2 lignes).
+        - OUTBOUND : L'agent s'identifie, ancre sur une observation concrète de l'activité, et pose une question ouverte sur le quotidien (3 lignes max).
         """
         prenom = lead.get('prenom', '') if lead else ''
-        prenom_str = f" {prenom}" if prenom else ""
-        interet = (lead.get('centre_interet') or lead.get('notes') or '').lower() if lead else ''
+        prenom_str = f" {prenom}" if prenom and prenom.lower() not in ("contact", "prospect", "inconnu") else ""
+        secteur = (lead.get('secteur_activite') or lead.get('poste') or lead.get('notes') or '').lower() if lead else ''
 
-        if 'whatsapp' in interet or 'relance' in interet or 'auto' in interet:
-            topic_hook = "Vous cherchez plutôt à automatiser vos relances WhatsApp ou à capter plus de prospects qualifiés ?"
-        elif 'formation' in interet or 'vente' in interet or 'commercial' in interet:
-            topic_hook = "Vous souhaitez structurer votre prospection commerciale ou former vos équipes au closing ?"
+        # CAS 1 — INBOUND : LE PROSPECT A ÉCRIT EN PREMIER
+        if contact_direction == "inbound":
+            if opening_type in ('formal_greeting_only', 'informal_greeting'):
+                # Salutation simple : accueil naturel sans se présenter, 1-2 lignes max, une seule question.
+                if prenom_str:
+                    return f"Bonjour{prenom_str} ! Comment puis-je vous aider ?"
+                return "Bonjour ! Comment puis-je vous aider ?"
+
+            elif opening_type == 'service_question':
+                # Question sur les services : demander le secteur avant tout déballage d'offre
+                return "Bien sûr. Vous êtes dans quel domaine ?"
+
+            elif opening_type == 'help_request':
+                # Description directe de problème : mot d'empathie court + question domaine
+                return "C'est un blocage fréquent. Vous êtes dans quel domaine ?"
+
+            elif opening_type == 'formal_greeting_with_context':
+                msg_low = (user_message or '').lower()
+                if any(k in msg_low for k in ['service', 'offre', 'formation', 'tarif', 'prix', 'proposez', 'savoir plus']):
+                    return "Bien sûr. Vous êtes dans quel domaine ?"
+                elif any(k in msg_low for k in ['client', 'bloqu', 'réseau', 'reseau', 'arrive pas', 'problème', 'difficil']):
+                    return "C'est un blocage fréquent. Vous êtes dans quel domaine ?"
+                return "Bonjour ! Qu'est-ce qui vous amène ?"
+
+            else:
+                return "Bonjour ! Qu'est-ce qui vous amène ?"
+
+        # CAS 2 — OUTBOUND : L'AGENT A INITIÉ LE CONTACT
+        # Structure en 3 lignes maximum :
+        # Ligne 1 : Identification sobre
+        # Ligne 2 : Accroche ancrée dans leur réalité
+        # Ligne 3 : Question ouverte et simple sur leur quotidien (pas sur nos offres)
+        l1 = f"Bonjour{prenom_str}, c'est Dave Sagbo."
+
+        if 'restaurant' in secteur or 'restauration' in secteur or 'table' in secteur or 'menu' in secteur:
+            l2 = "Je travaille avec plusieurs restaurateurs sur la fidélisation de leur clientèle."
+            l3 = "Comment vous faites pour garder le contact avec vos habitués en ce moment ?"
+        elif 'boutique' in secteur or 'commerce' in secteur or 'e-commerce' in secteur or 'magasin' in secteur:
+            l2 = "Je vois que vous avez une boutique active dans le quartier."
+            l3 = "Vous recevez beaucoup de demandes via WhatsApp ou c'est surtout du passage ?"
+        elif 'prestat' in secteur or 'coach' in secteur or 'formation' in secteur or 'service' in secteur or 'consult' in secteur:
+            l2 = "Je croise beaucoup de prestataires qui peinent à relancer leurs anciens clients."
+            l3 = "C'est quelque chose que vous rencontrez aussi de votre côté ?"
         else:
-            topic_hook = "Dites-moi, vous développez quelle activité en ce moment ?"
+            l2 = "J'échange régulièrement avec des entrepreneurs autour de l'organisation de leurs échanges clients."
+            l3 = "Comment vous faites pour gérer les demandes de vos contacts en ce moment ?"
 
-        responses = {
-            'informal_greeting': (
-                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
-                f"Ravi d'échanger avec vous ! {topic_hook}"
-            ),
-            'formal_greeting_only': (
-                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
-                f"Ravi de faire votre connaissance ! {topic_hook}"
-            ),
-            'formal_greeting_with_context': None,
-            'service_question': None,
-            'help_request': None,
-            'unclear': (
-                f"Bonjour{prenom_str}, c'est Dave Sagbo.\n"
-                f"Je suis à votre écoute : parlez-moi un peu de vos priorités commerciales actuelles."
-            )
-        }
-        return responses.get(opening_type)
+        return f"{l1}\n{l2}\n{l3}"
 
     def detect_distress_signal(self, message: str, conversation_history: list) -> Optional[str]:
         """
@@ -2474,10 +2530,22 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             return final_res
 
         # 3. ÉTAPE OUVERTURE : Premier contact
+        contact_dir = scan_result.get('contact_direction') if scan_result else None
+        if not contact_dir and lead_id:
+            try:
+                from core.database_store import determine_contact_direction
+                contact_dir = determine_contact_direction(lead_id)
+            except Exception:
+                pass
+        if not contact_dir:
+            contact_dir = 'inbound'
+
+        canal_norm = 'messenger' if 'messenger' in str(channel).lower() else ('whatsapp' if 'whatsapp' in str(channel).lower() else str(channel).lower())
+
         if is_first_turn:
             opening_type = self.detect_opening_type(user_message)
             lead_info = lead_data or {}
-            custom_opening = self.build_opening_response(opening_type, lead_info)
+            custom_opening = self.build_opening_response(opening_type, lead_info, contact_direction=contact_dir, user_message=user_message)
             if custom_opening:
                 conversation_context = {
                     'lead_id': lead_id,
@@ -2489,7 +2557,9 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                     'stop_signal_detected': False,
                     'last_prospect_message': user_message,
                     'conversation_history': history,
-                    'canal': channel
+                    'canal': canal_norm,
+                    'contact_direction': contact_dir,
+                    'opening_rule_applied': True
                 }
                 validated = self.guard.evaluate_and_validate(custom_opening, conversation_context, scan_result)
                 final_res = validated['message']
@@ -2566,6 +2636,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             cleaned = cleaned[0].upper() + cleaned[1:]
 
         # 7. SUPERVISION QUALITÉ OBLIGATOIRE : CommunicationQualityGuard
+        canal_norm = 'messenger' if 'messenger' in str(channel).lower() else ('whatsapp' if 'whatsapp' in str(channel).lower() else str(channel).lower())
         conversation_context = {
             'lead_id': lead_id,
             'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
@@ -2576,7 +2647,8 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             'stop_signal_detected': False,
             'last_prospect_message': user_message,
             'conversation_history': history,
-            'canal': channel
+            'canal': canal_norm,
+            'contact_direction': contact_dir
         }
 
         validated = self.guard.evaluate_and_validate(

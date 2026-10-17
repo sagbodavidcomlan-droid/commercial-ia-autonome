@@ -189,6 +189,7 @@ Ne te base jamais uniquement sur les derniers messages — lis tout avec une rig
 
 Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
 {{
+  "contact_direction": "inbound | outbound (inbound si le prospect a écrit en premier, outbound si l'agent a initié)",
   "synthese_conversation": {{
     "resume": "Résumé factuel de tout l'échange en 3 phrases maximum",
     "nb_messages_total": {len(full_history) + 1},
@@ -265,11 +266,17 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
             if not scan_result:
                 scan_result = self._minimal_scan(full_history, new_message, lead)
 
-            # ÉTAPE 6 : Enrichir avec les données CRM existantes
+            # ÉTAPE 6 : Enrichir avec les données CRM existantes et direction du contact
+            from core.database_store import determine_contact_direction
+            contact_direction = determine_contact_direction(lead_id)
+            if not scan_result.get("contact_direction") or scan_result["contact_direction"] not in ("inbound", "outbound"):
+                scan_result["contact_direction"] = contact_direction
+
             scan_result["lead_crm"] = {
                 "lead_id": lead.get("id", lead_id),
                 "canal_source": lead.get("canal_source") or lead.get("source_contact") or "messenger",
                 "canal_id": lead.get("canal_id") or "",
+                "contact_direction": scan_result["contact_direction"],
                 "temperature": lead.get("temperature") or "Tiède",
                 "phase_actuelle": lead.get("phase_actuelle") or "setter",
                 "diagnostic_complet": lead.get("diagnostic_complet", 0),
@@ -326,7 +333,9 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
         elif any(w in new_message.lower() for w in ["vous êtes un bot", "es un robot", "es une ia"]):
             signal_rupture = "bot_suspicion"
 
+        direction = "outbound" if (full_history and full_history[0]["role"] == "model") or ("outbound" in str(lead.get("canal_source", "")).lower() or "outbound" in str(lead.get("source_contact", "")).lower()) else "inbound"
         return {
+            "contact_direction": lead.get("contact_direction") or direction,
             "synthese_conversation": {
                 "resume": f"Discussion en cours avec le prospect (secteur : {secteur}).",
                 "nb_messages_total": len(full_history) + 1,

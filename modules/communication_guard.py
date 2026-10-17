@@ -116,6 +116,14 @@ class CommunicationQualityGuard:
         "concernant le funnel",
         "je vous contacte dans le cadre de",
         "dans le cadre de notre démarche",
+        "ravi d'échanger avec vous",
+        "c'est avec plaisir que",
+        "je reste à votre disposition",
+        "n'hésitez pas à",
+        "je me permets de vous contacter",
+        "suite à votre message concernant",
+        "je vous contacte car nous avons une solution",
+        "une solution qui pourrait vous intéresser",
     ]
 
     @staticmethod
@@ -267,6 +275,36 @@ class CommunicationQualityGuard:
                 "et indique que le lien officiel lui sera transmis sur sa boîte mail."
             )
         },
+        'opening_too_long': {
+            'check': lambda msg, ctx: (
+                ctx.get('message_count', 0) == 1 and
+                not ctx.get('third_party_handling') and
+                not ctx.get('document_requested') and
+                not ctx.get('meeting_requested') and
+                str(ctx.get('canal', '')).lower() in ['messenger', 'whatsapp', 'facebook_messenger'] and
+                len(msg.split()) > 30
+            ),
+            'instruction': (
+                "Le premier message est trop long pour "
+                "Messenger ou WhatsApp. Maximum 2-3 lignes. "
+                "Reformule en gardant uniquement l'essentiel : "
+                "une accroche courte et une seule question."
+            )
+        },
+        'inbound_self_intro': {
+            'check': lambda msg, ctx: (
+                ctx.get('contact_direction') == 'inbound' and
+                ctx.get('message_count', 0) == 1 and
+                "c'est dave sagbo" in msg.lower() and
+                len(msg.split('\n')) > 2
+            ),
+            'instruction': (
+                "Le prospect a initié le contact — pas besoin "
+                "d'une longue présentation. Réponds directement "
+                "à ce qu'il a dit en 1-2 lignes maximum, "
+                "avec une seule question simple à la fin."
+            )
+        },
     }
 
     def __init__(self, gemini_key: Optional[str] = None):
@@ -355,7 +393,7 @@ class CommunicationQualityGuard:
                 score_result
             )
 
-            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested'):
+            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested') or conversation_context.get('opening_rule_applied'):
                 self._save_quality_log(
                     lead_id=conversation_context.get('lead_id', 0),
                     canal=conversation_context.get('canal', 'messenger'),
@@ -446,6 +484,8 @@ class CommunicationQualityGuard:
         is_purchase_signal = bool(ctx.get('purchase_signal_detected') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
         no_real_meet = bool(ctx.get('meeting_requested') and not ctx.get('real_meet_link'))
 
+        is_inbound_opening = bool(ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1)
+
         scoring_prompt = f"""Tu es un superviseur qualité strict pour un directeur commercial.
 Tu as la fiche de contexte complète de la conversation.
 Évalue si le message proposé respecte ce qui était attendu.
@@ -461,6 +501,7 @@ Signal d'achat / phase de closing détecté : {is_purchase_signal}
 Signal de rupture détecté : {scan_result.get('progression_commerciale', {}).get('signal_rupture')}
 L'agent avait répondu hors sujet avant : {derniers.get('agent_a_repondu_hors_sujet', False)}
 Consigne Rendez-vous : {"Si aucun lien officiel n'a été fourni, l'agent ne DOIT PAS inventer de lien Meet fictif. Confirmer le créneau et indiquer l'envoi du lien par email est la SEULE réponse parfaite (attribuer OUI sur couverture)." if no_real_meet else "Répondre de façon adaptée"}
+Consigne Ouverture Inbound : {"Le prospect a initié le contact : zéro présentation intrusive ('C'est Dave Sagbo' interdit au premier message), max 2 lignes. S'il demande des services ou décrit un problème, poser d'abord une question sur son domaine ou son activité sans envoyer de catalogue est la SEULE réponse exacte attendue (attribuer OUI sur tous les critères)." if is_inbound_opening else "Répondre de façon adaptée"}
 
 === MESSAGE PROPOSÉ À ÉVALUER ===
 {message}
@@ -582,7 +623,9 @@ Vouvoiement strict, naturel direct, zéro formule bannie."""
     def _safe_fallback(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Réponse de sécurité neutre quand toutes les tentatives ont échoué."""
         canal = ctx.get('canal', 'messenger')
-        if str(canal).lower() in ['messenger', 'whatsapp', 'facebook_messenger']:
+        if ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1:
+            fallback_msg = "Bonjour ! Comment puis-je vous aider ?"
+        elif str(canal).lower() in ['messenger', 'whatsapp', 'facebook_messenger']:
             fallback_msg = (
                 "Pardonnez-moi pour cette réponse imprécise. "
                 "Pouvez-vous me redire en quelques mots ce que vous cherchez ?"

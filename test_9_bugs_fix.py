@@ -8,6 +8,7 @@ import sys
 import json
 import sqlite3
 import re
+import time
 from pathlib import Path
 
 # Fixer le chemin racine
@@ -41,6 +42,7 @@ def run_tests():
     init_db()
     agent = AISalesAgent()
     guard = CommunicationQualityGuard()
+    ts = int(time.time() * 1000)
 
     # -------------------------------------------------------------------------
     # SCÉNARIO 1 : Ouverture sobre sans jargon technique (Bug 1)
@@ -48,10 +50,10 @@ def run_tests():
     print("\n--- SCÉNARIO 1 : Ouverture sobre sans jargon technique ---")
     lead_id, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen1_psid_1792242611",
+        canal_id=f"test_scen1_psid_{ts}",
         prenom="David",
         nom="Sagbo",
-        facebook_psid="test_scen1_psid_1792242611",
+        facebook_psid=f"test_scen1_psid_{ts}",
         notes="Prise de contact directe : 'Bonjour'",
         secteur_activite="Restauration"
     )
@@ -63,11 +65,11 @@ def run_tests():
     )
     print(f"Réponse Agent :\n{rep1}")
 
-    banned_words = ["inbound", "outbound", "funnel", "suite à votre premier message", "concernant l'inbound"]
+    banned_words = ["inbound", "outbound", "funnel", "suite à votre premier message", "concernant l'inbound", "ravi d'échanger avec vous", "c'est dave sagbo"]
     for bw in banned_words:
-        assert bw not in rep1.lower(), f"ÉCHEC: Jargon technique détecté '{bw}' dans la réponse !"
-    assert "dave sagbo" in rep1.lower(), "ÉCHEC: Dave Sagbo doit se présenter au premier message"
-    print("✅ SCÉNARIO 1 VALIDÉ : Zéro jargon technique, ouverture humaine et authentique.")
+        assert bw not in rep1.lower(), f"ÉCHEC: Formule ou jargon interdit détecté '{bw}' dans la réponse !"
+    assert any(formule.lower() in rep1.lower() for formule in ["comment puis-je vous aider", "qu'est-ce qui vous amène", "dites-moi tout"]), f"ÉCHEC: Formule d'accueil invalide : {rep1}"
+    print("✅ SCÉNARIO 1 VALIDÉ : Zéro jargon, zéro formule corporate, accueil sobre et authentique.")
 
     # -------------------------------------------------------------------------
     # SCÉNARIO 2 : Prix annoncé une seule fois & pas de faux fallback (Bug 2 & Clarification)
@@ -75,7 +77,7 @@ def run_tests():
     print("\n--- SCÉNARIO 2 : Prix unique & Clarification sans faux fallback ---")
     lead_id2, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen2_psid_1792242611",
+        canal_id=f"test_scen2_psid_{ts}",
         prenom="Moussa",
         nom="Kone",
         secteur_activite="Restauration"
@@ -114,7 +116,7 @@ def run_tests():
     print("\n--- SCÉNARIO 3 : Temporisation prospect & mise en pause du poller ---")
     lead_id3, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen3_psid_1792242611",
+        canal_id=f"test_scen3_psid_{ts}",
         prenom="Fatou",
         nom="Diallo"
     )
@@ -160,7 +162,7 @@ def run_tests():
     print("\n--- SCÉNARIO 4 : Demande de document -> Génération de vrai PDF ---")
     lead_id4, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen4_psid_1792242611",
+        canal_id=f"test_scen4_psid_{ts}",
         prenom="Amadou",
         nom="Traore",
         secteur_activite="BTP & Construction"
@@ -191,7 +193,7 @@ def run_tests():
     print("\n--- SCÉNARIO 5 : Accord rendez-vous sans aucun lien fictif ---")
     lead_id5, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen5_psid_1792242611",
+        canal_id=f"test_scen5_psid_{ts}",
         prenom="Clarisse",
         nom="Adanho",
         email="clarisse.adanho@gmail.com"
@@ -217,7 +219,7 @@ def run_tests():
     print("\n--- SCÉNARIO 6 : Email associé -> liaison_contacts, zéro écrasement CRM ---")
     lead_id6, _ = get_or_create_lead(
         canal_source="messenger",
-        canal_id="test_scen6_psid_1792242611",
+        canal_id=f"test_scen6_psid_{ts}",
         prenom="David",
         nom="Sagbo",
         email=None,
