@@ -585,7 +585,7 @@ INSTRUCTIONS :
         4. Identifie et QUALIFIE les individus selon nos offres et secteurs d'activité.
         5. Ingeste directement les leads qualifiés dans le CRM (`crm_leads`) avec déduplication.
         """
-        from core.database_store import get_or_create_lead, log_activity
+        from core.database_store import get_or_create_lead, log_activity, log_lead_message
         from core.catalog_engine import CatalogEngine
 
         active_cfg = get_active_config()
@@ -660,15 +660,33 @@ INSTRUCTIONS :
                                 notes=f"Interception ciblée [{lead_analysis.get('secteur_activite', '')}] : \"{lead_analysis.get('comment_sample')}\" | Source: {post_url}",
                                 score_dur=lead_analysis.get("score_dur", 65),
                                 score_qualification=lead_analysis.get("score_dur", 65),
-                                statut_lead="Chaud" if lead_analysis.get("phone_detected") else "Nouveau"
+                                statut_lead="Chaud" if lead_analysis.get("phone_detected") else "Nouveau",
+                                contact_direction="outbound"
                             )
 
                             lead_analysis["crm_lead_id"] = lead_id
                             lead_analysis["is_new_in_crm"] = is_new
 
+                            if is_new:
+                                fb_prenom = lead_analysis.get("prenom") or "Bonjour"
+                                matched_off = lead_analysis.get("offre_matchee") or "votre activité"
+                                approach_text = (
+                                    f"Bonjour {fb_prenom}, c'est Dave Sagbo.\n"
+                                    f"Je travaille avec plusieurs acteurs sur {matched_off}.\n"
+                                    f"Comment vous abordez ce point dans votre organisation en ce moment ?"
+                                )
+                                log_lead_message(
+                                    lead_id=lead_id,
+                                    channel="FACEBOOK_MESSENGER" if lead_analysis.get("author_id") else "WHATSAPP",
+                                    sender="Dave Sagbo",
+                                    message=approach_text,
+                                    status="DELIVERED",
+                                    metadata={"origin": "FacebookAdsCollector", "competitor": comp_name}
+                                )
+
                             log_activity(
                                 category="PROSPECTION",
-                                action=f"Interception prospect qualifié ({lead_analysis.get('secteur_activite', 'Audience')})",
+                                action=f"Interception prospect qualifié ({lead_analysis.get('secteur_activite', 'Audience')}) [Outbound]",
                                 lead_name=lead_analysis.get("nom_complet"),
                                 lead_phone=lead_analysis.get("phone_detected") or "N/A",
                                 status="SUCCESS",

@@ -1040,14 +1040,18 @@ async function loadReportsHistory() {
   }
 
   container.innerHTML = reports.map(r => `
-    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between shadow-2xs">
+    <div onclick="viewStoredReport(${r.id})" class="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 cursor-pointer transition-all flex items-center justify-between shadow-2xs group">
       <div>
-        <div class="font-bold text-slate-900 text-xs">${r.title}</div>
-        <div class="text-[11px] text-slate-500">${r.summary.substring(0, 100)}...</div>
+        <div class="font-bold text-slate-900 group-hover:text-blue-700 text-xs transition-colors">${escapeHtml(r.title || 'Rapport Exécutif')}</div>
+        <div class="text-[11px] text-slate-500">${escapeHtml((r.summary || '').substring(0, 100))}...</div>
       </div>
-      <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-lg text-xs font-bold">Grade ${r.performance_grade}</span>
+      <div class="flex items-center gap-2">
+        <span class="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-lg text-xs font-bold">Grade ${escapeHtml(r.performance_grade || 'A')}</span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400 group-hover:text-blue-600 transition-transform"></i>
+      </div>
     </div>
   `).join("");
+  if (window.lucide) lucide.createIcons();
 }
 
 // --- CALENDRIER COMMERCIAL INTERACTIF & PLANIFICATEUR ---
@@ -4666,9 +4670,111 @@ ${escapeHtml(rep.content_markdown || "")}
   }
 }
 
+async function viewStoredReport(reportId) {
+  showModal("modal-report");
+  const contentDiv = document.getElementById("report-modal-content");
+  if (!contentDiv) return;
+  contentDiv.innerHTML = "<p class='text-slate-400'>Chargement du rapport archivé...</p>";
+
+  try {
+    const res = await fetch(`/api/reports?id=${reportId}`);
+    if (!res.ok) throw new Error("Rapport introuvable");
+    const rep = await res.json();
+
+    contentDiv.innerHTML = `
+      <div class="space-y-4">
+        <div class="flex items-center justify-between p-3.5 bg-slate-100 rounded-xl border border-slate-200">
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">${escapeHtml(rep.title || 'Rapport Exécutif')}</h3>
+            <p class="text-[11px] text-slate-500">Généré le ${new Date(rep.created_at).toLocaleString('fr-FR')}</p>
+          </div>
+          <span class="bg-blue-100 text-blue-800 border border-blue-300 px-2.5 py-1 rounded-lg text-xs font-bold">Grade ${escapeHtml(rep.performance_grade || 'A')}</span>
+        </div>
+        <div class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-slate-800 leading-relaxed text-xs">
+          <strong class="text-[#0062ff]">Synthèse Exécutive :</strong> ${escapeHtml(rep.summary || "")}
+        </div>
+        <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl whitespace-pre-wrap font-sans text-xs text-slate-800 leading-relaxed">
+${escapeHtml(rep.content_markdown || "")}
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    contentDiv.innerHTML = "<p class='text-rose-600'>Erreur lors du chargement du rapport archivé.</p>";
+  }
+}
+
 function closeReportModal() {
   hideModal("modal-report");
 }
+
+// --- MODAL DES NOTIFICATIONS & ACTIVITÉS ---
+async function openNotificationsModal() {
+  showModal("modal-notifications");
+  await loadNotificationsData();
+}
+
+function closeNotificationsModal() {
+  hideModal("modal-notifications");
+}
+
+async function loadNotificationsData() {
+  const container = document.getElementById("notifications-modal-content");
+  if (!container) return;
+  container.innerHTML = "<p class='text-slate-400 text-center py-4'>Chargement du journal d'activités...</p>";
+
+  try {
+    const res = await fetch("/api/history?limit=30");
+    const data = await res.json();
+    const logs = data.logs || [];
+
+    if (!logs || logs.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-slate-400">
+          <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+          <p>Aucune activité récente enregistrée pour le moment.</p>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = logs.map(log => {
+      const cat = (log.category || 'INFO').toUpperCase();
+      let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+      if (cat.includes('FOLLOWUP') || cat.includes('RELANCE')) badgeClass = 'bg-blue-100 text-blue-800 border-blue-200';
+      else if (cat.includes('CRM') || cat.includes('LEAD') || cat.includes('QUALIF')) badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      else if (cat.includes('OUTBOUND') || cat.includes('CHASSE') || cat.includes('MULTI_OFFER')) badgeClass = 'bg-purple-100 text-purple-800 border-purple-200';
+      else if (cat.includes('ERROR') || cat.includes('WARN')) badgeClass = 'bg-rose-100 text-rose-800 border-rose-200';
+
+      return `
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1 shadow-2xs">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}">${escapeHtml(cat)}</span>
+              <span class="font-bold text-slate-900 text-xs">${escapeHtml(log.action || 'Événement')}</span>
+            </div>
+            <span class="text-[10px] text-slate-400 font-mono">${escapeHtml(log.timestamp || '')}</span>
+          </div>
+          ${log.lead_name ? `<div class="text-[11px] text-slate-600 font-medium">Prospect : <span class="font-bold text-slate-800">${escapeHtml(log.lead_name)}</span> ${log.lead_phone ? `(${escapeHtml(log.lead_phone)})` : ''}</div>` : ''}
+          ${log.details ? `<div class="text-[11px] text-slate-500 whitespace-pre-wrap">${escapeHtml(log.details)}</div>` : ''}
+        </div>
+      `;
+    }).join("");
+    if (window.lucide) lucide.createIcons();
+  } catch (e) {
+    container.innerHTML = "<p class='text-rose-600 text-center py-4'>Erreur de chargement des notifications.</p>";
+  }
+}
+
+// Alias de compatibilité pour le cockpit
+window.triggerAutopilotNow = function() {
+  if (typeof triggerAutopilotSprint === "function") {
+    triggerAutopilotSprint();
+  } else {
+    showToast("Sprint Autopilot lancé", "info");
+  }
+};
+
 
 // --- CENTRE DE COMMANDEMENT SWARM (MULTI-AGENTS) ---
 async function loadSwarmStatus() {
@@ -7516,6 +7622,10 @@ async function convertSvgUrlToRaster(svgUrl, format = 'png', width = 1080, heigh
       img.src = svgUrl;
     });
   }
+}
+
+function downloadSingleSlideSvg(slideIndex) {
+  downloadSingleSlideFormat(slideIndex, 'svg');
 }
 
 async function downloadSingleSlideFormat(slideIndex, format = 'svg') {

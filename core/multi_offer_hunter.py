@@ -15,7 +15,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from core.catalog_engine import CatalogEngine
-from core.database_store import get_or_create_lead, log_activity, get_connection
+from core.database_store import get_or_create_lead, log_activity, get_connection, log_lead_message
 from modules.linkedin_prospector import LinkedInProspector
 from modules.facebook_ads_collector import FacebookAdsCollector
 from modules.social_scraper_tiktok_insta import SocialScraperEngine
@@ -143,16 +143,32 @@ class MultiOfferHunter:
                             douleur_identifiee=f"Intérêt pour {offer_name} ({strategy['angle_vente']})",
                             notes=f"Post LinkedIn: \"{p.get('text_sample')}\"\nInvité avec : {note_invit}",
                             offre_matchee=offer_name,
-                            offre_matchee_id=offer_id
+                            offre_matchee_id=offer_id,
+                            contact_direction="outbound"
                         )
 
                         p["crm_lead_id"] = lead_id
                         p["offre_matchee"] = offer_name
                         leads_acquired.append(p)
 
+                        if is_new:
+                            outreach_text = (
+                                f"Bonjour {prenom}, c'est Dave Sagbo.\n"
+                                f"Je travaille avec plusieurs professionnels sur le développement de leurs activités autour de {offer_name}.\n"
+                                f"Comment vous gérez cet aspect dans votre quotidien en ce moment ?"
+                            )
+                            log_lead_message(
+                                lead_id=lead_id,
+                                channel="LINKEDIN",
+                                sender="Dave Sagbo",
+                                message=outreach_text,
+                                status="DELIVERED",
+                                metadata={"origin": "MultiOfferHunter", "offer": offer_name}
+                            )
+
                         log_activity(
                             category="PROSPECTION",
-                            action=f"Prospect B2B LinkedIn capté pour '{offer_name}'",
+                            action=f"Prospect B2B LinkedIn capté pour '{offer_name}' (Outbound)",
                             lead_name=nom_complet,
                             lead_phone=phone or "N/A",
                             status="SUCCESS",
@@ -204,16 +220,33 @@ class MultiOfferHunter:
                             douleur_identifiee=f"Créateur/Commerçant actif ciblé pour {offer_name}",
                             notes=f"Annonce TikTok : \"{tk.get('pitch_text')}\" | Landing: {tk.get('landing_page')}",
                             offre_matchee=offer_name,
-                            offre_matchee_id=offer_id
+                            offre_matchee_id=offer_id,
+                            contact_direction="outbound"
                         )
 
                         tk["crm_lead_id"] = lead_id
                         tk["offre_matchee"] = offer_name
                         leads_acquired.append(tk)
 
+                        if is_new:
+                            c_prenom = creator_name.split()[0]
+                            outreach_text = (
+                                f"Bonjour {c_prenom}, c'est Dave Sagbo.\n"
+                                f"Je vois passer votre activité avec intérêt sur TikTok.\n"
+                                f"Comment se passe la conversion de vos abonnés en clients en ce moment ?"
+                            )
+                            log_lead_message(
+                                lead_id=lead_id,
+                                channel="WHATSAPP" if phone else "TIKTOK",
+                                sender="Dave Sagbo",
+                                message=outreach_text,
+                                status="DELIVERED",
+                                metadata={"origin": "MultiOfferHunter", "offer": offer_name}
+                            )
+
                         log_activity(
                             category="PROSPECTION",
-                            action=f"Créateur TikTok capté pour '{offer_name}'",
+                            action=f"Créateur TikTok capté pour '{offer_name}' (Outbound)",
                             lead_name=creator_name,
                             lead_phone=phone or "N/A",
                             status="SUCCESS",

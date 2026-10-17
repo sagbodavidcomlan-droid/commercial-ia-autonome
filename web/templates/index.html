@@ -387,7 +387,7 @@
       </button>
 
       <!-- Notification Bell -->
-      <button class="notif-btn" title="Notifications">
+      <button onclick="openNotificationsModal()" class="notif-btn" title="Voir les alertes et notifications d'activité">
         <i data-lucide="bell" class="w-4 h-4"></i>
         <span class="notif-badge"></span>
       </button>
@@ -610,6 +610,10 @@
             <button onclick="triggerAutopilotSprint()" class="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer">
               <i data-lucide="zap" class="w-4 h-4 text-[#0062ff]"></i>
               <span>Sprint IA</span>
+            </button>
+            <button onclick="triggerMultiOfferCashMachine()" class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs flex items-center gap-2 shadow-md shadow-emerald-500/20 transition cursor-pointer" title="Lancer une patrouille de prospection sortante (LinkedIn, TikTok, Facebook)">
+              <i data-lucide="target" class="w-4 h-4"></i>
+              <span>Traque Outbound</span>
             </button>
             <button onclick="window.open('/api/export/leads-csv', '_blank')" class="px-4 py-2.5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 font-bold text-xs flex items-center gap-2 shadow-2xs transition cursor-pointer">
               <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
@@ -2506,7 +2510,7 @@
                   <h3 class="text-base font-black text-slate-900 tracking-tight">Décisions en Attente & Alertes</h3>
                   <p class="text-xs text-slate-400">Dossiers chauds requérant un arbitrage ou une signature</p>
                 </div>
-                <button class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition text-xs">
+                <button onclick="showTab('pipeline')" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold transition text-xs cursor-pointer" title="Voir les dossiers dans le Pipeline Commercial">
                   &hellip;
                 </button>
               </div>
@@ -2704,7 +2708,7 @@
               <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
               <span>Actualiser l'Essaim</span>
             </button>
-            <button onclick="triggerAutopilotNow()" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-extrabold transition shadow-xs flex items-center gap-2">
+            <button onclick="triggerAutopilotSprint()" class="px-4 py-2 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white text-xs font-extrabold transition shadow-xs flex items-center gap-2 cursor-pointer">
               <i data-lucide="zap" class="w-3.5 h-3.5"></i>
               <span>Lancer une Ronde Collective</span>
             </button>
@@ -3811,7 +3815,7 @@
           <div class="flex flex-wrap items-center gap-3">
             <!-- Pilules de Navigation Style Référence (Chat, Cible, Objections, Offre) -->
             <div class="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200">
-              <button class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-slate-900 text-white shadow-2xs">Chat Direct</button>
+              <button onclick="document.getElementById('sim-input-text')?.focus(); document.getElementById('sim-messages-container')?.scrollIntoView({behavior:'smooth'});" class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-slate-900 text-white shadow-2xs cursor-pointer">Chat Direct</button>
               <button onclick="document.getElementById('sim-target-details-drawer')?.classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Paramètres Cible</button>
               <button onclick="startTargetSimulation()" class="px-3 py-1.5 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900">Amorcer Accroche</button>
             </div>
@@ -4202,7 +4206,7 @@
           <!-- Top Pill Tabs (Style SETO : Chat, My Project, Brand Voice, Templates, Tools) -->
           <div class="flex items-center justify-between gap-4 pb-8 border-b border-slate-100 flex-wrap relative z-10">
             <div class="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
-              <button type="button" class="px-4 py-1.5 rounded-xl text-xs font-black bg-[#0062ff] text-white shadow-xs">Studio Créatif</button>
+              <button type="button" onclick="document.getElementById('creative-topic')?.focus();" class="px-4 py-1.5 rounded-xl text-xs font-black bg-[#0062ff] text-white shadow-xs cursor-pointer">Studio Créatif</button>
               <button type="button" onclick="loadBrandBible()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Brand Bible</button>
               <button type="button" onclick="loadCreativeCalendar()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Calendrier</button>
               <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Canaux & Options</button>
@@ -5154,6 +5158,39 @@
       </div>
       <div class="p-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/60">
         <button onclick="closeAutopilotModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg">
+          Fermer
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NOTIFICATIONS & ACTIVITÉS -->
+  <div id="modal-notifications" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200">
+      <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0062ff]">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Centre d'Alertes & Activités Récentes</h3>
+            <p class="text-[11px] text-slate-500">Flux d'événements du cockpit et patrouilles en direct</p>
+          </div>
+        </div>
+        <button onclick="closeNotificationsModal()" class="text-slate-400 hover:text-slate-700 transition cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="notifications-modal-content" class="flex-1 overflow-y-auto p-5 text-xs text-slate-700 space-y-3">
+        <p class="text-slate-400">Chargement des alertes...</p>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 flex justify-between items-center bg-slate-50">
+        <button onclick="loadNotificationsData()" class="text-[11px] text-[#0062ff] hover:underline flex items-center gap-1 cursor-pointer font-bold">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Actualiser
+        </button>
+        <button onclick="closeNotificationsModal()" class="bg-[#0062ff] hover:bg-[#0052cc] text-white text-xs font-bold px-4 py-2 rounded-xl transition cursor-pointer">
           Fermer
         </button>
       </div>

@@ -181,6 +181,12 @@ class Autopilot24hDaemon:
             # MODE PRODUCTION RÉELLE : Patrouille rigoureuse des relances réelles
             # ==================================================================
             self._scan_and_process_real_followups()
+
+            # Patrouille de Prospection Sortante (Outbound Hunter) périodique en heures ouvrées
+            now = datetime.now()
+            current_time_dec = now.hour + now.minute / 60.0
+            if 8.5 <= current_time_dec <= 18.5 and (self.cycles_completed % 4 == 1):
+                self._run_outbound_prospecting_patrol()
         else:
             # Mode Simulation pédagogique (uniquement si activé explicitement)
             sprint_res = self.orchestrator.run_autopilot_sprint(batch_size=random.choice([1, 2]))
@@ -194,6 +200,28 @@ class Autopilot24hDaemon:
                 self._trigger_autonomous_sale()
 
             self.log_event(f"⚙️ [Simulation] Cycle #{self.cycles_completed} exécuté (+{len(new_leads)} leads).")
+
+    def _run_outbound_prospecting_patrol(self):
+        """
+        Déclenche une patrouille de prospection sortante (Outbound) :
+        - Scanne les opportunités et signaux sur les offres actives (MultiOfferHunter)
+        - Ingeste les prospects qualifiés sous contact_direction='outbound'
+        - Envoie la prise de contact sortante selon la Règle 11 (3 lignes concrètes sans pitch)
+        - Met à jour les statistiques de session Outbound
+        """
+        try:
+            from core.multi_offer_hunter import MultiOfferHunter
+            hunter = MultiOfferHunter()
+            hunt_res = hunter.hunt_for_all_offers(country="BJ")
+            acq = hunt_res.get("total_leads_acquired", 0)
+            if acq > 0:
+                self.leads_captured_session += acq
+                self.log_event(f"🎯 Patrouille Outbound : {acq} prospect(s) sortant(s) ciblé(s) et contacté(s).")
+            else:
+                if self.cycles_completed % 8 == 1:
+                    self.log_event("🔍 Patrouille Outbound : veille active, aucune nouvelle intention sous les publications concurrentes actuelles.")
+        except Exception as e:
+            logger.warning(f"Erreur patrouille outbound daemon : {e}")
 
     def _scan_and_process_real_followups(self):
         """

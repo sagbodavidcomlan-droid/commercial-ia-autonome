@@ -212,7 +212,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         elif path == "/api/settings":
             self.handle_api_get_settings()
         elif path == "/api/reports":
-            self.handle_api_get_reports()
+            self.handle_api_get_reports(query)
         elif path == "/api/domains":
             self.handle_api_get_domains()
         elif path == "/api/forecasting/montecarlo":
@@ -672,9 +672,21 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         rep = director_engine.generate_executive_report(report_type)
         self.send_json_response(rep)
 
-    def handle_api_get_reports(self):
+    def handle_api_get_reports(self, query=None):
+        report_id = None
+        if query and "id" in query:
+            report_id = query.get("id", [None])[0]
         conn = get_connection()
         c = conn.cursor()
+        if report_id:
+            c.execute("SELECT * FROM executive_reports WHERE id = ?", (report_id,))
+            row = c.fetchone()
+            conn.close()
+            if row:
+                self.send_json_response(dict(row))
+            else:
+                self.send_json_response({"error": "Rapport non trouvé"}, status=404)
+            return
         c.execute("SELECT * FROM executive_reports ORDER BY id DESC")
         rows = [dict(r) for r in c.fetchall()]
         conn.close()
