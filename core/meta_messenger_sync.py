@@ -416,20 +416,26 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
 
 def _extract_lead_contact_info(text: str) -> Dict[str, str]:
     """
-    Extrait automatiquement le téléphone/WhatsApp, l'email, le prénom/nom ou la douleur
-    d'un message envoyé par le prospect.
+    Extrait automatiquement le téléphone/WhatsApp, l'email, le prénom/nom,
+    l'entreprise ou la douleur d'un message envoyé par le prospect.
     """
     info = {}
     if not text:
         return info
 
-    # 1. Extraction numéro téléphone (+229..., 00229... ou 8 à 15 chiffres consécutifs)
-    phone_match = re.search(r'(\+?\b(?:229|225|221|226|228|237|223|242|243)?\s*[0-9]{2}(?:[\s.-]?[0-9]{2}){3,4}\b)', text)
-    if phone_match:
-        clean_phone = re.sub(r'[\s.-]', '', phone_match.group(1))
-        if len(clean_phone) >= 8:
-            info["telephone"] = clean_phone
-            info["whatsapp"] = clean_phone
+    from core.database_store import normalize_phone_number
+
+    # 1. Extraction numéro téléphone (+229..., 00229..., 8 à 14 chiffres avec ou sans espaces/tirets)
+    phone_candidates = re.findall(
+        r'((?:\+|00)?\s*(?:229|225|221|226|228|237|223|242|243|33|1)?\s*(?:[0-9][\s\.\-]?){8,14})',
+        text
+    )
+    for cand in phone_candidates:
+        intl, digits = normalize_phone_number(cand)
+        if intl and digits and len(digits) >= 8:
+            info["telephone"] = intl
+            info["whatsapp"] = intl
+            break
 
     # 2. Extraction adresse email
     email_match = re.search(r'([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', text)
@@ -440,17 +446,35 @@ def _extract_lead_contact_info(text: str) -> Dict[str, str]:
     name_patterns = [
         r"(?:je m'appelle|moi c'est|mon nom est|je suis(?:\s+monsieur|\s+madame|\s+m\.|\s+mme)?)\s+([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,})?)",
         r"(?:nom\s*:\s*)([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,})?)",
+        r"(?:appelez-moi|appele-moi|ici\s+(?:le\s+dr|mr|m\.|monsieur)?)\s+([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,})?)",
         r"(?:c'est\s+)([A-Za-zÀ-ÿ]{2,}(?:\s+[A-Za-zÀ-ÿ]{2,})?)\s+(?:à l'appareil|qui vous écrit|ici)"
     ]
     for np in name_patterns:
         name_match = re.search(np, text, re.IGNORECASE)
         if name_match:
             candidate_name = name_match.group(1).strip().title()
-            if candidate_name.lower() not in ("dave", "dave sagbo", "un client", "intéressé", "bloqué", "bonjour", "bonsoir"):
+            mots_ban = ("dave", "dave sagbo", "un client", "intéressé", "bloqué", "bonjour", "bonsoir", "le responsable")
+            if candidate_name.lower() not in mots_ban:
                 info["nom"] = candidate_name
                 parts = candidate_name.split()
                 info["prenom"] = parts[0]
                 info["nom_famille"] = " ".join(parts[1:]) if len(parts) > 1 else ""
+                break
+
+    # 4. Extraction entreprise / structure
+    company_patterns = [
+        r"(?:mon entreprise|ma société|ma boîte|notre agence|notre restaurant|mon restaurant|notre hôtel|mon hôtel|ma boutique|notre boutique)\s+(?:s'appelle|est|c'est)?\s*([A-Za-z0-9À-ÿ\s\-\&]{2,30})",
+        r"(?:gérant de|promoteur de|fondateur de|directeur de|responsable de)\s+([A-Za-z0-9À-ÿ\s\-\&]{2,30})",
+        r"(?:du restaurant|de la boutique|de l'agence|de l'hôtel|de la société|de l'entreprise|de chez)\s+([A-Za-z0-9À-ÿ\s\-\&]{2,30})"
+    ]
+    for cp in company_patterns:
+        comp_match = re.search(cp, text, re.IGNORECASE)
+        if comp_match:
+            comp_name = comp_match.group(1).strip()
+            # Nettoyer d'éventuels mots résiduels
+            comp_clean = re.sub(r'^(l\'|la\s+|le\s+|les\s+)', '', comp_name, flags=re.IGNORECASE).strip()
+            if len(comp_clean) >= 2 and comp_clean.lower() not in ("prospect", "contact", "moi", "nous"):
+                info["entreprise"] = comp_clean
                 break
 
     return info
@@ -527,8 +551,10 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 WHERE (canal_id IS NOT NULL AND canal_id = ?)
                    OR (facebook_psid IS NOT NULL AND facebook_psid = ?)
                    OR (canal_id = ?)
+                   OR (canal_id = ?)
+                   OR (canal_id = ?)
                 ORDER BY id ASC LIMIT 1
-            """, (canal_id_val, sender_psid, f"FB_{sender_psid}"))
+            """, (canal_id_val, sender_psid, f"FB_{sender_psid}", sender_psid, f"fb_audience_{sender_psid}"))
             lead_row = cursor.fetchone()
 
             lead_id = None
@@ -628,6 +654,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     details=f"Lead authentique créé suite à un message sur la Page Facebook. Message initial : {user_text}"
                 )
 
+            # Enrichir immédiatement les coordonnées extraites dans crm_leads
+            from core.database_store import update_lead_coordinates
+            if extracted_info:
+                update_lead_coordinates(lead_id, **extracted_info)
+
             # 3. Consigner le message reçu du prospect et le marquer processed immédiatement pour éviter qu'un poller concurrent ne génère une réponse simultanée (Bug 3)
             inbound_msg_id = log_lead_message(
                 lead_id=lead_id,
@@ -643,29 +674,19 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
             except Exception:
                 pass
 
-            # 4. Générer une réponse experte d'acquisition & closing
-            from modules.omnichannel_messenger import omnichannel_messenger
-            
-            # Prénom propre pour l'échange (éviter 'Contact')
-            lead_prenom = ""
-            if "Contact" not in lead_name and "Messenger" not in lead_name and lead_name.strip():
-                lead_prenom = lead_name.split()[0]
-            elif lead_row and lead_row["prenom"] and "Contact" not in lead_row["prenom"]:
-                lead_prenom = lead_row["prenom"]
-            
-            lead_data = {
-                "id": lead_id,
-                "prenom": lead_prenom,
-                "nom": (lead_name.split()[-1] if len(lead_name.split()) > 1 else "") if ("Contact" not in lead_name and "Messenger" not in lead_name) else "",
-                "nom_complet": lead_name,
-                "nom_lead": lead_name,
-                "source_canal": "Facebook Messenger",
-                "centre_interet": user_text,
-                "notes": user_text,
-                "facebook_psid": sender_psid,
-                "diagnostic_complet": lead_row["diagnostic_complet"] if lead_row else 0,
-                "diagnostic_questions_count": (lead_row["diagnostic_questions_count"] if lead_row and "diagnostic_questions_count" in lead_row.keys() else 0) or 0
-            }
+            # 4. Charger l'intégralité du dossier CRM à jour pour Gemini
+            cursor.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+            full_lead_row = cursor.fetchone()
+            lead_data = dict(full_lead_row) if full_lead_row else {}
+
+            lead_prenom = lead_data.get("prenom") or (lead_data.get("nom_complet", "").split()[0] if " " in lead_data.get("nom_complet", "") else "")
+            if any(w in str(lead_prenom).lower() for w in ("contact", "prospect", "#")):
+                lead_prenom = ""
+            lead_data["prenom"] = lead_prenom
+            lead_data["centre_interet"] = user_text
+            lead_data["notes"] = user_text
+            lead_data["source_canal"] = "Facebook Messenger"
+            lead_data["facebook_psid"] = sender_psid
 
             # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours + Règle 10)
             from modules.ai_sales_agent import AISalesAgent
@@ -855,6 +876,7 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
 
                 # Déduplication stricte dans crm_leads par canal_id (wa_<numéro>), whatsapp ou telephone
                 canal_id_val = f"wa_{clean_phone_digits}"
+                suffix8 = clean_phone_digits[-8:] if len(clean_phone_digits) >= 8 else clean_phone_digits
                 cursor.execute("""
                     SELECT id, nom_complet, nom_lead, prenom, nom, facebook_psid, canal_id,
                            telephone, whatsapp, email, source_canal, canal_source, canal_actuel,
@@ -868,8 +890,11 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                        OR canal_id = ?
                        OR whatsapp = ?
                        OR telephone = ?
+                       OR whatsapp LIKE ?
+                       OR telephone LIKE ?
+                       OR canal_id LIKE ?
                     ORDER BY id ASC LIMIT 1
-                """, (canal_id_val, formatted_phone, formatted_phone, f"WA_{clean_phone_digits}", clean_phone_digits, clean_phone_digits))
+                """, (canal_id_val, formatted_phone, formatted_phone, f"WA_{clean_phone_digits}", clean_phone_digits, clean_phone_digits, f"%{suffix8}", f"%{suffix8}", f"%{suffix8}"))
                 lead_row = cursor.fetchone()
 
                 lead_id = None
@@ -951,6 +976,11 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                         details=f"Lead créé suite à un message sur WhatsApp Business ({formatted_phone}). Message : {user_text}"
                     )
 
+                # Enrichir immédiatement les coordonnées extraites dans crm_leads
+                from core.database_store import update_lead_coordinates
+                if extracted_info:
+                    update_lead_coordinates(lead_id, **extracted_info)
+
                 # Consigner le message reçu du prospect
                 log_lead_message(
                     lead_id=lead_id,
@@ -965,22 +995,20 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     }
                 )
 
-                # Générer la réponse experte d'acquisition & closing
-                lead_prenom = (first_name if not lead_row else lead_row["prenom"]) or (lead_name.split()[0] if " " in lead_name else "")
-                lead_data = {
-                    "id": lead_id,
-                    "prenom": lead_prenom,
-                    "nom": (last_name if not lead_row else lead_row["nom"]) or "",
-                    "nom_complet": lead_name,
-                    "nom_lead": lead_name,
-                    "whatsapp": formatted_phone,
-                    "telephone": formatted_phone,
-                    "source_canal": "WhatsApp Business",
-                    "centre_interet": user_text,
-                    "notes": user_text,
-                    "diagnostic_complet": lead_row["diagnostic_complet"] if lead_row else 0,
-                    "diagnostic_questions_count": (lead_row["diagnostic_questions_count"] if lead_row and "diagnostic_questions_count" in lead_row.keys() else 0) or 0
-                }
+                # Charger l'intégralité du dossier CRM à jour pour Gemini
+                cursor.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+                full_lead_row = cursor.fetchone()
+                lead_data = dict(full_lead_row) if full_lead_row else {}
+
+                lead_prenom = lead_data.get("prenom") or (lead_data.get("nom_complet", "").split()[0] if " " in lead_data.get("nom_complet", "") else "")
+                if any(w in str(lead_prenom).lower() for w in ("contact", "prospect", "#")):
+                    lead_prenom = ""
+                lead_data["prenom"] = lead_prenom
+                lead_data["whatsapp"] = formatted_phone
+                lead_data["telephone"] = formatted_phone
+                lead_data["source_canal"] = "WhatsApp Business"
+                lead_data["centre_interet"] = user_text
+                lead_data["notes"] = user_text
 
                 from modules.ai_sales_agent import AISalesAgent
                 ai_agent = AISalesAgent()

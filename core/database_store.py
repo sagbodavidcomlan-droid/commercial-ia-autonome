@@ -14,8 +14,9 @@ import os
 import sqlite3
 import json
 import logging
+import re
 from datetime import datetime, date, timedelta, timezone
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 logger = logging.getLogger("DatabaseStore")
 
@@ -2190,6 +2191,150 @@ def extract_lead_data_from_message(
     return extracted
 
 
+def normalize_phone_number(raw_phone: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Normalise universellement un numéro de téléphone / WhatsApp :
+    - Élimine les espaces, tirets, points, parenthèses.
+    - Transforme 00XXX en +XXX.
+    - Reconnaît les indicatifs ouest-africains (+229 Bénin, +225 Côte d'Ivoire, +228 Togo, +221 Sénégal...)
+      et internationaux (+33, +1, +44...).
+    - Normalise les numéros béninois locaux à 8 chiffres ou 10 chiffres (préfixe 01) vers +229...
+    Retourne un tuple : (format_international: str, chiffres_purs: str).
+    """
+    if not raw_phone:
+        return None, None
+    raw_str = str(raw_phone).strip()
+    if not raw_str or raw_str.lower() in ("none", "null", "undefined", "n/a"):
+        return None, None
+
+    clean = re.sub(r'[\s\.\-\(\)]', '', raw_str)
+    if clean.startswith("00"):
+        clean = "+" + clean[2:]
+
+    digits = re.sub(r'[^\d]', '', clean)
+    if len(digits) < 6:
+        return None, None
+
+    if clean.startswith("+"):
+        intl = clean
+    else:
+        # Heuristiques de formatage intelligent
+        if len(digits) == 8:
+            # Numéro béninois standard 8 chiffres (ex: 97123456 -> +22997123456)
+            intl = f"+229{digits}"
+        elif len(digits) == 10 and digits.startswith("01"):
+            # Nouveau plan de numérotation Bénin 10 chiffres (ex: 0197123456 -> +229{digits})
+            intl = f"+229{digits}"
+        elif digits.startswith("229") and len(digits) in (11, 13):
+            intl = f"+{digits}"
+        elif digits.startswith("225") and len(digits) in (11, 13):
+            intl = f"+{digits}"
+        elif digits.startswith("228") and len(digits) in (11, 13):
+            intl = f"+{digits}"
+        elif digits.startswith("221") and len(digits) in (12, 13):
+            intl = f"+{digits}"
+        elif digits.startswith("33") and len(digits) in (11, 12):
+            intl = f"+{digits}"
+        else:
+            intl = f"+{digits}"
+
+    return intl, digits
+
+
+def update_lead_coordinates(lead_id: int, **coords) -> bool:
+    """
+    Met à jour immédiatement et de manière sécurisée les coordonnées d'un prospect :
+    prenom, nom, nom_complet, telephone, whatsapp, email, entreprise, poste, secteur_activite.
+    Ne remplace jamais une valeur valide existante par du vide ou un placeholder générique.
+    """
+    if not lead_id:
+        return False
+    try:
+        conn = get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT id, prenom, nom, nom_complet, telephone, whatsapp, email, entreprise, poste, secteur_activite
+            FROM crm_leads WHERE id = ?
+        """, (lead_id,))
+        lead = c.fetchone()
+        if not lead:
+            conn.close()
+            return False
+
+        upd_fields = ["updated_at = datetime('now')"]
+        upd_params = []
+
+        # 1. Téléphone / WhatsApp normalisé
+        raw_phone = coords.get("telephone") or coords.get("whatsapp") or coords.get("phone")
+        if raw_phone:
+            intl_phone, _ = normalize_phone_number(raw_phone)
+            if intl_phone:
+                if not lead["telephone"] or "FB:" in str(lead["telephone"]):
+                    upd_fields.append("telephone = ?")
+                    upd_params.append(intl_phone)
+                if not lead["whatsapp"] or "FB:" in str(lead["whatsapp"]):
+                    upd_fields.append("whatsapp = ?")
+                    upd_params.append(intl_phone)
+
+        # 2. Email
+        raw_email = coords.get("email")
+        if raw_email and str(raw_email).strip():
+            clean_email = str(raw_email).strip().lower()
+            if "@" in clean_email and (not lead["email"] or "example" in lead["email"]):
+                upd_fields.append("email = ?")
+                upd_params.append(clean_email)
+
+        # 3. Prénom / Nom
+        new_prenom = coords.get("prenom")
+        new_nom = coords.get("nom")
+        new_full = coords.get("nom_complet") or coords.get("nom_lead")
+
+        if new_full and not (new_prenom and new_nom):
+            parts = str(new_full).strip().split()
+            if parts and not new_prenom:
+                new_prenom = parts[0]
+            if len(parts) > 1 and not new_nom:
+                new_nom = " ".join(parts[1:])
+
+        curr_prenom = lead["prenom"] or ""
+        curr_nom = lead["nom"] or ""
+        curr_full = lead["nom_complet"] or ""
+
+        is_generic = lambda s: any(w in str(s).lower() for w in ("contact", "prospect", "#", "inconnu", "whatsapp", "messenger"))
+
+        if new_prenom and (not curr_prenom or is_generic(curr_prenom)):
+            upd_fields.append("prenom = ?")
+            upd_params.append(str(new_prenom).strip())
+
+        if new_nom and (not curr_nom or is_generic(curr_nom)):
+            upd_fields.append("nom = ?")
+            upd_params.append(str(new_nom).strip())
+
+        if (new_full or (new_prenom and new_nom)) and (not curr_full or is_generic(curr_full)):
+            full_val = (new_full or f"{new_prenom or ''} {new_nom or ''}").strip()
+            if full_val and not is_generic(full_val):
+                upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
+                upd_params.extend([full_val, full_val])
+
+        # 4. Entreprise, Poste, Secteur
+        for k in ("entreprise", "poste", "secteur_activite"):
+            val = coords.get(k)
+            if val and str(val).strip() and not lead[k]:
+                upd_fields.append(f"{k} = ?")
+                upd_params.append(str(val).strip())
+
+        if len(upd_fields) > 1:
+            upd_params.append(lead_id)
+            c.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
+            conn.commit()
+            logger.info(f"update_lead_coordinates: Lead #{lead_id} enrichi avec succès.")
+        conn.close()
+        return True
+    except Exception as e:
+        logger.warning(f"Erreur update_lead_coordinates lead #{lead_id} : {e}")
+        return False
+
+
 def get_or_create_lead(
     canal_source: str,
     canal_id: str,
@@ -2198,54 +2343,129 @@ def get_or_create_lead(
     **kwargs
 ) -> tuple:
     """
-    Logique universelle de déduplication par canal_id (Partie 2) :
-    canal_id doit être UNIQUE.
-    Si le lead existe déjà -> met à jour last_contact_at, conversation_count et updated_at.
-    Si le lead est nouveau -> INSERT complet.
+    Logique universelle et exhaustive de déduplication omnicanale (Partie 2) :
+    - Recherche robuste par canal_id (avec/sans préfixes messenger_, fb_audience_, wa_), facebook_psid,
+      téléphone/whatsapp (avec normalisation universelle et recherche par suffixe) et email.
+    - Si le lead existe déjà -> met à jour last_contact_at, last_interaction, conversation_count, updated_at
+      et enrichit immédiatement toutes les coordonnées manquantes.
+    - Si le lead est nouveau -> INSERT complet.
     Retourne (lead_id, is_new: bool).
     """
     conn = get_connection()
     c = conn.cursor()
     try:
-        # 1. Recherche exhaustive du lead existant à travers TOUS ses identifiants
-        phone_val = kwargs.get("whatsapp") or kwargs.get("telephone")
-        phone = str(phone_val).strip() if phone_val and str(phone_val).strip() else None
+        # 0. Déballage des métadonnées optionnelles
+        meta = kwargs.get("metadata")
+        if isinstance(meta, dict):
+            for mk, mv in meta.items():
+                if mk not in kwargs or not kwargs[mk]:
+                    kwargs[mk] = mv
+
+        # 1. Normalisation exhaustive des identifiants
+        phone_val = kwargs.get("whatsapp") or kwargs.get("telephone") or kwargs.get("phone")
+        intl_phone, phone_digits = normalize_phone_number(phone_val)
 
         email_val = kwargs.get("email")
-        email = str(email_val).strip() if email_val and str(email_val).strip() else None
+        email = str(email_val).strip().lower() if email_val and str(email_val).strip() else None
 
         psid_val = kwargs.get("facebook_psid")
         psid = str(psid_val).strip() if psid_val and str(psid_val).strip() else None
 
-        # Construction dynamique des conditions de recherche pour éviter les faux doublons
+        raw_canal_id = str(canal_id or "").strip()
+        core_canal_id = re.sub(r'^(messenger_|fb_audience_|fb_user_|fb_|FB_|wa_|WA_|whatsapp_|user_|lead_)', '', raw_canal_id) if raw_canal_id else ""
+
+        # Si le canal_id ressemble à un numéro de téléphone, le normaliser
+        if not phone_digits and core_canal_id and any(c.isdigit() for c in core_canal_id):
+            p_intl, p_dig = normalize_phone_number(core_canal_id)
+            if p_dig and len(p_dig) >= 8:
+                intl_phone, phone_digits = p_intl, p_dig
+
         conditions = []
         params = []
 
-        if canal_id:
+        # A. Correspondances par canal_id et déclinaisons de préfixes
+        if raw_canal_id:
             conditions.append("canal_id = ?")
-            params.append(canal_id)
-        if psid:
+            params.append(raw_canal_id)
+        if core_canal_id and core_canal_id != raw_canal_id:
+            conditions.append("canal_id = ?")
+            params.append(core_canal_id)
+            conditions.append("canal_id = ?")
+            params.append(f"messenger_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_user_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_audience_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"FB_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"wa_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"WA_{core_canal_id}")
+            conditions.append("canal_id = ?")
+            params.append(f"whatsapp_{core_canal_id}")
+            conditions.append("canal_id LIKE ?")
+            params.append(f"%{core_canal_id}")
+
+        # B. Correspondances par facebook_psid
+        target_psid = psid or (core_canal_id if ("messenger" in str(canal_source).lower() or "facebook" in str(canal_source).lower()) else None)
+        if target_psid:
             conditions.append("facebook_psid = ?")
-            params.append(psid)
-            # Cas où canal_id était stocké sous la forme messenger_<psid> ou fb_audience_<psid>
+            params.append(target_psid)
             conditions.append("canal_id = ?")
-            params.append(f"messenger_{psid}")
+            params.append(target_psid)
             conditions.append("canal_id = ?")
-            params.append(f"fb_audience_{psid}")
-        if phone:
-            conditions.append("whatsapp = ?")
-            params.append(phone)
-            conditions.append("telephone = ?")
-            params.append(phone)
+            params.append(f"messenger_{target_psid}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_user_{target_psid}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_audience_{target_psid}")
+            conditions.append("canal_id = ?")
+            params.append(f"fb_{target_psid}")
+            conditions.append("canal_id = ?")
+            params.append(f"FB_{target_psid}")
+            conditions.append("canal_id LIKE ?")
+            params.append(f"%{target_psid}")
+
+        # C. Correspondances par téléphone / WhatsApp normalisé
+        if intl_phone or phone_digits:
+            if intl_phone:
+                conditions.append("whatsapp = ?")
+                params.append(intl_phone)
+                conditions.append("telephone = ?")
+                params.append(intl_phone)
+            if phone_digits:
+                conditions.append("whatsapp = ?")
+                params.append(phone_digits)
+                conditions.append("telephone = ?")
+                params.append(phone_digits)
+                conditions.append("canal_id = ?")
+                params.append(f"wa_{phone_digits}")
+                conditions.append("canal_id = ?")
+                params.append(f"WA_{phone_digits}")
+                # Correspondance sur les 8 derniers chiffres pour tolérer les variations d'indicatif
+                if len(phone_digits) >= 8:
+                    suffix8 = phone_digits[-8:]
+                    conditions.append("whatsapp LIKE ?")
+                    params.append(f"%{suffix8}")
+                    conditions.append("telephone LIKE ?")
+                    params.append(f"%{suffix8}")
+                    conditions.append("canal_id LIKE ?")
+                    params.append(f"%{suffix8}")
+
+        # D. Correspondances par email
         if email:
-            conditions.append("email = ?")
+            conditions.append("LOWER(TRIM(email)) = ?")
             params.append(email)
 
         lead = None
         if conditions:
             sql_find = f"""
                 SELECT id, prenom, nom, nom_complet, conversation_count, 
-                       canal_id, facebook_psid, telephone, whatsapp, email
+                       canal_id, facebook_psid, telephone, whatsapp, email,
+                       entreprise, poste, secteur_activite
                 FROM crm_leads 
                 WHERE {' OR '.join(conditions)}
                 ORDER BY id ASC
@@ -2259,42 +2479,56 @@ def get_or_create_lead(
             existing_count = lead[4] or 1
             upd_fields = [
                 "last_contact_at = datetime('now')",
+                "last_interaction = datetime('now')",
                 "conversation_count = ?",
                 "updated_at = datetime('now')"
             ]
             upd_params = [existing_count + 1]
 
-            if prenom and (not lead[1] or "Contact" in lead[1] or "Prospect" in lead[1]):
+            is_generic = lambda s: any(w in str(s).lower() for w in ("contact", "prospect", "#", "inconnu", "whatsapp", "messenger"))
+
+            if prenom and (not lead[1] or is_generic(lead[1])):
                 upd_fields.append("prenom = ?")
                 upd_params.append(prenom)
-            if nom and not lead[2]:
+            if nom and (not lead[2] or is_generic(lead[2])):
                 upd_fields.append("nom = ?")
                 upd_params.append(nom)
-            if (prenom or nom) and (not lead[3] or "Prospect" in lead[3] or "Contact" in lead[3]):
-                full = f"{prenom or ''} {nom or ''}".strip()
-                if full and "Contact" not in full and "Prospect" not in full:
+            if (prenom or nom) and (not lead[3] or is_generic(lead[3])):
+                full = f"{prenom or lead[1] or ''} {nom or lead[2] or ''}".strip()
+                if full and not is_generic(full):
                     upd_fields.extend(["nom_complet = ?", "nom_lead = ?"])
                     upd_params.extend([full, full])
 
             # Remplir automatiquement les identifiants manquants (consolidation omnicanale)
-            if canal_id and not lead[5]:
+            if raw_canal_id and not lead[5]:
                 upd_fields.append("canal_id = ?")
-                upd_params.append(canal_id)
-            if psid and not lead[6]:
+                upd_params.append(raw_canal_id)
+            if target_psid and not lead[6]:
                 upd_fields.append("facebook_psid = ?")
-                upd_params.append(psid)
-            if phone and not lead[7]:
+                upd_params.append(target_psid)
+            if intl_phone and not lead[7]:
                 upd_fields.append("telephone = ?")
-                upd_params.append(phone)
-            if phone and not lead[8]:
+                upd_params.append(intl_phone)
+            if intl_phone and not lead[8]:
                 upd_fields.append("whatsapp = ?")
-                upd_params.append(phone)
+                upd_params.append(intl_phone)
             if email and not lead[9]:
                 upd_fields.append("email = ?")
                 upd_params.append(email)
 
-            # Champs optionnels passés en kwargs (ex: linkedin_url, secteur_activite, offre_matchee, etc.)
-            for k in ["linkedin_url", "secteur_activite", "offre_matchee", "offre_matchee_id", "douleur_identifiee"]:
+            # Champs entreprise / poste / secteur
+            if kwargs.get("entreprise") and not lead[10]:
+                upd_fields.append("entreprise = ?")
+                upd_params.append(kwargs["entreprise"])
+            if kwargs.get("poste") and not lead[11]:
+                upd_fields.append("poste = ?")
+                upd_params.append(kwargs["poste"])
+            if kwargs.get("secteur_activite") and not lead[12]:
+                upd_fields.append("secteur_activite = ?")
+                upd_params.append(kwargs["secteur_activite"])
+
+            # Champs optionnels passés en kwargs (ex: linkedin_url, offre_matchee, etc.)
+            for k in ["linkedin_url", "offre_matchee", "offre_matchee_id", "douleur_identifiee"]:
                 val = kwargs.get(k)
                 if val:
                     upd_fields.append(f"{k} = COALESCE({k}, ?)")
@@ -2338,7 +2572,7 @@ def get_or_create_lead(
             elif not full_name:
                 full_name = f"{prenom or ''} {nom or ''}".strip()
 
-            psid_val = kwargs.get("facebook_psid")
+            psid_val = kwargs.get("facebook_psid") or target_psid
             psid = str(psid_val).strip() if psid_val and str(psid_val).strip() else None
 
             li_url_val = kwargs.get("linkedin_url")
@@ -2401,7 +2635,7 @@ def get_or_create_lead(
                 )
             """, (
                 canal_source, canal_id, prenom, nom, full_name, full_name,
-                phone, phone, email, psid, li_url,
+                intl_phone, intl_phone, email, psid, li_url,
                 canal_source, canal_source, canal_source.upper(),
                 init_statut, init_temperature,
                 poste, douleur,

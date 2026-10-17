@@ -249,6 +249,23 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
     "relances_effectuees": 0
   }},
 
+  "coordonnees_detectees": {{
+    "prenom": "prénom du prospect s'il s'est présenté ou mentionné, sinon null",
+    "nom": "nom de famille du prospect si mentionné, sinon null",
+    "telephone": "numéro de téléphone ou WhatsApp fourni ou mentionné (au format international si possible), sinon null",
+    "email": "adresse email fournie ou mentionnée, sinon null",
+    "entreprise": "nom de l'entreprise, restaurant, boutique, agence ou établissement du prospect, sinon null",
+    "poste": "rôle du prospect (ex: gérant, fondateur, directeur, commerçant...), sinon null"
+  }},
+
+  "reprise_conversation": {{
+    "is_returning_lead": false,
+    "sujet_precedent": "bref rappel du besoin ou de la solution discutée lors des échanges passés, ou null",
+    "derniere_etape": "où en était la discussion avant l'interruption (ex: découverte douleur, présentation offre #7, cadrage devis, fixation RDV)",
+    "prenom_prospect": "prénom du prospect à saluer chaleureusement, ou null",
+    "instruction_reprise": "Directive pour accueillir chaleureusement le prospect en saluant son retour par son prénom et en faisant le lien avec le sujet précédent sans recommencer à zéro"
+  }},
+
   "derniers_echanges_analyse": {{
     "dernier_message_prospect": "{safe_msg}",
     "derniere_reponse_agent": "dernière réplique de l'agent ou null",
@@ -412,6 +429,21 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
                 "pertinence_score": 9,
                 "justification": "Solution d'automatisation WhatsApp adaptée aux commerces et services"
             },
+            "coordonnees_detectees": {
+                "prenom": None,
+                "nom": None,
+                "telephone": None,
+                "email": None,
+                "entreprise": None,
+                "poste": None
+            },
+            "reprise_conversation": {
+                "is_returning_lead": len(full_history) > 1,
+                "sujet_precedent": lead.get("douleur_identifiee") or "Besoins d'automatisation",
+                "derniere_etape": lead.get("phase_actuelle") or "setter",
+                "prenom_prospect": lead.get("prenom") or None,
+                "instruction_reprise": f"Saluer chaleureusement le retour de {lead.get('prenom') or 'ce prospect'} et reprendre la conversation sur {lead.get('douleur_identifiee') or 'son activité'}." if len(full_history) > 1 else None
+            },
             "rendez_vous": {
                 "demande_detectee": any(w in h_lower for w in ["meet", "rendez-vous", "rdv", "visio", "calendrier", "zoom"]),
                 "date_proposee": None,
@@ -445,12 +477,23 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
     def _update_crm_from_scan(self, lead_id: int, scan_result: Dict[str, Any], conn):
         """
         Met à jour le CRM avec les informations extraites du scan.
-        Jamais d'écrasement d'une valeur existante par NULL.
+        Persiste immédiatement les coordonnées détectées et ne remplace jamais par NULL.
         """
         profil = scan_result.get("profil_prospect", {})
         besoins = scan_result.get("besoins_identifies", {})
         prog = scan_result.get("progression_commerciale", {})
         offre_rec = scan_result.get("offre_recommandee", {})
+        coords = scan_result.get("coordonnees_detectees", {})
+
+        # Persistance immédiate des coordonnées détectées (nom, téléphone, email, entreprise, poste)
+        if coords and isinstance(coords, dict):
+            try:
+                from core.database_store import update_lead_coordinates
+                clean_coords = {k: v for k, v in coords.items() if v and str(v).lower() not in ("null", "none", "")}
+                if clean_coords:
+                    update_lead_coordinates(lead_id, **clean_coords)
+            except Exception as e_c:
+                logger.warning(f"Note persistance coordonnées depuis scan lead #{lead_id} : {e_c}")
 
         updates = []
         params = []

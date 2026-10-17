@@ -242,9 +242,13 @@ class CommunicationQualityGuard:
             )
         },
         'near_duplicate': {
-            'check': lambda msg, ctx: CommunicationQualityGuard._is_near_duplicate(
-                msg, ctx.get('lead_id')
-            )[0],
+            'check': lambda msg, ctx: (
+                not ctx.get('opening_rule_applied', False) and
+                not ctx.get('returning_lead_greeting', False) and
+                CommunicationQualityGuard._is_near_duplicate(
+                    msg, ctx.get('lead_id')
+                )[0]
+            ),
             'instruction': (
                 "Ce message est trop similaire à un message récent déjà envoyé. "
                 "Génère une réponse radicalement différente qui avance la "

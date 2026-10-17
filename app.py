@@ -1120,10 +1120,21 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             return
 
         lead = dict(row)
-        pitch = omnichannel_messenger.generate_channel_pitch(lead, channel)
+        messages = get_lead_messages(int(lead_id), channel)
+        prospect_msgs = [m for m in messages if str(m.get("sender") or "").upper() not in ("AGENT", "AI", "DAVE")]
+        last_prospect_msg = (prospect_msgs[-1].get("message") if prospect_msgs else "") or "Bonjour"
+
+        suggested = sales_agent.generate_conversational_reply(
+            lead_id=int(lead_id),
+            user_message=last_prospect_msg,
+            channel=channel,
+            lead_data=lead,
+            history=messages
+        )
+
         self.send_json_response({
             "success": True,
-            "suggested_message": pitch,
+            "suggested_message": suggested,
             "channel": channel
         })
 

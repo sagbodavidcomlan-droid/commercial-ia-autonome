@@ -170,7 +170,23 @@ PSYCHOLOGIE & PRINCIPES COMMERCIAUX D'ÉLITE :
       - Poser fermement le cadre : préciser qu'il s'agit d'une personnalisation spécifique qui fait l'objet d'un cadrage technique et d'un ajustement tarifaire / devis complémentaire selon l'ampleur du développement.
       - Poser une question de cadrage pour évaluer le périmètre précis (ex: quel est votre outil actuel, quel est le volume ?).
    3. RAPPORT D'ESCALADE SILENTWATCHER :
-      - L'agent consigne et transmet immédiatement la demande à SilentWatcher & Superviseur Autonome pour alerter l'administrateur et permettre aux créateurs d'implémenter ou chiffrer la demande."""
+      - L'agent consigne et transmet immédiatement la demande à SilentWatcher & Superviseur Autonome pour alerter l'administrateur et permettre aux créateurs d'implémenter ou chiffrer la demande.
+
+18. RÈGLE 33 — RECONNAISSANCE DES ANCIENS PROSPECTS & RÉ-ACCUEIL CONTEXTUALISÉ :
+    - Quand un prospect revient dans la conversation après une pause (quelques heures ou jours) :
+      1. INTERDICTION FORMELLE de le traiter comme un inconnu ou de lui renvoyer le pitch de premier contact (« Bonjour, c'est Dave Sagbo... »).
+      2. Ré-accueillir chaleureusement le prospect en l'appelant par son vrai prénom s'il est connu (« Ravi de vous retrouver [Prénom] ! », « Rebonjour [Prénom] ! »).
+      3. Faire immédiatement le pont avec ce qui a été abordé précédemment (« Nous parlions de [Sujet/Douleur/Offre]... »).
+      4. Poser la question de relance logique pour continuer là où vous vous étiez arrêtés.
+      5. Ne jamais laisser penser au prospect qu'il a affaire à un système amnésique ou suspect.
+
+19. RÈGLE 34 — COLLECTE PROACTIVE ET NATURELLE DES COORDONNÉES MANQUANTES :
+    - Lorsque les coordonnées (téléphone/WhatsApp ou email) du prospect ne sont pas encore renseignées :
+      1. L'agent saisit avec élégance les moments naturels de la discussion pour les collecter :
+         * Lors du partage de documentation/plaquette : « Pour que je vous transmette directement la plaquette et les fiches techniques, quel est votre meilleur numéro WhatsApp ou adresse email ? »
+         * Lors de la planification d'un RDV ou démo Meet : « À quelle adresse email souhaitez-vous recevoir l'invitation ? »
+         * En fin de diagnostic ou synthèse : « Sur quel contact WhatsApp puis-je vous faire parvenir le récapitulatif ? »
+      2. Dès que le prospect fournit son numéro, email ou nom, le système enregistre et met à jour immédiatement sa fiche dans le CRM."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -1259,6 +1275,71 @@ class AISalesAgent:
 
         return f"{l1}\n{l2}\n{l3}"
 
+    def build_returning_lead_response(
+        self,
+        lead: Dict[str, Any],
+        scan_result: Optional[Dict[str, Any]] = None,
+        user_message: str = ""
+    ) -> str:
+        """
+        Construit une réponse de ré-accueil chaleureuse et contextualisée pour un ancien prospect qui revient.
+        RÈGLE 33 : Ne JAMAIS traiter un prospect existant comme un nouveau prospect.
+        - Jamais de pitch froid d'intro ("Bonjour, c'est Dave Sagbo. Quel est votre besoin...").
+        - Salutation chaleureuse personnalisée ("Ravi de vous retrouver [Prénom] !", "Rebonjour [Prénom] !").
+        - Reconnexion au fil précédent (secteur, besoin ou solution discutée).
+        - Question ouverte naturelle pour reprendre là où la discussion s'est arrêtée.
+        """
+        prenom = (lead.get('prenom') or '').strip() if lead else ''
+        if not prenom and scan_result and scan_result.get('reprise_conversation'):
+            prenom = (scan_result['reprise_conversation'].get('prenom_prospect') or '').strip()
+
+        prenom_str = f" {prenom}" if prenom and prenom.lower() not in ("contact", "prospect", "inconnu", "null", "none") else ""
+
+        reprise = scan_result.get('reprise_conversation', {}) if scan_result else {}
+        sujet = reprise.get('sujet_precedent') or (lead.get('douleur_identifiee') if lead else '') or (lead.get('secteur_activite') if lead else '') or ''
+        etape = reprise.get('derniere_etape') or (lead.get('phase_actuelle') if lead else '') or ''
+
+        # Salutation de retour chaleureuse
+        greeting = f"Ravi de vous retrouver{prenom_str} !"
+
+        # Cas 1 : Le prospect revient avec une question ou une remarque précise
+        msg_clean = (user_message or '').strip()
+        msg_low = msg_clean.lower()
+        is_simple_greeting = any(msg_low == g for g in [
+            'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
+            're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
+            'c\'est encore moi', 'je suis de retour', 'me revoilà', 'me revoila',
+            'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
+        ]) or len(msg_clean) <= 15
+
+        if not is_simple_greeting and msg_clean:
+            quoi_dire = scan_result.get('instruction_reponse_suivante', {}).get('quoi_dire') if scan_result else None
+            if quoi_dire and len(quoi_dire) > 10:
+                return f"{greeting} {quoi_dire}"
+            return f"{greeting} Tout à fait, reprenons sur ce point."
+
+        # Cas 2 : Salutation simple ou reprise générique ("Bonjour", "On peut continuer ?")
+        if lead and lead.get('offre_proposee') and (lead.get('offre_matchee') or lead.get('offre_matchee_id')):
+            return (
+                f"{greeting} Avez-vous eu l'occasion de jeter un coup d'œil à la présentation que je vous avais partagée ?\n\n"
+                f"Souhaitez-vous que nous fassions un point rapide de 15 minutes pour voir comment l'appliquer concrètement ?"
+            )
+        elif 'rendez_vous' in etape.lower() or 'rdv' in etape.lower() or 'meeting' in etape.lower() or (scan_result and scan_result.get('rendez_vous', {}).get('demande_detectee')):
+            return (
+                f"{greeting} Nous étions en train de caler un créneau pour échanger de vive voix.\n\n"
+                f"Quel moment vous conviendrait le mieux cette semaine ?"
+            )
+        elif sujet:
+            return (
+                f"{greeting} Nous parlions de l'organisation de vos relances clients et de {sujet}.\n\n"
+                f"Souhaitez-vous qu'on reprenne notre échange là où nous en étions ?"
+            )
+        else:
+            return (
+                f"{greeting} Je suis ravi de poursuivre notre échange.\n\n"
+                f"Comment puis-je vous aider aujourd'hui ?"
+            )
+
     def detect_distress_signal(self, message: str, conversation_history: list) -> Optional[str]:
         """
         Détecte les signaux de rupture qui nécessitent une sortie immédiate
@@ -2209,6 +2290,13 @@ ANALYSE DES DERNIERS ÉCHANGES :
 DEMANDE SPÉCIFIQUE DÉTECTÉE :
 {('OUI — ' + str(scan_result.get('demande_specifique', {}).get('besoin_exprime')) + ' (Inclus standard : ' + ('OUI' if scan_result.get('demande_specifique', {}).get('fait_partie_offre_standard') else 'NON / Sur-mesure requis - Appliquer RÈGLE 32 : ne pas refuser, valoriser adaptabilité sur-mesure, poser cadre devis/cadrage technique et poser question de dimensionnement)')) if scan_result.get('demande_specifique', {}).get('detectee') else 'AUCUNE DEMANDE PARTICULIÈRE'}
 
+REPRISE DE CONVERSATION (PROSPECT EXISTANT / RETOUR) :
+{('OUI — Prospect récurrent reconnu (' + str(scan_result.get('reprise_conversation', {}).get('prenom_prospect') or 'Prénom non précisé') + '). Sujet précédent : ' + str(scan_result.get('reprise_conversation', {}).get('sujet_precedent') or 'Échange en cours') + '. Instruction de ré-accueil : ' + str(scan_result.get('reprise_conversation', {}).get('instruction_reprise') or 'Accueillir chaleureusement sans pitch froid.') + ' (Appliquer RÈGLE 33 : ne jamais traiter en nouveau prospect)') if scan_result.get('reprise_conversation', {}).get('is_returning_lead') else 'NON — Nouveau fil ou conversation en continuité directe'}
+
+COORDONNÉES DÉTECTÉES & COMPLÉTION PROFIL :
+{json.dumps(scan_result.get('coordonnees_detectees', {}), ensure_ascii=False) if scan_result.get('coordonnees_detectees') else 'Aucune nouvelle coordonnée dans ce tour'}
+(Note RÈGLE 34 : Si téléphone/WhatsApp ou email manque, saisir poliment l opportunité lors d un envoi de document ou fixation de RDV pour le collecter naturellement).
+
 CE QUE TU DOIS COUVRIR DANS TA RÉPONSE :
 {instruc.get('quoi_dire', 'Répondre directement et naturellement')}
 
@@ -2295,7 +2383,25 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
 
         agent_msgs = [m for m in history if m.get("sender") == "AGENT" or m.get("role") == "model"]
         agent_count = len(agent_msgs)
-        is_first_turn = (agent_count == 0)
+
+        # Calcul robuste de is_returning_lead vs is_first_turn (RÈGLE 33)
+        conv_count = (lead_data.get('conversation_count') or 0) if lead_data else 0
+        scanner_reprise = scan_result.get('reprise_conversation', {}) if scan_result else {}
+        is_scanner_returning = scanner_reprise.get('is_returning_lead', False)
+        lead_status = (lead_data.get('statut_lead') or '').strip() if lead_data else ''
+
+        # Un prospect est en retour s'il y a déjà eu des échanges, ou si le compteur est incrémenté,
+        # ou si le scanner détecte une reprise, ou si son statut n'est pas "Nouveau".
+        is_returning_lead = bool(
+            is_scanner_returning or
+            conv_count > 1 or
+            agent_count > 0 or
+            (lead_status and lead_status.lower() not in ('nouveau', '')) or
+            len(history) > 1
+        )
+
+        # is_first_turn est STRICTEMENT réservé à un nouveau prospect absolu sans historique passé
+        is_first_turn = (agent_count == 0 and not is_returning_lead and len(history) <= 1)
 
         # =========================================================================
         # GESTION CRITIQUE DES ÉCHANGES (BUGS 3, 4, 5, 6, 7, 8, 9 & SYMBIOSE SYSTÈME)
@@ -2891,13 +2997,71 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                     pass
                 return final_res
 
+        elif is_returning_lead:
+            msg_clean_ret = (user_message or '').strip()
+            msg_low_ret = msg_clean_ret.lower()
+            is_return_greeting = any(msg_low_ret == g for g in [
+                'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
+                're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
+                'c\'est encore moi', 'je suis de retour', 'me revoilà', 'me revoila',
+                'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
+            ]) or (len(msg_clean_ret) <= 25 and any(w in msg_low_ret for w in ['bonjour', 'salut', 're', 'coucou', 'rebonjour', 'dispo']))
+
+            if is_return_greeting:
+                lead_info = lead_data or {}
+                ret_opening = self.build_returning_lead_response(lead=lead_info, scan_result=scan_result, user_message=user_message)
+                if ret_opening:
+                    conversation_context = {
+                        'lead_id': lead_id,
+                        'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_info.get('secteur_activite') or lead_info.get('poste')) if lead_info else None),
+                        'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                        'agent_message_count': agent_count,
+                        'message_count': len(history) + 1,
+                        'purchase_signal_detected': False,
+                        'stop_signal_detected': False,
+                        'last_prospect_message': user_message,
+                        'conversation_history': history,
+                        'canal': canal_norm,
+                        'contact_direction': contact_dir,
+                        'is_returning_lead': True,
+                        'returning_lead_greeting': True
+                    }
+                    validated = self.guard.evaluate_and_validate(ret_opening, conversation_context, scan_result)
+                    final_res = validated['message']
+                    try:
+                        from modules.silent_watcher import watcher_instance
+                        watcher_instance.observe_message_exchange(
+                            lead_id=lead_id or 0,
+                            prospect_message=user_message,
+                            proposed_message=ret_opening,
+                            validated_message=final_res,
+                            scan_result=scan_result,
+                            guard_result=validated,
+                            response_time_seconds=time.time() - t_start
+                        )
+                    except Exception:
+                        pass
+                    return final_res
+
         # 4. Inférence Gemini avec Contexte Enrichi par le Scanner
+        if is_first_turn:
+            turn_rule = 'PREMIER MESSAGE : Commence obligatoirement par "Bonjour, c\'est Dave Sagbo."'
+        elif is_returning_lead:
+            turn_rule = (
+                'PROSPECT EXISTANT EN RETOUR / REPRISE (RÈGLE 33) : Ce prospect a déjà échangé avec nous par le passé. '
+                'INTERDICTION ABSOLUE de te présenter ("C\'est Dave Sagbo") ou de le traiter comme un inconnu froid. '
+                'Accueille-le chaleureusement et naturellement en reconnaissant son retour ("Ravi de vous retrouver [Prénom] !", "Rebonjour [Prénom] !"), '
+                'rappelle le fil de notre échange précédent et réponds directement à son message en 2-3 lignes max.'
+            )
+        else:
+            turn_rule = 'INTERDICTION STRICTE de dire Bonjour ou Bonsoir (hors 1er message) et INTERDICTION STRICTE de te présenter ("C\'est Dave Sagbo") ou de signer.'
+
         base_system = (
             f"{SYSTEM_PROMPT}\n\n"
             f"=== CONTEXTE OPÉRATIONNEL EN DIRECT ===\n"
             f"Canal actif : {channel} (PLAFOND STRICT : 2-3 LIGNES MAXIMUM)\n"
             f"Nombre de messages déjà envoyés par Dave : {agent_count}\n"
-            f"- {'PREMIER MESSAGE : Commence obligatoirement par \"Bonjour, c est Dave Sagbo.\"' if is_first_turn else 'INTERDICTION STRICTE de dire Bonjour ou Bonsoir (hors 1er message) et INTERDICTION STRICTE de te présenter (\"C est Dave Sagbo\") ou de signer.'}\n"
+            f"- {turn_rule}\n"
             f"- Réponds DIRECTEMENT au prospect en 2 à 3 lignes maximum.\n"
             f"- COHÉRENCE SECTORIELLE STRICTE : Ancre la réponse dans le secteur réel du prospect.\n"
             f"- INTERDICTION ABSOLUE DE TEMPLATES GÉNÉRIQUES.\n"
@@ -2923,6 +3087,8 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             msg_low = (user_message or '').lower()
             if is_first_turn:
                 reply_text = f"Bonjour{prenom_str}, c'est Dave Sagbo. Quel est le principal défi ou besoin que vous souhaitez aborder pour {sec} ?"
+            elif is_returning_lead:
+                reply_text = f"Ravi de vous retrouver{prenom_str} ! Souhaitez-vous qu'on reprenne notre échange là où nous en étions pour {sec} ?"
             elif any(w in msg_low for w in ["sais pas", "sais plus", "identifier", "aucune idée", "comment savoir", "perdu", "difficile à dire"]):
                 reply_text = "Je vais vous aider à le trouver simplement. Est-ce que vos publications sur les réseaux sociaux génèrent au moins quelques messages privés de prospects intéressés chaque semaine ?"
             elif agent_count == 1:
@@ -2935,6 +3101,10 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
         if is_first_turn:
             if not any(phrase in cleaned.lower() for phrase in ["dave sagbo", "c'est dave sagbo"]):
                 cleaned = f"Bonjour, c'est Dave Sagbo. {cleaned}"
+        elif is_returning_lead:
+            cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo|dave sagbo|ici dave sagbo|dave à l'appareil)[,\.\s\-\!]*", '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'(\n+)?(bien à vous|bien cordialement|cordialement|dave sagbo|responsable du projet)[,\.\s\-]*$', '', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'(\n+)?dave sagbo$', '', cleaned, flags=re.IGNORECASE).strip()
         else:
             for _ in range(3):
                 cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\-\!]*', '', cleaned, flags=re.IGNORECASE).strip()
@@ -2961,7 +3131,8 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             'last_prospect_message': user_message,
             'conversation_history': history,
             'canal': canal_norm,
-            'contact_direction': contact_dir
+            'contact_direction': contact_dir,
+            'is_returning_lead': is_returning_lead
         }
 
         validated = self.guard.evaluate_and_validate(
