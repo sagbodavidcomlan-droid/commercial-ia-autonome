@@ -186,7 +186,18 @@ PSYCHOLOGIE & PRINCIPES COMMERCIAUX D'ÉLITE :
          * Lors du partage de documentation/plaquette : « Pour que je vous transmette directement la plaquette et les fiches techniques, quel est votre meilleur numéro WhatsApp ou adresse email ? »
          * Lors de la planification d'un RDV ou démo Meet : « À quelle adresse email souhaitez-vous recevoir l'invitation ? »
          * En fin de diagnostic ou synthèse : « Sur quel contact WhatsApp puis-je vous faire parvenir le récapitulatif ? »
-      2. Dès que le prospect fournit son numéro, email ou nom, le système enregistre et met à jour immédiatement sa fiche dans le CRM."""
+      2. Dès que le prospect fournit son numéro, email ou nom, le système enregistre et met à jour immédiatement sa fiche dans le CRM.
+
+20. RÈGLE 35 — COLLECTE OBLIGATOIRE DES COORDONNÉES AU PAIEMENT & CAPTURE D'ÉCRAN DE CONFIRMATION :
+    - Dès que le prospect est prêt à passer au paiement (demande comment payer, où régler, lien de paiement, valide l'offre, s'inscrit, commande, mentionne MoMo, Wave, CB ou virement) :
+      1. DEMANDE OBLIGATOIRE DES COORDONNÉES :
+         Si son email ou son numéro WhatsApp/téléphone n'est pas encore enregistré dans le CRM, l'agent DOIT impérativement lui demander son adresse email et son numéro WhatsApp en expliquant la raison légitime :
+         « Pour sécuriser votre inscription, procéder à la vérification après paiement et vous faire parvenir immédiatement vos accès officiels ainsi que votre facture... »
+      2. INSTRUCTION DE PREUVE DE PAIEMENT (CAPTURE D'ÉCRAN) :
+         L'agent fournit le lien ou les modalités de règlement ET lui demande expressément :
+         « Dès que vous avez validé votre paiement, merci de m'envoyer ici la capture d'écran de confirmation du paiement pour vérification comptable et activation immédiate de votre dispositif. »
+      3. ACCUSÉ DE RÉCEPTION DE LA CAPTURE D'ÉCRAN :
+         Si le prospect confirme avoir payé ou partage sa capture, l'agent confirme la prise en compte, indique que la vérification est en cours et que les accès lui parviennent sur son email."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -1995,6 +2006,177 @@ RÈGLES STRICTES :
             f"Voici tous les détails pour mettre en place ce dispositif : {lien}"
         )
 
+    def detect_payment_intent(self, message: str) -> bool:
+        """
+        Détecte si le prospect manifeste son intention de passer au paiement / régler / commander.
+        """
+        if not message:
+            return False
+        clean = message.lower().strip()
+        payment_triggers = [
+            'comment payer', 'comment regler', 'comment régler', 'comment faire pour payer',
+            'ou payer', 'où payer', 'je veux payer', 'je paye comment', 'je règle comment',
+            'lien de paiement', 'lien pour payer', 'envoyez le lien', 'envoyez-moi le lien',
+            'envoyez moi le lien', 'donnez-moi le lien', 'donne moi le lien', 'donnez moi le lien',
+            'lien de commande', 'passer commande', 'valider ma commande',
+            'moyen de paiement', 'moyens de paiement', 'modes de paiement', 'mode de paiement',
+            'modalités de paiement', 'modalites de paiement', 'modalite de paiement',
+            'momo', 'mtn momo', 'moov money', 'wave', 'carte bancaire', 'virement',
+            'payer par', 'payer en', 'numéro de paiement', 'numero de paiement',
+            'compte bancaire', 'coordonnées de paiement', 'coordonnees de paiement',
+            'je prends l\'offre', 'je prends loffre', 'je prends la formule', 'je valide l\'offre',
+            'je veux m\'inscrire', 'je veux minscrire', 'je commande', 'comment finaliser',
+            'je suis prêt à payer', 'je suis pret a payer', 'je veux acheter', 'comment acheter',
+            'c\'est bon je paye', 'cest bon je paye', 'je suis d\'accord pour payer',
+            'envoyez le lien de paiement', 'envoyer le lien de paiement', 'lien d\'inscription',
+            'je prends le pack', 'je valide le pack', 'on commence quand je paye', 'je suis partant pour payer',
+            'd\'accord je prends', 'daccord je prends'
+        ]
+        return any(t in clean for t in payment_triggers)
+
+    def detect_payment_proof(self, message: str) -> bool:
+        """
+        Détecte si le prospect indique avoir effectué son paiement ou transmet une preuve / capture.
+        """
+        if not message:
+            return False
+        clean = message.lower().strip()
+        proof_triggers = [
+            'capture', 'screenshot', 'capture d\'écran', 'capture decran',
+            'reçu', 'recu', 'preuve', 'justificatif', 'quittance',
+            'j\'ai payé', 'jai paye', 'c\'est payé', 'cest paye', 'je viens de payer',
+            'paiement effectué', 'paiement effectue', 'paiement envoyé', 'paiement envoye',
+            'transfert fait', 'transfert effectué', 'transfert effectue', 'virement fait',
+            'virement effectué', 'j\'ai envoyé l\'argent', 'jai envoye l argent',
+            'voici le paiement', 'voici la preuve', 'voici le reçu', 'voici le recu',
+            'voici la capture', 'voilà la capture', 'voila la capture'
+        ]
+        return any(t in clean for t in proof_triggers)
+
+    def handle_payment_flow(
+        self,
+        lead_id: int,
+        lead: Dict[str, Any],
+        user_message: str,
+        conversation_history: list,
+        scan_result: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        RÈGLE 35 : Gestion du passage au paiement.
+        - Dès que le prospect est prêt à payer :
+          1. Demande obligatoire des coordonnées (email, WhatsApp) avec raison explicite :
+             sécurisation, vérification après paiement et envoi officiel des accès & facture.
+          2. Fourniture du lien officiel de paiement.
+          3. Demande impérative de fournir la capture d'écran du paiement pour vérification.
+        - Si confirmation de paiement / capture reçue : accusé de réception et transmission financière.
+        """
+        import re
+        from core.database_store import update_lead_coordinates, get_connection
+
+        lead = lead or {}
+
+        # 1. Extraction et consolidation immédiate des coordonnées présentes dans le message
+        extracted_email = None
+        extracted_phone = None
+        em_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', user_message)
+        if em_match:
+            extracted_email = em_match.group(0).lower().strip()
+
+        ph_match = re.search(r'(?:\+|00)?(?:229|225|228|221|33)?[0-9\s\.\-]{8,15}', user_message)
+        if ph_match:
+            extracted_phone = ph_match.group(0).strip()
+
+        new_coords = {}
+        if extracted_email:
+            new_coords['email'] = extracted_email
+        if extracted_phone:
+            new_coords['telephone'] = extracted_phone
+            new_coords['whatsapp'] = extracted_phone
+
+        if new_coords and lead_id:
+            try:
+                update_lead_coordinates(lead_id, **new_coords)
+                lead.update(new_coords)
+            except Exception:
+                pass
+
+        current_email = lead.get('email') or (scan_result.get('coordonnees_detectees', {}).get('email') if scan_result else None)
+        current_phone = lead.get('telephone') or lead.get('whatsapp') or (scan_result.get('coordonnees_detectees', {}).get('telephone') if scan_result else None)
+        prenom = (lead.get('prenom') or '').strip()
+        prenom_str = f" {prenom}" if prenom and prenom.lower() not in ('prospect', 'lead', 'inconnu', 'contact') else ""
+
+        need_summary = self.extract_need_summary(conversation_history)
+        matched_offer = self.match_offer_from_need(need_summary, lead.get("canal_source", "messenger"))
+        lien = matched_offer.get("lien") or "https://formations.sagbodavid.com/automatisation-whatsapp"
+        prix = matched_offer.get("prix") or matched_offer.get("prix_fcfa")
+        prix_str = f" ({prix:,.0f} FCFA)".replace(',', ' ') if prix else ""
+
+        # Mettre à jour immédiatement crm_leads en base
+        if lead_id:
+            try:
+                conn_p = get_connection()
+                cp = conn_p.cursor()
+                cp.execute("""
+                    UPDATE crm_leads
+                    SET statut_lead = 'Chaud',
+                        temperature = 'Chaud',
+                        phase_actuelle = 'closer',
+                        offre_proposee = 1,
+                        updated_at = datetime('now')
+                    WHERE id = ?
+                """, (lead_id,))
+                conn_p.commit()
+                conn_p.close()
+            except Exception:
+                pass
+
+        # CAS 1 : Confirmation de paiement ou capture reçue
+        if self.detect_payment_proof(user_message):
+            if lead_id:
+                try:
+                    conn_pay = get_connection()
+                    c_pay = conn_pay.cursor()
+                    c_pay.execute("""
+                        UPDATE crm_leads
+                        SET statut_lead = 'Client',
+                            phase_actuelle = 'closing_paye',
+                            updated_at = datetime('now')
+                        WHERE id = ?
+                    """, (lead_id,))
+                    conn_pay.commit()
+                    conn_pay.close()
+                except Exception:
+                    pass
+            em_dest = current_email or "votre adresse email"
+            return (
+                f"Merci infiniment{prenom_str} ! J'accuse bonne réception de votre confirmation et capture d'écran de règlement.\n\n"
+                f"Je transmets immédiatement votre preuve à notre service financier pour vérification comptable. Dès la validation effective, vos accès officiels ainsi que votre facture acquittée vous seront transmis directement sur {em_dest}.\n\n"
+                f"Ravi de vous compter parmi nos partenaires !"
+            )
+
+        # CAS 2 : Coordonnées manquantes (email ou WhatsApp absent) -> RÈGLE 35 EXPLICITE
+        if not current_email or not current_phone:
+            missing_items = []
+            if not current_email:
+                missing_items.append("votre adresse email")
+            if not current_phone:
+                missing_items.append("votre numéro WhatsApp principal")
+            missing_txt = " et ".join(missing_items)
+
+            return (
+                f"C'est un excellent choix{prenom_str} !\n\n"
+                f"Pour sécuriser votre commande et procéder à la vérification immédiate après votre règlement, pourriez-vous me transmettre {missing_txt} ? Cela me permettra d'associer votre paiement à votre compte et de vous faire parvenir vos accès officiels ainsi que votre facture.\n\n"
+                f"Voici le lien sécurisé pour finaliser votre règlement{prix_str} : {lien}\n\n"
+                f"Dès que votre paiement est validé, merci de m'envoyer ici la capture d'écran de confirmation pour vérification comptable et activation immédiate."
+            )
+
+        # CAS 3 : Les coordonnées sont déjà complètes
+        return (
+            f"C'est un excellent choix{prenom_str} ! Vos coordonnées sont bien enregistrées pour la vérification après paiement ({current_email} • {current_phone}).\n\n"
+            f"Voici votre lien sécurisé pour finaliser votre règlement{prix_str} : {lien}\n\n"
+            f"Dès que votre paiement est effectué, merci de m'envoyer ici la capture d'écran de confirmation pour vérification comptable et déblocage immédiat de vos accès."
+        )
+
     def sanitize_gemini_contents(self, contents: list) -> list:
         """
         Nettoie le tableau de messages pour respecter rigoureusement
@@ -2366,6 +2548,31 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             except Exception as e_ld:
                 logger.warning(f"Note chargement lead_data lead #{lead_id} : {e_ld}")
 
+        # 0.0 EXTRACTION ET PERSISTANCE IMMÉDIATE DES COORDONNÉES REÇUES
+        if user_message and lead_id:
+            try:
+                from core.database_store import update_lead_coordinates
+                extracted_email = None
+                extracted_phone = None
+                em_m = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', user_message)
+                if em_m:
+                    extracted_email = em_m.group(0).lower().strip()
+                ph_m = re.search(r'(?:\+|00)?(?:229|225|228|221|33)?[0-9\s\.\-]{8,15}', user_message)
+                if ph_m:
+                    extracted_phone = ph_m.group(0).strip()
+                c_updates = {}
+                if extracted_email:
+                    c_updates['email'] = extracted_email
+                if extracted_phone:
+                    c_updates['telephone'] = extracted_phone
+                    c_updates['whatsapp'] = extracted_phone
+                if c_updates:
+                    update_lead_coordinates(lead_id, **c_updates)
+                    if lead_data:
+                        lead_data.update(c_updates)
+            except Exception as e_cr:
+                logger.debug(f"Note extraction coordonnées entrée lead #{lead_id}: {e_cr}")
+
         if history is None:
             raw_hist = full_history if full_history else (get_lead_messages(lead_id) if lead_id else [])
             norm_history = []
@@ -2627,11 +2834,63 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
             return validated['message']
 
+        # 0.44 ÉTAPE PAIEMENT, COLLECTE COORDONNÉES & CAPTURE D'ÉCRAN (RÈGLE 35)
+        # Priorité absolue sur tout le reste dès que le prospect veut payer ou transmet sa preuve
+        is_payment_trigger = (
+            self.detect_payment_intent(user_message) or
+            self.detect_payment_proof(user_message) or
+            any(w in user_message.lower() for w in ['lien de paiement', 'lien paiement', 'pour payer', 'comment payer', 'passer au paiement', 'finaliser le paiement', 'payer maintenant', 'régler maintenant'])
+        )
+
+        if is_payment_trigger:
+            lead_info = lead_data or {}
+            proposed = self.handle_payment_flow(
+                lead_id=lead_id or 0,
+                lead=lead_info,
+                user_message=user_message,
+                conversation_history=history,
+                scan_result=scan_result
+            )
+            is_proof = bool(self.detect_payment_proof(user_message))
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else (lead_info.get('secteur_activite') or lead_info.get('poste')),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': True,
+                'payment_flow': True,
+                'payment_proof_detected': is_proof,
+                'link_allowed': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            final_res = validated['message']
+            try:
+                from modules.silent_watcher import watcher_instance
+                watcher_instance.observe_message_exchange(
+                    lead_id=lead_id or 0,
+                    prospect_message=user_message,
+                    proposed_message=proposed,
+                    validated_message=final_res,
+                    scan_result=scan_result,
+                    guard_result=validated,
+                    response_time_seconds=time.time() - t_start
+                )
+            except Exception:
+                pass
+            return final_res
+
         # 0.45 DEMANDE DU LIEN DIRECT DU MEET / VISIO SUR MESSENGER OU WHATSAPP
         msg_low_rdv = user_message.lower()
         is_meet_link_query = (
-            any(w in msg_low_rdv for w in ['lien meet', 'lien du meet', 'lien rdv', 'lien du rdv', 'lien visio', 'lien d\'accès', 'lien d acces', 'lien de connexion', 'lien de l\'appel', 'lien google meet', 'lien de l échange', 'lien de l echange']) or
-            ((any(v in msg_low_rdv for v in ['envoie', 'donne', 'partage', 'transmets', 'mets', 'peux-tu envoyer', 'peux tu envoyer', 'envoi']) or 'lien' in msg_low_rdv) and any(c in msg_low_rdv for c in ['meet', 'rdv', 'ici', 'messenger', 'whatsapp', 'visio', 'appel']))
+            not is_payment_trigger and (
+                any(w in msg_low_rdv for w in ['lien meet', 'lien du meet', 'lien rdv', 'lien du rdv', 'lien visio', 'lien d\'accès', 'lien d acces', 'lien de connexion', 'lien de l\'appel', 'lien google meet', 'lien de l échange', 'lien de l echange']) or
+                ((any(v in msg_low_rdv for v in ['envoie', 'donne', 'partage', 'transmets', 'mets', 'peux-tu envoyer', 'peux tu envoyer', 'envoi']) or 'lien' in msg_low_rdv) and any(c in msg_low_rdv for c in ['meet', 'rdv', 'visio', 'appel']))
+            )
         )
 
         if is_meet_link_query:
@@ -2942,6 +3201,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             except Exception:
                 pass
             return final_res
+
 
         # 2.5 ÉTAPE SIGNAL D'ACHAT EXPLICITE (RÈGLE 22)
         if self.detect_purchase_signal(user_message) or scan_purchase:

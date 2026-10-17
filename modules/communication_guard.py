@@ -248,6 +248,7 @@ class CommunicationQualityGuard:
             'check': lambda msg, ctx: (
                 not ctx.get('opening_rule_applied', False) and
                 not ctx.get('returning_lead_greeting', False) and
+                not ctx.get('payment_flow', False) and
                 CommunicationQualityGuard._is_near_duplicate(
                     msg, ctx.get('lead_id')
                 )[0]
@@ -289,6 +290,8 @@ class CommunicationQualityGuard:
                 not ctx.get('document_requested') and
                 not ctx.get('meeting_requested') and
                 not ctx.get('custom_feature_request') and
+                not ctx.get('payment_flow') and
+                not ctx.get('purchase_signal_detected') and
                 str(ctx.get('canal', '')).lower() in ['messenger', 'whatsapp', 'facebook_messenger'] and
                 len(msg.split()) > 30
             ),
@@ -401,7 +404,7 @@ class CommunicationQualityGuard:
                 score_result
             )
 
-            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested') or conversation_context.get('document_requested') or conversation_context.get('opening_rule_applied'):
+            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested') or conversation_context.get('document_requested') or conversation_context.get('opening_rule_applied') or conversation_context.get('payment_flow'):
                 self._save_quality_log(
                     lead_id=conversation_context.get('lead_id', 0),
                     canal=conversation_context.get('canal', 'messenger'),
@@ -488,8 +491,8 @@ class CommunicationQualityGuard:
         derniers = scan_result.get('derniers_echanges_analyse', {})
         secteur = scan_result.get('profil_prospect', {}).get('secteur_activite') or ctx.get('prospect_sector', 'inconnu')
 
-        is_link_allowed = bool(ctx.get('purchase_signal_detected') or instruc.get('inclure_lien', False))
-        is_purchase_signal = bool(ctx.get('purchase_signal_detected') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
+        is_link_allowed = bool(ctx.get('purchase_signal_detected') or ctx.get('link_allowed') or ctx.get('payment_flow') or instruc.get('inclure_lien', False))
+        is_purchase_signal = bool(ctx.get('purchase_signal_detected') or ctx.get('payment_flow') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
         no_real_meet = bool(ctx.get('meeting_requested') and not ctx.get('real_meet_link'))
 
         is_inbound_opening = bool(ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1 and not ctx.get('document_requested') and not ctx.get('meeting_requested') and not ctx.get('custom_feature_request'))
@@ -634,7 +637,19 @@ Vouvoiement strict, naturel direct, zéro formule bannie."""
     def _safe_fallback(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Réponse de sécurité neutre quand toutes les tentatives ont échoué."""
         canal = ctx.get('canal', 'messenger')
-        if ctx.get('is_returning_lead'):
+        if ctx.get('payment_proof_detected'):
+            fallback_msg = (
+                "Merci infiniment ! J'accuse bonne réception de votre confirmation et capture d'écran de règlement.\n\n"
+                "Je transmets immédiatement votre preuve à notre service financier pour vérification comptable. Dès la validation effective, vos accès officiels ainsi que votre facture acquittée vous seront transmis directement.\n\n"
+                "Ravi de vous compter parmi nos partenaires !"
+            )
+        elif ctx.get('payment_flow'):
+            fallback_msg = (
+                "C'est un excellent choix ! Pour sécuriser votre commande et procéder à la vérification immédiate après votre règlement, pourriez-vous me transmettre votre adresse email ainsi que votre numéro WhatsApp ?\n\n"
+                "Voici le lien sécurisé pour finaliser votre règlement : https://formations.sagbodavid.com/automatisation-whatsapp\n\n"
+                "Dès que votre paiement est validé, merci de m'envoyer ici la capture d'écran de confirmation pour vérification comptable et activation immédiate."
+            )
+        elif ctx.get('is_returning_lead'):
             fallback_msg = "Ravi de vous retrouver ! Reprenons notre échange : comment puis-je vous aider aujourd'hui ?"
         elif ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1:
             fallback_msg = "Bonjour ! Comment puis-je vous aider ?"

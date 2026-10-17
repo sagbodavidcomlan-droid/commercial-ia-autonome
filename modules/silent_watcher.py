@@ -1597,6 +1597,13 @@ Réponds UNIQUEMENT en JSON :
 
         c.execute(query, params)
         rows = c.fetchall()
+        if not rows and status == "open":
+            try:
+                self.audit_crm_conversations()
+                c.execute(query, params)
+                rows = c.fetchall()
+            except Exception as e_audit:
+                logger.debug(f"Auto-audit dans get_bugs: {e_audit}")
         bugs = []
         for r in rows:
             if isinstance(r, dict):
