@@ -2401,11 +2401,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
 
     def handle_api_watcher_reports(self, query):
         try:
-            limit = int(query.get("limit", [10])[0])
-            report_type = query.get("type", [None])[0]
+            limit = int(query.get("limit", [10])[0]) if query else 10
+            report_type = query.get("type", [None])[0] if query else None
             reports = watcher_instance.get_reports(limit=limit, report_type=report_type)
-            self.send_json_response({"success": True, "data": reports})
+            self.send_json_response({"success": True, "data": reports, "reports": reports})
         except Exception as e:
+            logger.error(f"Erreur handle_api_watcher_reports : {e}")
             self.send_json_response({"success": False, "error": str(e)}, status=500)
 
     def handle_api_watcher_generate_report(self, body):

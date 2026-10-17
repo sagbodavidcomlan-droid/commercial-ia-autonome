@@ -1154,7 +1154,7 @@ async function loadReportsHistory() {
     ]);
     cachedDirectorReports = resDir.ok ? await resDir.json() : [];
     const watchJson = resWatch.ok ? await resWatch.json() : {};
-    cachedWatcherReports = watchJson.success ? (watchJson.data || []) : [];
+    cachedWatcherReports = watchJson.success ? (watchJson.data || watchJson.reports || []) : [];
     renderCombinedReports();
   } catch (err) {
     console.error("Erreur loadReportsHistory:", err);
@@ -8791,7 +8791,7 @@ async function fetchWatcherReports() {
     const res = await fetch("/api/watcher/reports?limit=10");
     const json = await res.json();
     if (!json.success) return;
-    const reports = json.data || [];
+    const reports = json.data || json.reports || [];
 
     const list = document.getElementById("watcher-reports-list");
     if (!list) return;
@@ -8800,7 +8800,11 @@ async function fetchWatcherReports() {
       list.innerHTML = `
         <div class="text-center py-8 text-slate-400 text-xs font-medium">
           <i data-lucide="file-text" class="w-8 h-8 mx-auto text-slate-300 mb-2"></i>
-          Aucun rapport généré pour le moment.
+          <p class="mb-3">Aucun rapport généré pour le moment.</p>
+          <button onclick="triggerWatcherSessionReport()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition inline-flex items-center gap-1.5 shadow-2xs cursor-pointer">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Générer un audit immédiat</span>
+          </button>
         </div>
       `;
     } else {

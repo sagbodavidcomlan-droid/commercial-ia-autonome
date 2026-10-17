@@ -1292,17 +1292,38 @@ Réponds UNIQUEMENT en JSON :
             conn.close()
         return obs
 
-    def get_reports(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_reports(self, limit: int = 10, report_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """Liste les rapports générés avec scores et métriques."""
         conn = self._get_db_connection()
         c = conn.cursor()
-        c.execute("""
-            SELECT id, report_type, period_start, period_end, report_json, summary,
-                   critical_count, error_count, warning_count, info_count, created_at, read_at
-            FROM watcher_reports
-            ORDER BY id DESC
-            LIMIT ?
-        """, (limit,))
+
+        # S'il n'y a encore aucun rapport généré (ex: nouvelle instance Render), en générer un d'office
+        try:
+            c.execute("SELECT COUNT(*) FROM watcher_reports")
+            cnt_row = c.fetchone()
+            total_reps = (cnt_row[0] if isinstance(cnt_row, tuple) else cnt_row["COUNT(*)"]) if cnt_row else 0
+            if total_reps == 0:
+                self.generate_structured_report(report_type="session")
+        except Exception as e_init_rep:
+            logger.warning(f"Note auto-génération rapport initial SilentWatcher : {e_init_rep}")
+
+        if report_type:
+            c.execute("""
+                SELECT id, report_type, period_start, period_end, report_json, summary,
+                       critical_count, error_count, warning_count, info_count, created_at, read_at
+                FROM watcher_reports
+                WHERE UPPER(report_type) = UPPER(?)
+                ORDER BY id DESC
+                LIMIT ?
+            """, (report_type, limit))
+        else:
+            c.execute("""
+                SELECT id, report_type, period_start, period_end, report_json, summary,
+                       critical_count, error_count, warning_count, info_count, created_at, read_at
+                FROM watcher_reports
+                ORDER BY id DESC
+                LIMIT ?
+            """, (limit,))
         rows = c.fetchall()
         reports = []
         for r in rows:
