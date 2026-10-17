@@ -1579,16 +1579,21 @@ Réponds UNIQUEMENT en JSON :
                 "critical_count": row[6], "error_count": row[7], "warning_count": row[8], "info_count": row[9], "created_at": row[10]
             }
 
-    def get_bugs(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Liste les bugs récurrents."""
+    def get_bugs(self, status: Optional[str] = None, limit: Optional[int] = 50) -> List[Dict[str, Any]]:
+        """Liste les bugs récurrents ou ouverts."""
         conn = self._get_db_connection()
         c = conn.cursor()
         query = "SELECT id, bug_code, agent_name, title, description, first_seen_at, last_seen_at, occurrence_count, severity, status, fix_suggestion FROM watcher_bugs"
         params = []
         if status:
-            query += " WHERE status = ?"
-            params.append(status)
-        query += " ORDER BY severity DESC, occurrence_count DESC"
+            if status == "open":
+                query += " WHERE status IN ('open', 'investigating') OR (status != 'fixed' AND status != 'resolved')"
+            else:
+                query += " WHERE status = ?"
+                params.append(status)
+        query += " ORDER BY severity DESC, occurrence_count DESC, id DESC"
+        if limit:
+            query += f" LIMIT {int(limit)}"
 
         c.execute(query, params)
         rows = c.fetchall()
@@ -1603,16 +1608,22 @@ Réponds UNIQUEMENT en JSON :
                     "occurrence_count": r[7], "severity": r[8], "status": r[9],
                     "fix_suggestion": r[10]
                 }
-            # Déduire ou inclure un bug_type normalisé
+            # Déduire ou inclure un bug_type normalisé lisible
             title_lower = (item.get("title") or "").lower()
-            if "boucle" in title_lower or "répétition" in title_lower or "repetition" in title_lower:
-                item["bug_type"] = "infinite_loop_or_repetition"
+            if "amnésie" in title_lower or "amnesie" in title_lower:
+                item["bug_type"] = "Amnésie Prospect (Règle 33)"
+            elif "boucle" in title_lower or "répétition" in title_lower or "repetition" in title_lower:
+                item["bug_type"] = "Boucle / Répétition"
             elif "fallback" in title_lower:
-                item["bug_type"] = "fallback_activated"
-            elif "corrigé" in title_lower:
-                item["bug_type"] = "message_corrected"
+                item["bug_type"] = "Fallback Sécurité Activé"
+            elif "coordonnées" in title_lower or "coordonnees" in title_lower:
+                item["bug_type"] = "Coordonnées Non Consolidées"
+            elif "signal d'achat" in title_lower or "signal d achat" in title_lower:
+                item["bug_type"] = "Signal d'Achat Ignoré"
             else:
-                item["bug_type"] = "general_anomaly"
+                item["bug_type"] = item.get("title") or "Anomalie Détectée"
+
+            item["occurrences_count"] = item.get("occurrence_count", 1)
             bugs.append(item)
         if self.db is None:
             conn.close()

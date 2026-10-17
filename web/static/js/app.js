@@ -8738,23 +8738,23 @@ async function fetchWatcherBugs() {
       `;
     } else {
       list.innerHTML = bugs.map(b => `
-        <div class="p-3 rounded-xl border border-rose-100 bg-rose-50/30 flex flex-col gap-2">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-100 text-rose-800">${b.bug_code}</span>
-                <span class="text-xs font-black text-slate-900">${b.bug_type}</span>
-                <span class="text-[10px] text-slate-400">(${b.occurrences_count}x)</span>
+        <div class="p-3.5 rounded-2xl border border-rose-200 bg-rose-50/40 flex flex-col gap-2.5 shadow-2xs">
+          <div class="flex items-start justify-between gap-2 flex-wrap">
+            <div class="space-y-1">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-200">${escapeHtml(b.bug_code || 'BUG')}</span>
+                <span class="text-xs font-black text-slate-900">${escapeHtml(b.title || b.bug_type || 'Anomalie')}</span>
+                <span class="text-[10px] text-slate-400 font-bold">(${b.occurrences_count || b.occurrence_count || 1}x)</span>
               </div>
-              <p class="text-[11px] text-slate-600 font-medium mt-1">${b.description || ''}</p>
+              <p class="text-[11px] text-slate-600 font-medium leading-relaxed">${escapeHtml(b.description || '')}</p>
             </div>
-            <button onclick="resolveWatcherBug('${b.id}')" class="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-bold text-slate-700 transition cursor-pointer">
+            <button onclick="resolveWatcherBug('${b.id}')" class="px-2.5 py-1 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition cursor-pointer shrink-0 shadow-2xs">
               Résoudre
             </button>
           </div>
           ${b.fix_suggestion ? `
-            <div class="p-2 rounded-lg bg-white border border-slate-200/80 text-[10px] font-mono text-slate-600">
-              <strong class="text-indigo-600 font-sans">Fix suggéré :</strong> ${b.fix_suggestion}
+            <div class="p-2.5 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-700">
+              <strong class="text-indigo-600 font-bold">Fix suggéré :</strong> ${escapeHtml(b.fix_suggestion)}
             </div>
           ` : ''}
         </div>
