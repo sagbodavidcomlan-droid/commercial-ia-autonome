@@ -327,6 +327,42 @@ def init_db():
     )
     """)
 
+    # 10.bis Table des Rendez-vous Collaboratifs et Réels (Google Meet / Agenda)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS meetings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL,
+        calendar_id TEXT,
+        meet_link TEXT,
+        html_link TEXT,
+        date_meeting TEXT NOT NULL,
+        time_meeting TEXT NOT NULL,
+        attendees_json TEXT,
+        subject TEXT,
+        status TEXT DEFAULT 'scheduled',
+        invitations_json TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
+    # 10.ter Table des Contacts Liés (Tiers, Associés, Partenaires) & Anti-Reprospection
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS liaison_contacts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id_source INTEGER NOT NULL,
+        prenom TEXT,
+        nom TEXT,
+        email TEXT,
+        whatsapp TEXT,
+        role TEXT,
+        offre_id_exclure INTEGER,
+        crm_lead_id INTEGER,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_agent ON watcher_observations(agent_name, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_obs_severity ON watcher_observations(severity, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_bugs_status ON watcher_bugs(status, severity)")
@@ -334,6 +370,9 @@ def init_db():
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_lead ON crm_lead_calls(lead_id, created_at)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_calls_status ON crm_lead_calls(status, call_type)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_creative_assets ON creative_studio_assets(created_at)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_liaison_email ON liaison_contacts(email)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_liaison_offre ON liaison_contacts(email, offre_id_exclure)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_meetings_lead ON meetings(lead_id, date_meeting)")
 
     # Harmonisation & migration non-bloquante de la table crm_leads
     try:
@@ -389,6 +428,9 @@ def init_db():
             ("entreprise", "TEXT"),
             ("site_web", "TEXT"),
             ("email_verifie", "INTEGER DEFAULT 0"),
+            ("conversation_paused", "INTEGER DEFAULT 0"),
+            ("pause_reason", "TEXT"),
+            ("paused_at", "TEXT"),
             ("updated_at", "TEXT")
         ]
         for col_name, col_type in cols_to_add:
@@ -612,14 +654,16 @@ def init_db():
     )
     """)
 
-    # Migration non-bloquante de la colonne processed sur crm_lead_messages
+    # Migration non-bloquante de la colonne processed et is_waiting_response sur crm_lead_messages
     try:
         cursor.execute("PRAGMA table_info(crm_lead_messages)")
         msg_cols = [c[1] for c in cursor.fetchall()]
         if "processed" not in msg_cols:
             cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN processed INTEGER DEFAULT 0")
+        if "is_waiting_response" not in msg_cols:
+            cursor.execute("ALTER TABLE crm_lead_messages ADD COLUMN is_waiting_response INTEGER DEFAULT 0")
     except Exception as e_proc:
-        logger.warning(f"Note migration processed sur crm_lead_messages : {e_proc}")
+        logger.warning(f"Note migration processed/is_waiting_response sur crm_lead_messages : {e_proc}")
 
 
     # 11. Table des verrous de traitement anti-doublon pour le Poller 24/7
@@ -2268,7 +2312,20 @@ def get_or_create_lead(
             li_url_val = kwargs.get("linkedin_url")
             li_url = str(li_url_val).strip() if li_url_val and str(li_url_val).strip() else None
 
+            lc_row = None
             notes = kwargs.get("notes") or kwargs.get("centre_interet") or ""
+            if email:
+                c.execute("SELECT id, lead_id_source, prenom, role FROM liaison_contacts WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) LIMIT 1", (email,))
+                lc_row = c.fetchone()
+                if lc_row:
+                    source_lead_id = lc_row[1]
+                    lc_prenom = lc_row[2]
+                    logger.info(f"get_or_create_lead: L'email {email} correspond à un contact lié du lead #{source_lead_id}")
+                    if not prenom and lc_prenom:
+                        prenom = lc_prenom
+                        full_name = f"{prenom} {nom}".strip()
+                    notes = f"{notes} | Associé/contact lié du lead #{source_lead_id}. Exclusion sur-prospection active.".strip(" |")
+
             poste = kwargs.get("poste") or "Entrepreneur"
             douleur = kwargs.get("douleur_identifiee") or ""
             init_statut = kwargs.get("statut_lead") or "Nouveau"
@@ -2314,6 +2371,11 @@ def get_or_create_lead(
                 secteur_val, offre_matchee_val, offre_matchee_id_val
             ))
             new_id = c.lastrowid
+            if lc_row:
+                try:
+                    c.execute("UPDATE liaison_contacts SET crm_lead_id = ? WHERE id = ?", (new_id, lc_row[0]))
+                except Exception:
+                    pass
             conn.commit()
             return new_id, True
     finally:
@@ -2617,6 +2679,169 @@ def get_creative_assets(limit: int = 20) -> List[Dict[str, Any]]:
     rows = c.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# =========================================================================
+# GESTION DES RENDEZ-VOUS COLLABORATIFS (MEETINGS)
+# =========================================================================
+
+def save_meeting_record(
+    lead_id: int,
+    date_meeting: str,
+    time_meeting: str,
+    meet_link: str,
+    calendar_id: Optional[str] = None,
+    html_link: Optional[str] = None,
+    attendees: Optional[List[str]] = None,
+    subject: Optional[str] = None,
+    status: str = "scheduled",
+    invitations: Optional[Dict[str, Any]] = None
+) -> int:
+    """Enregistre un vrai rendez-vous dans la table meetings."""
+    conn = get_connection()
+    c = conn.cursor()
+    attendees_json = json.dumps(attendees or [])
+    invitations_json = json.dumps(invitations or {})
+    c.execute("""
+        INSERT INTO meetings (
+            lead_id, calendar_id, meet_link, html_link,
+            date_meeting, time_meeting, attendees_json,
+            subject, status, invitations_json, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        lead_id, calendar_id, meet_link, html_link,
+        date_meeting, time_meeting, attendees_json,
+        subject, status, invitations_json
+    ))
+    meeting_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return meeting_id
+
+
+def get_meetings_for_lead(lead_id: int) -> List[Dict[str, Any]]:
+    """Retourne la liste des rendez-vous enregistrés pour un lead."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT * FROM meetings
+        WHERE lead_id = ?
+        ORDER BY id DESC
+    """, (lead_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+# =========================================================================
+# GESTION DES CONTACTS LIÉS (TIERS / ASSOCIÉS) & ANTI-REPROSPECTION
+# =========================================================================
+
+def add_liaison_contact(
+    lead_id_source: int,
+    email: str,
+    role: str = "associe",
+    prenom: Optional[str] = None,
+    nom: Optional[str] = None,
+    whatsapp: Optional[str] = None,
+    offre_id_exclure: Optional[int] = None,
+    crm_lead_id: Optional[int] = None
+) -> int:
+    """
+    Enregistre un tiers (associé, partenaire, collègue) lié à un prospect existant.
+    Ne modifie JAMAIS l'email personnel du prospect source.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO liaison_contacts (
+            lead_id_source, prenom, nom, email, whatsapp,
+            role, offre_id_exclure, crm_lead_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        lead_id_source, prenom, nom, email.strip().lower() if email else None,
+        whatsapp, role, offre_id_exclure, crm_lead_id
+    ))
+    liaison_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return liaison_id
+
+
+def get_liaison_contacts(lead_id_source: Optional[int] = None, email: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Récupère les contacts liés par lead source ou par email."""
+    conn = get_connection()
+    c = conn.cursor()
+    if lead_id_source:
+        c.execute("SELECT * FROM liaison_contacts WHERE lead_id_source = ? ORDER BY id DESC", (lead_id_source,))
+    elif email:
+        c.execute("SELECT * FROM liaison_contacts WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) ORDER BY id DESC", (email,))
+    else:
+        c.execute("SELECT * FROM liaison_contacts ORDER BY id DESC LIMIT 50")
+    rows = c.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def check_liaison_exclusion(email: str, offre_id: Any) -> bool:
+    """
+    Vérifie si ce contact ne doit pas être prospecté sur cette offre car il est l'associé
+    ou le tiers d'un prospect existant.
+    """
+    if not email:
+        return False
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT lc.id, lc.lead_id_source
+            FROM liaison_contacts lc
+            WHERE LOWER(TRIM(lc.email)) = LOWER(TRIM(?))
+            AND (lc.offre_id_exclure = ? OR lc.offre_id_exclure IS NULL)
+        """, (email, offre_id))
+        row = c.fetchone()
+        return row is not None
+    except Exception as e:
+        logger.warning(f"Erreur check_liaison_exclusion: {e}")
+        return False
+    finally:
+        conn.close()
+
+
+# =========================================================================
+# GESTION DU PAUSE / REPRISE CONVERSATIONNELLE (SIGNAUX D'ATTENTE)
+# =========================================================================
+
+def set_conversation_paused(lead_id: int, paused: bool = True, reason: str = "prospect_waiting") -> bool:
+    """Marque ou lève la pause sur une conversation lead."""
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if paused:
+            c.execute("""
+                UPDATE crm_leads
+                SET conversation_paused = 1,
+                    pause_reason = ?,
+                    paused_at = datetime('now'),
+                    updated_at = datetime('now')
+                WHERE id = ?
+            """, (reason, lead_id))
+        else:
+            c.execute("""
+                UPDATE crm_leads
+                SET conversation_paused = 0,
+                    pause_reason = NULL,
+                    paused_at = NULL,
+                    updated_at = datetime('now')
+                WHERE id = ?
+            """, (lead_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Erreur set_conversation_paused({lead_id}): {e}")
+        return False
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

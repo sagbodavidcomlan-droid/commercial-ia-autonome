@@ -220,7 +220,7 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
     "signal_achat_detecte": true,
     "signal_achat_detail": "citation exacte du signal ou null",
     "objection_en_cours": "PRIX | TEMPS | CONFIANCE | TIMING | null",
-    "signal_rupture": "confusion | incomprehension | arret | bot_suspicion | null",
+    "signal_rupture": "confusion | incomprehension | arret | bot_suspicion | null (ATTENTION : les questions de clarification courtes comme 'Comment ça ?', 'Pourquoi ?', 'C'est-à-dire ?' ne sont JAMAIS des signaux de rupture, mettre null)",
     "relances_effectuees": 0
   }},
 
@@ -239,6 +239,15 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
     "lien": "https://formations.sagbodavid.com/automatisation-whatsapp",
     "pertinence_score": 9,
     "justification": "Pourquoi cette offre correspond exactement au besoin exprimé"
+  }},
+
+  "rendez_vous": {{
+    "demande_detectee": false,
+    "date_proposee": "YYYY-MM-DD ou null",
+    "heure_proposee": "HH:MM ou null",
+    "participants": ["liste des emails collectés"],
+    "meeting_cree": false,
+    "meeting_id": "id SQLite ou null"
   }},
 
   "instruction_reponse_suivante": {{
@@ -363,6 +372,14 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
                 "lien": "https://formations.sagbodavid.com/automatisation-whatsapp",
                 "pertinence_score": 9,
                 "justification": "Solution d'automatisation WhatsApp adaptée aux commerces et services"
+            },
+            "rendez_vous": {
+                "demande_detectee": any(w in h_lower for w in ["meet", "rendez-vous", "rdv", "visio", "calendrier", "zoom"]),
+                "date_proposee": None,
+                "heure_proposee": None,
+                "participants": [],
+                "meeting_cree": False,
+                "meeting_id": None
             },
             "instruction_reponse_suivante": {
                 "quoi_dire": f"Répondre avec pertinence et ancrage strict dans le secteur {secteur}.",

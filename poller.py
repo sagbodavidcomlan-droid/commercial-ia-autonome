@@ -177,6 +177,8 @@ def get_pending_conversations() -> List[Dict[str, Any]]:
         WHERE LOWER(COALESCE(l.temperature, '')) != 'froid'
           AND LOWER(COALESCE(l.statut_lead, '')) NOT IN ('froid', 'rejeté')
           AND l.opt_out != 1
+          -- Exclure les conversations en pause (signal d'attente du prospect)
+          AND (l.conversation_paused = 0 OR l.conversation_paused IS NULL)
           -- Le message m est le tout dernier de la conversation
           AND m.id = (
               SELECT MAX(id) FROM crm_lead_messages 

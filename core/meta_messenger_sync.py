@@ -615,7 +615,7 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     whatsapp=extracted_phone,
                     email=extracted_email,
                     facebook_psid=sender_psid,
-                    notes=f"Inbound Facebook Messenger. Premier échange : '{user_text}'",
+                    notes=f"Prise de contact directe : '{user_text}'",
                     centre_interet=user_text[:120]
                 )
 
@@ -628,8 +628,8 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     details=f"Lead authentique créé suite à un message sur la Page Facebook. Message initial : {user_text}"
                 )
 
-            # 3. Consigner le message reçu du prospect
-            log_lead_message(
+            # 3. Consigner le message reçu du prospect et le marquer processed immédiatement pour éviter qu'un poller concurrent ne génère une réponse simultanée (Bug 3)
+            inbound_msg_id = log_lead_message(
                 lead_id=lead_id,
                 channel="FACEBOOK_MESSENGER",
                 sender="LEAD",
@@ -637,6 +637,11 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 status="RECEIVED",
                 metadata={"facebook_psid": sender_psid, "raw_message_id": message_obj.get("mid")}
             )
+            try:
+                cursor.execute("UPDATE crm_lead_messages SET processed = 1 WHERE id = ?", (inbound_msg_id,))
+                conn.commit()
+            except Exception:
+                pass
 
             # 4. Générer une réponse experte d'acquisition & closing
             from modules.omnichannel_messenger import omnichannel_messenger

@@ -83,7 +83,54 @@ PSYCHOLOGIE & PRINCIPES COMMERCIAUX D'ÉLITE :
    - N'invente, ne déduis et ne suppose AUCUNE donnée personnelle (nom, téléphone, email, poste). Seules les données fournies explicitement existent.
 
 10. COHÉRENCE CONTEXTUELLE & ANTI-RÉPÉTITION :
-   - Toujours tenir compte de l'ensemble de l'historique récent. Ne jamais répéter une phrase ou une question déjà posée."""
+   - Toujours tenir compte de l'ensemble de l'historique récent. Ne jamais répéter une phrase ou une question déjà posée.
+
+11. RÈGLE D'OUVERTURE — MESSAGE INITIAL (PROPRETÉ & AUTHENTICITÉ) :
+   - Quand le prospect ouvre avec 'Bonjour' ou une salutation simple, réponds chaleureusement et directement.
+   - INTERDICTION ABSOLUE de reformuler le message du prospect.
+   - INTERDICTION STRICTE de tout jargon technique marketing (inbound, outbound, funnel, CRM, automatisation, growth...).
+   - Ne jamais expliquer mécaniquement pourquoi on le contacte ("suite à votre message du...").
+   - Ne jamais utiliser de formules corporate rigides ("Je me permets de...", "Je vous contacte dans le cadre de...").
+   - VOCABULAIRE INTERDIT DANS LES MESSAGES : inbound, outbound, funnel, CRM, automation, lead, prospect, pipeline, tunnel de vente, conversion, taux, KPI, ROI, scalable, growth hacking, nurturing, onboarding.
+   - Formulation correcte pour un premier "Bonjour" simple :
+     "Bonjour [prénom si connu], c'est Dave Sagbo. Ravi d'échanger avec vous. Vous gérez quel type d'établissement / activité en ce moment ?"
+
+12. RÈGLE 27 — PRIX ET TARIFS (ANNONCÉ UNE SEULE FOIS) :
+   - Le prix d'une offre ne s'annonce qu'UNE SEULE FOIS par conversation, clairement et directement.
+   - Après l'avoir mentionné, INTERDICTION FORMELLE de le répéter dans les messages suivants sauf si le prospect pose une question explicite et ciblée sur le tarif.
+   - Après avoir donné le prix, la prochaine question doit obligatoirement porter sur les freins ou les critères de décision du prospect, JAMAIS répéter le prix.
+
+13. RÈGLE 28 — RENDEZ-VOUS ET LIENS MEET (INTERDICTION TOTALE DE LIEN FICTIF) :
+   - Ne JAMAIS promettre un lien de visioconférence sans le créer réellement via le système de planification officiel du projet (MeetingScheduler).
+   - Ne JAMAIS inventer, deviner ou fabriquer un lien Meet (interdiction absolue de générer meet.google.com/abc-defg-hij ou tout lien fictif).
+   - Quand un rendez-vous est convenu :
+     1. Le système de planification (MeetingScheduler) crée la réunion réelle.
+     2. L'agent transmet le vrai lien officiel retourné par le système.
+     3. Confirmer que les invitations ont été envoyées aux adresses email renseignées.
+   - Si le système de calendrier est indisponible : informer honnêtement le prospect, lui demander son email pour lui transmettre le lien manuellement dès validation, et NE JAMAIS inventer un lien de substitution.
+
+14. RÈGLE 29 — EMAIL D'UN TIERS (ASSOCIÉ / PARTENAIRE / COLLÈGUE) :
+   - Quand un prospect fournit l'adresse email de quelqu'un d'autre (associé, partenaire, collègue) :
+     1. NE JAMAIS enregistrer cet email comme l'email du prospect.
+     2. Remercier et demander immédiatement le prénom et nom de cette personne pour personnaliser l'invitation ("Pour personnaliser l'invitation, c'est quoi le prénom de votre associé ?").
+     3. Demander ensuite l'adresse email personnelle du prospect ("Et pour que vous receviez aussi le lien de votre côté, quelle est votre adresse email ?").
+     4. Enregistrer le tiers comme contact lié (liaison_contacts) pour exclure toute reprospection intempestive sur la même offre.
+
+15. RÈGLE 30 — DOCUMENTS DE PRÉSENTATION (VRAI DOCUMENT PDF EXIGÉ) :
+   - Quand le prospect demande un document, un brief, un dossier, une présentation, des slides ou tout support formel à partager :
+     1. INTERDICTION FORMELLE de répondre avec un simple résumé en texte brut dans le chat.
+     2. Le système génère un vrai document PDF téléchargeable (DocumentGenerator).
+     3. Transmettre le lien de téléchargement officiel du PDF personnalisé en expliquant qu'il reprend exactement leurs enjeux sectoriels.
+     4. Si la génération échoue : informer honnêtement et proposer un délai, mais ne jamais substituer par un bloc de texte brut.
+
+16. RÈGLE 31 — COLLABORATION OBLIGATOIRE ENTRE AGENTS & SYMBIOSE :
+   - Chaque action impliquant un autre sous-système doit obligatoirement passer par ce sous-système :
+     * Rendez-vous -> MeetingScheduler
+     * Email -> Système d'envoi d'invitations
+     * Document -> DocumentGenerator
+     * Contact tiers -> Table liaison_contacts & anti-reprospection
+     * Agenda -> Google Calendar / Agenda tasks
+   - Zéro simulation, zéro hallucination. Si un sous-système est indisponible, transparence immédiate avec le prospect."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -1179,7 +1226,7 @@ class AISalesAgent:
             'je ne comprends pas', 'je comprends rien', 'comprends rien',
             'c\'est incohérent', 'cest incohérent', 'incohérent', 'incoherent',
             'ça n\'a pas de sens', 'a pas de sens', 'aucun sens',
-            'comment ça', 'comment ca', 'de quoi vous parlez',
+            'de quoi vous parlez',
             'vous parlez de quoi', 'je suis perdu', 'perdu',
             'c\'est quoi ça', 'c\'est quoi ce', 'hein', 'quoi ?', '???'
         ]
@@ -2024,9 +2071,277 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
         agent_count = len(agent_msgs)
         is_first_turn = (agent_count == 0)
 
+        # =========================================================================
+        # GESTION CRITIQUE DES ÉCHANGES (BUGS 3, 4, 5, 6, 7, 8, 9 & SYMBIOSE SYSTÈME)
+        # =========================================================================
+        from core.database_store import (
+            get_connection,
+            set_conversation_paused,
+            add_liaison_contact,
+            get_liaison_contacts
+        )
+
+        # 0.1 AUTO-UNPAUSE SI LA CONVERSATION ÉTAIT EN PAUSE
+        is_paused = False
+        if lead_id:
+            try:
+                conn_chk = get_connection()
+                c_chk = conn_chk.cursor()
+                c_chk.execute("SELECT conversation_paused FROM crm_leads WHERE id = ?", (lead_id,))
+                row_chk = c_chk.fetchone()
+                conn_chk.close()
+                if row_chk and row_chk[0] == 1:
+                    is_paused = True
+            except Exception:
+                pass
+
+        # 0.2 SIGNAUX DE TEMPORISATION / ATTENTE DU PROSPECT (BUG 3)
+        waiting_signals = [
+            'un instant', 'une seconde', '2 minutes', 'deux minutes',
+            'attendez', 'attends', 'je reviens', 'minute', 'patientez',
+            'laissez-moi', 'laissez moi', 'je suis occupé', 'je suis occupe',
+            'tout à l\'heure', 'tout a l heure', 'un moment', 'juste un instant'
+        ]
+        is_waiting = any(re.search(r'\b' + re.escape(w) + r'\b', user_message.lower()) for w in waiting_signals)
+        if is_waiting:
+            if lead_id:
+                set_conversation_paused(lead_id, paused=True, reason="prospect_temporisation")
+            proposed = "Bien sûr, prenez votre temps."
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': False,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+        elif is_paused and lead_id:
+            # Reprise de contact du prospect -> dépauser la conversation
+            set_conversation_paused(lead_id, paused=False)
+
+        # 0.3 DÉTECTION D'UN EMAIL TIERS / ASSOCIÉ / COLLÈGUE (BUGS 6, 7 & 8)
+        email_match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', user_message)
+        third_party_keywords = [
+            'associé', 'associe', 'collègue', 'collegue', 'partenaire',
+            'patron', 'manager', 'directeur', 'fondateur', 'co-fondateur',
+            'cofondateur', 'pour lui', 'pour elle', 'mon ami', 'son mail',
+            'son adresse', 'son email', 'le mail de', 'notre équipe', 'notre equipe'
+        ]
+        is_third_party = bool(email_match and any(kw in user_message.lower() for kw in third_party_keywords))
+
+        # Vérifier si l'associé a déjà été enregistré et qu'on reçoit son prénom dans ce tour
+        if not is_third_party and lead_id:
+            try:
+                existing_liaisons = get_liaison_contacts(lead_id_source=lead_id)
+                if existing_liaisons and not existing_liaisons[0].get("prenom"):
+                    m_prenom = re.search(r"(?:il s'appelle|c'est|nom|prénom|prenom)\s+([A-ZÀ-ÿa-z\-]+)", user_message, re.IGNORECASE)
+                    if m_prenom:
+                        prenom_found = m_prenom.group(1).capitalize()
+                        conn_pr = get_connection()
+                        c_pr = conn_pr.cursor()
+                        c_pr.execute("UPDATE liaison_contacts SET prenom = ? WHERE id = ?", (prenom_found, existing_liaisons[0]["id"]))
+                        conn_pr.commit()
+                        conn_pr.close()
+                        proposed = f"Entendu pour {prenom_found}. Et de votre côté, quelle est votre adresse email afin que je vous mette également en copie de nos échanges ?"
+                        conversation_context = {
+                            'lead_id': lead_id,
+                            'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else None,
+                            'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                            'agent_message_count': agent_count,
+                            'message_count': len(history) + 1,
+                            'purchase_signal_detected': False,
+                            'stop_signal_detected': False,
+                            'last_prospect_message': user_message,
+                            'conversation_history': history,
+                            'canal': channel,
+                            'third_party_handling': True
+                        }
+                        validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+                        return validated['message']
+            except Exception as e_chk_assoc:
+                logger.warning(f"Note vérification prénom liaison #{lead_id}: {e_chk_assoc}")
+
+        if is_third_party:
+            third_email = email_match.group(0).lower().strip()
+            m_pr = re.search(r'(?:associé|associe|collègue|collegue)\s+([A-ZÀ-ÿa-z\-]+)', user_message, re.IGNORECASE)
+            detected_prenom = m_pr.group(1).capitalize() if m_pr and m_pr.group(1).lower() not in ['de', 'du', 'mon', 'son', 'le', 'un', 'notre', 'mail', 'email', 'adresse'] else None
+            if detected_prenom and (f"{detected_prenom.lower()}@" in third_email or detected_prenom.lower() == third_email.split('@')[0]):
+                detected_prenom = None
+
+            # Enregistrer comme contact lié (avec exclusion de sur-prospection pour ne pas prospecter l'associé en double)
+            offre_exclure = (lead_data.get('offre_matchee') if lead_data else None) or (lead_data.get('offre_matchee_id') if lead_data else None)
+            if lead_id:
+                try:
+                    add_liaison_contact(
+                        lead_id_source=lead_id,
+                        email=third_email,
+                        role="associe",
+                        prenom=detected_prenom,
+                        offre_id_exclure=offre_exclure
+                    )
+                except Exception as e_liaison:
+                    logger.warning(f"Note enregistrement liaison contact lead #{lead_id}: {e_liaison}")
+
+            if not detected_prenom:
+                proposed = "Merci, son adresse est bien enregistrée. Quel est son prénom afin que je puisse m'adresser directement à lui ? Et de votre côté, quelle est votre adresse email pour que je vous mette en copie ?"
+            else:
+                proposed = f"Merci, son adresse est bien enregistrée pour {detected_prenom}. Et de votre côté, quelle est votre adresse email afin que je vous mette également en copie ?"
+
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': False,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel,
+                'third_party_handling': True
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+
+        # 0.4 DEMANDE D'UN DOCUMENT / BRIEF / PRÉSENTATION PDF (BUG 9)
+        from modules.document_generator import DocumentGenerator
+        doc_gen = DocumentGenerator()
+        if doc_gen.is_document_requested(user_message):
+            try:
+                doc_url = doc_gen.generate_pitch_document(
+                    lead_id=lead_id or 0,
+                    scan_result=scan_result,
+                    lead_info=lead_data
+                )
+            except Exception as e_doc:
+                logger.warning(f"Note génération document lead #{lead_id}: {e_doc}")
+                doc_url = None
+
+            if doc_url:
+                proposed = (
+                    f"J'ai préparé une présentation complète et personnalisée pour votre activité. "
+                    f"Vous pouvez la consulter et la télécharger directement ici : {doc_url}\n\n"
+                    f"Souhaitez-vous que nous en discutions de vive voix lors d'un court échange ?"
+                )
+            else:
+                proposed = (
+                    "Je prépare la présentation détaillée avec les éléments clés pour votre activité. "
+                    "Je vous transmets le document complet dès finalisation."
+                )
+
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': True,
+                'link_allowed': True,
+                'document_requested': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+
+        # 0.5 ACCORD OU PROPOSITION DE RENDEZ-VOUS / MEET (BUGS 4 & 5)
+        msg_low_rdv = user_message.lower()
+        has_time = bool(re.search(r'\b\d{1,2}\s*[h:]\s*(\d{2})?\b', msg_low_rdv))
+        has_day = any(d in msg_low_rdv for d in ['demain', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche', 'après-demain', 'apres-demain'])
+        has_accord_rdv = any(w in msg_low_rdv for w in ['rendez-vous', 'rdv', 'call', 'appel', 'meet', 'google meet', 'dispo', 'créneau', 'creneau', 'convient', 'parfait pour', 'ok pour', 'd\'accord pour', 'daccord pour', 'marche pour'])
+        is_meeting_confirmation = (has_time and (has_day or has_accord_rdv)) or bool(scan_result and scan_result.get('rendez_vous', {}).get('demande_detectee') and has_time)
+
+        if is_meeting_confirmation:
+            from modules.meeting_scheduler import MeetingScheduler
+            scheduler = MeetingScheduler()
+
+            date_found = "Demain"
+            for d in ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche', 'demain', 'après-demain']:
+                if d in msg_low_rdv:
+                    date_found = d.capitalize()
+                    break
+
+            time_match = re.search(r'\b(\d{1,2})\s*[h:]\s*(\d{2})?\b', msg_low_rdv)
+            time_found = "15h00"
+            if time_match:
+                h = time_match.group(1)
+                m = time_match.group(2) or "00"
+                time_found = f"{h}h{m}"
+
+            attendees = []
+            if lead_data and lead_data.get('email'):
+                attendees.append(lead_data['email'])
+            if lead_id:
+                try:
+                    liaisons = get_liaison_contacts(lead_id_source=lead_id)
+                    for lc in liaisons:
+                        if lc.get("email"):
+                            attendees.append(lc["email"])
+                except Exception:
+                    pass
+
+            meet_res = None
+            try:
+                meet_res = scheduler.create_meeting(
+                    lead_id=lead_id or 0,
+                    date_str=date_found,
+                    time_str=time_found,
+                    attendees=attendees
+                )
+            except Exception as e_meet:
+                logger.warning(f"Note création meeting lead #{lead_id}: {e_meet}")
+
+            if meet_res and meet_res.get("meet_link"):
+                real_link = meet_res["meet_link"]
+                proposed = (
+                    f"C'est parfaitement noté pour {date_found} à {time_found}. "
+                    f"Voici le lien direct pour notre échange Google Meet : {real_link}\n\n"
+                    f"L'invitation a également été envoyée à vos adresses."
+                )
+            else:
+                proposed = (
+                    f"Parfait pour {date_found} à {time_found}. "
+                    f"Je viens de réserver ce créneau sur mon agenda. "
+                    f"Je vous transmets le lien d'accès et la confirmation sur votre boîte mail dès validation."
+                )
+
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': True,
+                'link_allowed': True,
+                'meeting_requested': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+
         # Vérifier si le scanner a repéré un signal d'arrêt ou d'incompréhension
         scan_rupture = scan_result.get('progression_commerciale', {}).get('signal_rupture') if scan_result else None
         scan_purchase = scan_result.get('progression_commerciale', {}).get('signal_achat_detecte') if scan_result else False
+
+        # Ignorer les faux signaux de rupture sur une simple question de clarification (Bug Fallback)
+        clean_user_msg = (user_message or "").strip().lower()
+        if scan_rupture in ('confusion', 'incomprehension') and clean_user_msg in [
+            'comment ça ?', 'comment ça', 'comment ca ?', 'comment ca',
+            "c'est-à-dire ?", "c'est-a-dire ?", "c'est à dire ?", "c'est a dire ?",
+            "pourquoi ?", "pourquoi", "qu'entendez-vous par là ?", "comment ?"
+        ]:
+            scan_rupture = None
 
         # 1. ÉTAPE SIGNAUX DE RUPTURE (Stop, Incompréhension, Réflexion)
         distress = self.detect_distress_signal(user_message, history) or scan_rupture

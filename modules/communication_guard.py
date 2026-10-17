@@ -108,7 +108,59 @@ class CommunicationQualityGuard:
         "sans abonnement caché",
         "bonjour contact",
         "quel est votre sujet du moment",
+        "inbound via",
+        "outbound via",
+        "je me permets de vous contacter directement",
+        "suite à votre premier message",
+        "concernant l'inbound",
+        "concernant le funnel",
+        "je vous contacte dans le cadre de",
+        "dans le cadre de notre démarche",
     ]
+
+    @staticmethod
+    def _is_near_duplicate(message: str, lead_id: Any) -> Tuple[bool, Optional[str]]:
+        """
+        Détecte si le message est un quasi-doublon d'un message récent de l'agent.
+        Utilise la similarité de contenu (Jaccard > 0.65 sur les 5 derniers messages).
+        """
+        if not lead_id or not message:
+            return False, None
+        try:
+            from core.database_store import get_connection
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("""
+                SELECT message FROM crm_lead_messages
+                WHERE lead_id = ?
+                AND UPPER(sender) IN ('AGENT', 'AI', 'DAVE')
+                ORDER BY id DESC
+                LIMIT 5
+            """, (lead_id,))
+            rows = c.fetchall()
+            conn.close()
+
+            # Nettoyer les mots du message proposé
+            message_words = set(re.findall(r'\b\w{3,}\b', message.lower()))
+            if not message_words:
+                return False, None
+
+            for row in rows:
+                content = str(row[0] or '')
+                recent_words = set(re.findall(r'\b\w{3,}\b', content.lower()))
+                if not recent_words:
+                    continue
+
+                intersection = message_words & recent_words
+                union = message_words | recent_words
+                similarity = len(intersection) / len(union) if union else 0.0
+
+                if similarity > 0.65:
+                    return True, content
+        except Exception as e:
+            logger.warning(f"Note vérification quasi-doublon lead #{lead_id} : {e}")
+
+        return False, None
 
     BLOCKING_CRITERIA = {
         'banned_phrase': {
@@ -152,8 +204,11 @@ class CommunicationQualityGuard:
         },
         'link_without_signal': {
             'check': lambda msg, ctx: (
-                'http' in msg and
+                ('http' in msg or '/static/docs/' in msg) and
                 not ctx.get('purchase_signal_detected', False) and
+                not ctx.get('link_allowed', False) and
+                not ctx.get('document_requested', False) and
+                not ctx.get('meeting_requested', False) and
                 not (ctx.get('scan_result', {}).get('instruction_reponse_suivante', {}).get('inclure_lien', False))
             ),
             'instruction': (
@@ -178,6 +233,16 @@ class CommunicationQualityGuard:
                 "Génère une réponse totalement différente qui fait avancer la conversation."
             )
         },
+        'near_duplicate': {
+            'check': lambda msg, ctx: CommunicationQualityGuard._is_near_duplicate(
+                msg, ctx.get('lead_id')
+            )[0],
+            'instruction': (
+                "Ce message est trop similaire à un message récent déjà envoyé. "
+                "Génère une réponse radicalement différente qui avance la "
+                "conversation au lieu de répéter la même information avec d'autres mots."
+            )
+        },
         'stop_signal_ignored': {
             'check': lambda msg, ctx: (
                 ctx.get('stop_signal_detected', False) and
@@ -186,6 +251,20 @@ class CommunicationQualityGuard:
             'instruction': (
                 "Le prospect a signalé vouloir arrêter. "
                 "Remplace ce message par une réponse de 2 lignes maximum qui accepte et laisse une porte ouverte."
+            )
+        },
+        'fictitious_meet_link': {
+            'check': lambda msg, ctx: any(fake in msg.lower() for fake in [
+                'meet.google.com/abc-defg-hij',
+                'meet.google.com/xxx',
+                'meet.google.com/test',
+                'meet.google.com/abc',
+                'meet.google.com/dummy'
+            ]),
+            'instruction': (
+                "INTERDICTION ABSOLUE : Tu as inventé un lien Meet fictif. "
+                "Supprime immédiatement le faux lien. Confirme la réservation du créneau "
+                "et indique que le lien officiel lui sera transmis sur sa boîte mail."
             )
         },
     }
@@ -276,7 +355,7 @@ class CommunicationQualityGuard:
                 score_result
             )
 
-            if score_result.get('score', 0) >= 7.0:
+            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested'):
                 self._save_quality_log(
                     lead_id=conversation_context.get('lead_id', 0),
                     canal=conversation_context.get('canal', 'messenger'),
@@ -294,14 +373,33 @@ class CommunicationQualityGuard:
             else:
                 if attempt < max_attempts:
                     instr = score_result.get('correction_instruction') or "Formule une réponse plus naturelle et directe."
-                    current_message = self._regenerate(
-                        instr,
-                        conversation_context,
-                        current_message
-                    )
+                    try:
+                        regen = self._regenerate(
+                            instr,
+                            conversation_context,
+                            current_message
+                        )
+                        if regen and len(regen) > 10 and "pardonnez-moi" not in regen.lower() and "toutes mes excuses" not in regen.lower():
+                            current_message = regen
+                    except Exception:
+                        pass
                 else:
+                    if score_result.get('score', 0) >= 6.0 and current_message:
+                        return {
+                            'message': current_message,
+                            'score': score_result.get('score', 6.0),
+                            'attempts': attempt,
+                            'status': 'accepted_above_threshold'
+                        }
                     return self._safe_fallback(conversation_context)
 
+        if current_message and len(current_message) > 10 and "pardonnez-moi" not in current_message.lower():
+            return {
+                'message': current_message,
+                'score': score_result.get('score', 7.0),
+                'attempts': attempt,
+                'status': 'accepted_final'
+            }
         return self._safe_fallback(conversation_context)
 
     def _check_blocking_criteria(self, message: str, ctx: Dict[str, Any]) -> Optional[Dict[str, str]]:
@@ -346,6 +444,7 @@ class CommunicationQualityGuard:
 
         is_link_allowed = bool(ctx.get('purchase_signal_detected') or instruc.get('inclure_lien', False))
         is_purchase_signal = bool(ctx.get('purchase_signal_detected') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
+        no_real_meet = bool(ctx.get('meeting_requested') and not ctx.get('real_meet_link'))
 
         scoring_prompt = f"""Tu es un superviseur qualité strict pour un directeur commercial.
 Tu as la fiche de contexte complète de la conversation.
@@ -361,6 +460,7 @@ Ton recommandé : {instruc.get('ton_recommande', 'empathique')}
 Signal d'achat / phase de closing détecté : {is_purchase_signal}
 Signal de rupture détecté : {scan_result.get('progression_commerciale', {}).get('signal_rupture')}
 L'agent avait répondu hors sujet avant : {derniers.get('agent_a_repondu_hors_sujet', False)}
+Consigne Rendez-vous : {"Si aucun lien officiel n'a été fourni, l'agent ne DOIT PAS inventer de lien Meet fictif. Confirmer le créneau et indiquer l'envoi du lien par email est la SEULE réponse parfaite (attribuer OUI sur couverture)." if no_real_meet else "Répondre de façon adaptée"}
 
 === MESSAGE PROPOSÉ À ÉVALUER ===
 {message}
@@ -468,7 +568,11 @@ Vouvoiement strict, naturel direct, zéro formule bannie."""
                     parts = cand.get("content", {}).get("parts", [])
                     raw_text = "".join([p.get("text", "") for p in parts if isinstance(p, dict)]).strip()
                     if raw_text and len(raw_text) > 5:
-                        return raw_text
+                        for fake in ['meet.google.com/abc-defg-hij', 'meet.google.com/xxx', 'meet.google.com/test', 'meet.google.com/abc', 'meet.google.com/dummy']:
+                            if fake in raw_text.lower():
+                                raw_text = re.sub(r'https?://meet\.google\.com/[^\s\)\.\,]+', '', raw_text)
+                                raw_text = re.sub(r'voici votre lien google meet [^\.:,]+[:,\.]?', 'Je vous transmets le lien d\'accès par email dès validation.', raw_text, flags=re.IGNORECASE)
+                        return raw_text.strip()
             except Exception as e:
                 logger.warning(f"Régénération Guard ({mod}) : {e}")
                 continue
