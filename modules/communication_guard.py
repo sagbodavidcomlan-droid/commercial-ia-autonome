@@ -185,18 +185,21 @@ class CommunicationQualityGuard:
         },
         'reidentification': {
             'check': lambda msg, ctx: (
-                ctx.get('agent_message_count', 0) > 0 and
+                (ctx.get('agent_message_count', 0) > 0 or ctx.get('is_returning_lead', False)) and
                 any(phrase in msg.lower() for phrase in [
                     "bonjour, c'est dave sagbo",
                     "bonjour c'est dave sagbo",
                     "c'est dave sagbo",
-                    "bonjour contact"
+                    "je suis dave sagbo",
+                    "bonjour contact",
+                    "quel est votre principal défi",
+                    "quel est votre principal besoin"
                 ])
             ),
             'instruction': (
-                "Tu te réidentifies dans un message de suivi. "
-                "Supprime toute salutation et identification. "
-                "Commence directement par la réponse au dernier message du prospect."
+                "Tu te réidentifies froidement ou réinitialises la qualification sur un prospect existant (RÈGLE 33). "
+                "Supprime toute présentation froide ('C'est Dave Sagbo'). "
+                "Accueille chaleureusement le prospect ('Ravi de vous retrouver !') et réponds directement à son message."
             )
         },
         'wrong_sector': {
@@ -631,7 +634,9 @@ Vouvoiement strict, naturel direct, zéro formule bannie."""
     def _safe_fallback(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Réponse de sécurité neutre quand toutes les tentatives ont échoué."""
         canal = ctx.get('canal', 'messenger')
-        if ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1:
+        if ctx.get('is_returning_lead'):
+            fallback_msg = "Ravi de vous retrouver ! Reprenons notre échange : comment puis-je vous aider aujourd'hui ?"
+        elif ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1:
             fallback_msg = "Bonjour ! Comment puis-je vous aider ?"
         elif str(canal).lower() in ['messenger', 'whatsapp', 'facebook_messenger']:
             fallback_msg = (

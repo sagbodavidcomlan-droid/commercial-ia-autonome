@@ -8813,33 +8813,41 @@ async function fetchWatcherReports() {
         const score = r.global_score || 85;
         const totalObs = r.total_exchanges || (r.critical_count + r.error_count + r.warning_count + r.info_count) || 0;
         return `
-          <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-indigo-50/30 hover:border-indigo-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs group">
-            <div onclick="openWatcherReportModal(${r.id})" class="cursor-pointer flex-1">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-black text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full uppercase">${r.report_type || 'SESSION'}</span>
-                <span class="text-[11px] text-slate-400 font-mono">${dateStr}</span>
-                <span class="text-[11px] font-bold text-slate-700 ml-auto sm:ml-0 bg-white px-2 py-0.5 rounded-lg border border-slate-200">Score ${score}/100</span>
+          <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-indigo-50/30 hover:border-indigo-300 transition-all flex flex-col gap-2.5 shadow-2xs group w-full overflow-hidden box-border">
+            <div onclick="openWatcherReportModal(${r.id})" class="cursor-pointer space-y-1.5">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-black text-indigo-700 bg-indigo-100/70 px-2 py-0.5 rounded-full uppercase tracking-wider">${r.report_type || 'SESSION'}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${dateStr}</span>
+                </div>
+                <span class="text-[11px] font-bold text-slate-700 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shrink-0">Score ${score}/100</span>
               </div>
-              <div class="text-[11px] text-slate-600 font-medium mt-1.5 line-clamp-2">
+              <div class="text-[11px] text-slate-600 font-medium line-clamp-2 leading-relaxed">
                 ${escapeHtml((r.summary || 'Rapport d\'évaluation continue SilentWatcher').substring(0, 140))}...
               </div>
-              <div class="text-[10px] text-slate-400 font-bold mt-1">
-                ${totalObs} observations &bull; ${r.critical_count || 0} critique(s) &bull; ${r.error_count || 0} erreur(s)
+              <div class="text-[10px] text-slate-400 font-semibold flex items-center gap-1.5 flex-wrap">
+                <span>${totalObs} observation(s)</span>
+                <span>&bull;</span>
+                <span class="${r.critical_count > 0 ? 'text-rose-600 font-bold' : ''}">${r.critical_count || 0} critique(s)</span>
+                <span>&bull;</span>
+                <span class="${r.error_count > 0 ? 'text-amber-600 font-bold' : ''}">${r.error_count || 0} erreur(s)</span>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-              <button onclick="openWatcherReportModal(${r.id})" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs">
+            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1.5 flex-wrap">
+              <button onclick="openWatcherReportModal(${r.id})" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition cursor-pointer flex items-center gap-1 shadow-2xs">
                 <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                 <span>Consulter</span>
               </button>
-              <button onclick="window.open('/api/watcher/reports/${r.id}/html?autoprint=1', '_blank')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1" title="Imprimer ou enregistrer en PDF">
-                <i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-600"></i>
-                <span>PDF</span>
-              </button>
-              <button onclick="window.open('/api/watcher/reports/${r.id}/download', '_blank')" class="px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer flex items-center gap-1" title="Télécharger le fichier JSON">
-                <i data-lucide="download" class="w-3.5 h-3.5 text-slate-400"></i>
-                <span>JSON</span>
-              </button>
+              <div class="flex items-center gap-1.5">
+                <button onclick="window.open('/api/watcher/reports/${r.id}/html?autoprint=1', '_blank')" class="px-2 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer flex items-center gap-1" title="Imprimer ou enregistrer en PDF">
+                  <i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>PDF</span>
+                </button>
+                <button onclick="window.open('/api/watcher/reports/${r.id}/download', '_blank')" class="px-2 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold transition cursor-pointer flex items-center gap-1" title="Télécharger le fichier JSON">
+                  <i data-lucide="download" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span>JSON</span>
+                </button>
+              </div>
             </div>
           </div>
         `;

@@ -281,6 +281,80 @@ class SilentWatcher:
         if gemini_obs:
             observations.extend(gemini_obs)
 
+        # --- OBSERVATION 8 : Amnésie Agent 1 sur prospect en retour / existant (CRITIQUE) ---
+        is_ret_ctx = bool(scan_result.get('reprise_conversation', {}).get('is_returning_lead'))
+        if not is_ret_ctx and lead_id:
+            try:
+                conn_chk = self._get_db_connection()
+                c_chk = conn_chk.cursor()
+                c_chk.execute("SELECT conversation_count, douleur_identifiee, statut_lead FROM crm_leads WHERE id = ?", (lead_id,))
+                row_chk = c_chk.fetchone()
+                if row_chk:
+                    cc = (row_chk["conversation_count"] if isinstance(row_chk, dict) else row_chk[0]) or 0
+                    stat = str((row_chk["statut_lead"] if isinstance(row_chk, dict) else row_chk[2]) or '').lower()
+                    if cc > 1 or stat not in ('nouveau', ''):
+                        is_ret_ctx = True
+                if not is_ret_ctx:
+                    c_chk.execute("SELECT COUNT(*) FROM crm_lead_messages WHERE lead_id = ?", (lead_id,))
+                    cnt_m = c_chk.fetchone()[0] or 0
+                    if cnt_m > 1:
+                        is_ret_ctx = True
+                if self.db is None:
+                    conn_chk.close()
+            except Exception:
+                pass
+
+        if is_ret_ctx:
+            msg_chk_low = (proposed_message or validated_message).lower()
+            cold_patterns = [
+                "c'est dave sagbo",
+                "je suis dave sagbo",
+                "ici dave sagbo",
+                "dave à l'appareil",
+                "quel est votre principal défi",
+                "quel est votre principal besoin",
+                "quel est le principal défi",
+                "quel est le principal besoin"
+            ]
+            if any(p in msg_chk_low for p in cold_patterns):
+                observations.append({
+                    'agent':    'agent_vendeur',
+                    'type':     'amnesia_returning_lead',
+                    'severity': 'critical',
+                    'title':    'Amnésie Agent 1 — Prospect existant traité comme un inconnu',
+                    'detail':   (
+                        f"L'agent vendeur a utilisé une introduction froide ou relancé le cycle de qualification à zéro "
+                        f"alors que le prospect #{lead_id} a déjà un historique d'échange. "
+                        f"Rupture de confiance critique et violation de la RÈGLE 33."
+                    ),
+                    'excerpt':  (proposed_message or validated_message)[:200]
+                })
+
+        # --- OBSERVATION 9 : Coordonnées du prospect non consolidées ---
+        det_coords = scan_result.get('coordonnees_detectees', {})
+        if det_coords and (det_coords.get('telephone') or det_coords.get('email')):
+            try:
+                conn_c = self._get_db_connection()
+                c_c = conn_c.cursor()
+                c_c.execute("SELECT telephone, email FROM crm_leads WHERE id = ?", (lead_id,))
+                r_c = c_c.fetchone()
+                if r_c:
+                    t_val = r_c["telephone"] if isinstance(r_c, dict) else r_c[0]
+                    e_val = r_c["email"] if isinstance(r_c, dict) else r_c[1]
+                    if (det_coords.get('telephone') and not t_val) or (det_coords.get('email') and not e_val):
+                        observations.append({
+                            'agent':    'conversation_scanner',
+                            'type':     'missing_lead_coordinates',
+                            'severity': 'warning',
+                            'title':    'Coordonnées détectées non enregistrées au CRM',
+                            'detail':   f"Numéro ou email présent dans l'échange mais absent du profil CRM du lead #{lead_id}.",
+                            'excerpt':  prospect_message[:200]
+                        })
+                if self.db is None:
+                    conn_c.close()
+            except Exception:
+                pass
+
         # Sauvegarder toutes les observations et tracker les bugs
         for obs in observations:
             self._save_observation(lead_id, obs)
@@ -837,11 +911,103 @@ Sois précis : nom de fichier, nom de fonction, type de correction à apporter.
     # MODULE 4 : GÉNÉRATION DES RAPPORTS
     # =========================================================================
 
+    def audit_crm_conversations(self) -> List[Dict[str, Any]]:
+        """
+        Audit proactif du CRM et des fils de messages.
+        Scanne les interactions pour détecter les anomalies non signalées en temps réel :
+        1. Amnésie historique (messages d'accueil froids sur prospects récurrents).
+        2. Leads délaissés sans réponse depuis plus de 30 minutes.
+        3. Coordonnées détectables dans les messages mais non synchronisées dans crm_leads.
+        """
+        discovered = []
+        try:
+            conn = self._get_db_connection()
+            c = conn.cursor()
+
+            # 1. Détection amnésie : prospects avec >1 message où l'agent a envoyé un intro froid
+            c.execute("""
+                SELECT lead_id, message, timestamp
+                FROM crm_lead_messages
+                WHERE UPPER(sender) IN ('AGENT', 'AI', 'DAVE')
+                ORDER BY lead_id, id ASC
+            """)
+            agent_msgs = c.fetchall()
+            
+            lead_agent_counts = {}
+            for r in agent_msgs:
+                lid = r["lead_id"] if isinstance(r, dict) else r[0]
+                msg_txt = str((r["message"] if isinstance(r, dict) else r[1]) or "")
+                lead_agent_counts[lid] = lead_agent_counts.get(lid, 0) + 1
+                
+                if lead_agent_counts[lid] > 1:
+                    m_low = msg_txt.lower()
+                    if any(p in m_low for p in ["c'est dave sagbo", "je suis dave sagbo", "quel est votre principal défi", "quel est votre principal besoin"]):
+                        obs = {
+                            'agent':    'agent_vendeur',
+                            'type':     'amnesia_returning_lead',
+                            'severity': 'critical',
+                            'title':    f'Amnésie constatée sur lead #{lid}',
+                            'detail':   f"L'agent vendeur s'est réintroduit froidement au message #{lead_agent_counts[lid]} pour le lead #{lid}.",
+                            'excerpt':  msg_txt[:200]
+                        }
+                        discovered.append(obs)
+                        self._save_observation(lid, obs)
+                        self._track_bug(obs)
+
+            # 2. Détection coordonnées non consolidées
+            c.execute("""
+                SELECT id, nom_complet, prenom, telephone, email, notes
+                FROM crm_leads
+                WHERE telephone IS NULL OR email IS NULL OR telephone = '' OR email = ''
+            """)
+            missing_leads = c.fetchall()
+            for ml in missing_leads:
+                lid = ml["id"] if isinstance(ml, dict) else ml[0]
+                has_tel = bool(ml["telephone"] if isinstance(ml, dict) else ml[3])
+                has_em = bool(ml["email"] if isinstance(ml, dict) else ml[4])
+                
+                c.execute("""
+                    SELECT message FROM crm_lead_messages
+                    WHERE lead_id = ? AND UPPER(sender) IN ('LEAD', 'USER', 'PROSPECT')
+                """, (lid,))
+                p_msgs = [str((row["message"] if isinstance(row, dict) else row[0]) or '') for row in c.fetchall()]
+                all_text = " ".join(p_msgs)
+                
+                import re
+                found_phone = re.search(r'(?:\+|00)?[0-9\s\.\-]{8,15}', all_text)
+                found_email = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', all_text)
+                
+                if (not has_tel and found_phone) or (not has_em and found_email):
+                    obs = {
+                        'agent':    'conversation_scanner',
+                        'type':     'missing_lead_coordinates',
+                        'severity': 'warning',
+                        'title':    f'Coordonnées non consolidées pour lead #{lid}',
+                        'detail':   f"Des coordonnées semblent présentes dans les échanges du lead #{lid} mais ne sont pas enregistrées dans le CRM.",
+                        'excerpt':  all_text[:200]
+                    }
+                    discovered.append(obs)
+                    self._save_observation(lid, obs)
+                    self._track_bug(obs)
+
+            if self.db is None:
+                conn.close()
+        except Exception as e:
+            logger.warning(f"Note audit_crm_conversations: {e}")
+
+        return discovered
+
     def _generate_report(self, period_type: str, period_start: str, period_end: str) -> Dict[str, Any]:
         """
         Génère un rapport complet pour la période donnée.
         Analyse via Gemini de toutes les observations collectées.
         """
+        # Exécuter l'audit proactif de fond pour identifier les anomalies réelles
+        try:
+            self.audit_crm_conversations()
+        except Exception as e_aud:
+            logger.warning(f"Note audit préliminaire rapport : {e_aud}")
+
         conn = self._get_db_connection()
         c = conn.cursor()
 

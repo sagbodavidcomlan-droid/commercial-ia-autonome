@@ -682,20 +682,25 @@ def handle_facebook_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
             lead_prenom = lead_data.get("prenom") or (lead_data.get("nom_complet", "").split()[0] if " " in lead_data.get("nom_complet", "") else "")
             if any(w in str(lead_prenom).lower() for w in ("contact", "prospect", "#")):
                 lead_prenom = ""
-            lead_data["prenom"] = lead_prenom
-            lead_data["centre_interet"] = user_text
-            lead_data["notes"] = user_text
+            if not lead_data.get("centre_interet"):
+                lead_data["centre_interet"] = user_text
+            if not lead_data.get("notes"):
+                lead_data["notes"] = user_text
             lead_data["source_canal"] = "Facebook Messenger"
             lead_data["facebook_psid"] = sender_psid
 
-            # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours + Règle 10)
+            # Récupérer l'historique complet pour garantir la mémoire conversationnelle
+            lead_history = get_lead_messages(lead_id, "FACEBOOK_MESSENGER") or get_lead_messages(lead_id)
+
+            # 4. Générer la réponse experte d'acquisition & closing (4 règles d'or du cours + Règle 10 + Règle 33)
             from modules.ai_sales_agent import AISalesAgent
             ai_agent = AISalesAgent()
             reply_text = ai_agent.generate_conversational_reply(
                 lead_id=lead_id,
                 user_message=user_text,
                 channel="FACEBOOK_MESSENGER",
-                lead_data=lead_data
+                lead_data=lead_data,
+                history=lead_history
             )
 
             # Incrémenter le compteur de questions de diagnostic si on n'a pas encore clos
@@ -1007,8 +1012,12 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                 lead_data["whatsapp"] = formatted_phone
                 lead_data["telephone"] = formatted_phone
                 lead_data["source_canal"] = "WhatsApp Business"
-                lead_data["centre_interet"] = user_text
-                lead_data["notes"] = user_text
+                if not lead_data.get("centre_interet"):
+                    lead_data["centre_interet"] = user_text
+                if not lead_data.get("notes"):
+                    lead_data["notes"] = user_text
+
+                lead_history = get_lead_messages(lead_id, "WHATSAPP") or get_lead_messages(lead_id)
 
                 from modules.ai_sales_agent import AISalesAgent
                 ai_agent = AISalesAgent()
@@ -1016,7 +1025,8 @@ def handle_whatsapp_webhook_payload(payload: Dict[str, Any]) -> List[Dict[str, A
                     lead_id=lead_id,
                     user_message=user_text,
                     channel="WHATSAPP",
-                    lead_data=lead_data
+                    lead_data=lead_data,
+                    history=lead_history
                 )
 
                 # Synchronisation automatique de la qualification au CRM si offre close ou incrément diagnostic

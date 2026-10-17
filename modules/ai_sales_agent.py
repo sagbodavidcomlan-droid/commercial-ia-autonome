@@ -1120,7 +1120,7 @@ class AISalesAgent:
             matched_offer = "Offre #7 : Système d'Automatisation & Closing WhatsApp (75 000 FCFA)"
             offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
         elif already_complete:
-            is_complete = True
+            is_complete = False
             diagnostic_type = "ALREADY_COMPLETE"
             douleur_identifiee = lead_data.get("douleur_identifiee") or "Blocage d'acquisition et de closing identifié"
         elif hit_ceiling:
@@ -1305,12 +1305,23 @@ class AISalesAgent:
         # Cas 1 : Le prospect revient avec une question ou une remarque précise
         msg_clean = (user_message or '').strip()
         msg_low = msg_clean.lower()
-        is_simple_greeting = any(msg_low == g for g in [
+        return_signals = [
             'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
-            're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
-            'c\'est encore moi', 'je suis de retour', 'me revoilà', 'me revoila',
-            'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
-        ]) or len(msg_clean) <= 15
+            're', 'rebonjour', 'continue', 'continuer', 'on continue',
+            'de retour', 'revoilà', 'revoila', 'reviens', 'reprendre', 'on reprend',
+            'reprise', 'dispo', 'disponible', "c'est encore moi", 'tu es là',
+            'vous êtes là', "t'es là", 'on en était', 'on en etait', 'desole', 'désolé'
+        ]
+        is_simple_greeting = (
+            any(msg_low == g for g in [
+                'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
+                're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
+                "c'est encore moi", 'je suis de retour', 'me revoilà', 'me revoila',
+                'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
+            ])
+            or (len(msg_clean) <= 80 and any(w in msg_low for w in return_signals))
+            or len(msg_clean) <= 20
+        )
 
         if not is_simple_greeting and msg_clean:
             quoi_dire = scan_result.get('instruction_reponse_suivante', {}).get('quoi_dire') if scan_result else None
@@ -2397,8 +2408,21 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             conv_count > 1 or
             agent_count > 0 or
             (lead_status and lead_status.lower() not in ('nouveau', '')) or
-            len(history) > 1
+            len(history) > 1 or
+            bool(lead_data and lead_data.get('douleur_identifiee'))
         )
+
+        # Synchroniser scan_result pour que build_agent_prompt_from_scan injecte les directives de retour (RÈGLE 33)
+        if is_returning_lead and scan_result:
+            rep = scan_result.setdefault("reprise_conversation", {})
+            rep["is_returning_lead"] = True
+            if not rep.get("prenom_prospect"):
+                rep["prenom_prospect"] = (lead_data.get("prenom") if lead_data else "") or None
+            if not rep.get("sujet_precedent"):
+                rep["sujet_precedent"] = (lead_data.get("douleur_identifiee") or lead_data.get("centre_interet") or "votre activité") if lead_data else "votre activité"
+            if not rep.get("instruction_reprise"):
+                prenom_greet = f" {rep.get('prenom_prospect')}" if rep.get("prenom_prospect") else ""
+                rep["instruction_reprise"] = f"Accueillir chaleureusement le retour de ce prospect ('Ravi de vous retrouver{prenom_greet} !'), faire le lien avec {rep.get('sujet_precedent')} et poursuivre la négociation sans recommencer à zéro."
 
         # is_first_turn est STRICTEMENT réservé à un nouveau prospect absolu sans historique passé
         is_first_turn = (agent_count == 0 and not is_returning_lead and len(history) <= 1)
@@ -2839,8 +2863,12 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             return validated['message']
 
         # 2. ÉTAPE DIAGNOSTIC COMPLET & PLAFOND 8 TOURS (RÈGLES D'OR DE CLOSING)
+        has_already_received_offer = bool(
+            lead_data and (lead_data.get("offre_proposee") == 1 or lead_data.get("phase_actuelle") == "closer")
+        ) or any("formations.sagbodavid.com" in (m.get("message") or "") for m in agent_msgs)
+
         diag = self.is_diagnostic_complete(lead_id, history, user_message, lead_data)
-        if diag.get("is_complete"):
+        if diag.get("is_complete") and not has_already_received_offer and not is_returning_lead:
             # Mettre à jour immédiatement crm_leads en base
             if lead_id:
                 try:
@@ -3000,12 +3028,23 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
         elif is_returning_lead:
             msg_clean_ret = (user_message or '').strip()
             msg_low_ret = msg_clean_ret.lower()
-            is_return_greeting = any(msg_low_ret == g for g in [
+            return_signals = [
                 'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
-                're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
-                'c\'est encore moi', 'je suis de retour', 'me revoilà', 'me revoila',
-                'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
-            ]) or (len(msg_clean_ret) <= 25 and any(w in msg_low_ret for w in ['bonjour', 'salut', 're', 'coucou', 'rebonjour', 'dispo']))
+                're', 'rebonjour', 'continue', 'continuer', 'on continue',
+                'de retour', 'revoilà', 'revoila', 'reviens', 'reprendre', 'on reprend',
+                'reprise', 'dispo', 'disponible', "c'est encore moi", 'tu es là',
+                'vous êtes là', "t'es là", 'on en était', 'on en etait', 'desole', 'désolé'
+            ]
+            is_return_greeting = (
+                any(msg_low_ret == g for g in [
+                    'bonjour', 'bonsoir', 'salut', 'hello', 'coucou', 'yo',
+                    're', 'rebonjour', 'on continue', 'on peut continuer', 'on peut continuer ?',
+                    "c'est encore moi", 'je suis de retour', 'me revoilà', 'me revoila',
+                    'dispo', 'je suis dispo', 'disponible', 'on reprend', 'bonjour dave', 'salut dave'
+                ])
+                or (len(msg_clean_ret) <= 80 and any(w in msg_low_ret for w in return_signals))
+                or len(msg_clean_ret) <= 20
+            )
 
             if is_return_greeting:
                 lead_info = lead_data or {}
@@ -3102,9 +3141,16 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             if not any(phrase in cleaned.lower() for phrase in ["dave sagbo", "c'est dave sagbo"]):
                 cleaned = f"Bonjour, c'est Dave Sagbo. {cleaned}"
         elif is_returning_lead:
+            prenom_val = (lead_data.get('prenom') if lead_data else '') or ''
+            prenom_tag = f" {prenom_val}" if prenom_val else ""
+            cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\wÀ-ÿ]*c\'est dave sagbo[,\.\s\-\!]*', f'Ravi de vous retrouver{prenom_tag} ! ', cleaned, flags=re.IGNORECASE).strip()
+            cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\wÀ-ÿ]*je suis dave sagbo[,\.\s\-\!]*', f'Ravi de vous retrouver{prenom_tag} ! ', cleaned, flags=re.IGNORECASE).strip()
             cleaned = re.sub(r"^(c'est dave sagbo|je suis dave sagbo|dave sagbo|ici dave sagbo|dave à l'appareil)[,\.\s\-\!]*", '', cleaned, flags=re.IGNORECASE).strip()
             cleaned = re.sub(r'(\n+)?(bien à vous|bien cordialement|cordialement|dave sagbo|responsable du projet)[,\.\s\-]*$', '', cleaned, flags=re.IGNORECASE).strip()
             cleaned = re.sub(r'(\n+)?dave sagbo$', '', cleaned, flags=re.IGNORECASE).strip()
+            if any(phrase in cleaned.lower() for phrase in ["quel est votre principal défi", "quel est votre principal besoin", "quel est le principal défi", "quel est le principal besoin"]):
+                sec = scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else 'votre activité')
+                cleaned = f"Ravi de vous retrouver{prenom_tag} ! Souhaitez-vous qu'on reprenne notre échange là où nous en étions pour {sec} ?"
         else:
             for _ in range(3):
                 cleaned = re.sub(r'^(bonjour|bonsoir|salut|hello|coucou)[,\.\s\-\!]*', '', cleaned, flags=re.IGNORECASE).strip()

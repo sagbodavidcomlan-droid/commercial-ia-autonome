@@ -260,6 +260,7 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
 
   "reprise_conversation": {{
     "is_returning_lead": false,
+    "_note_is_returning_lead": "METTRE STRICTEMENT true si le prospect a déjà échangé auparavant, s'il y a plus d'un message dans l'historique ou si le prospect revient après une pause, sinon false",
     "sujet_precedent": "bref rappel du besoin ou de la solution discutée lors des échanges passés, ou null",
     "derniere_etape": "où en était la discussion avant l'interruption (ex: découverte douleur, présentation offre #7, cadrage devis, fixation RDV)",
     "prenom_prospect": "prénom du prospect à saluer chaleureusement, ou null",
@@ -312,6 +313,24 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
             contact_direction = determine_contact_direction(lead_id)
             if not scan_result.get("contact_direction") or scan_result["contact_direction"] not in ("inbound", "outbound"):
                 scan_result["contact_direction"] = contact_direction
+
+            # Consolidation robuste de reprise_conversation (RÈGLE 33)
+            reprise = scan_result.setdefault("reprise_conversation", {})
+            has_prior_history = (
+                len(full_history) > 1 or
+                (lead and (lead.get("conversation_count") or 0) > 1) or
+                bool(lead and lead.get("douleur_identifiee")) or
+                (lead and str(lead.get("statut_lead") or "").lower() not in ("nouveau", ""))
+            )
+            if has_prior_history:
+                reprise["is_returning_lead"] = True
+                if not reprise.get("prenom_prospect"):
+                    reprise["prenom_prospect"] = (lead.get("prenom") if lead else "") or None
+                if not reprise.get("sujet_precedent"):
+                    reprise["sujet_precedent"] = (lead.get("douleur_identifiee") or lead.get("centre_interet") or "votre activité") if lead else "votre activité"
+                if not reprise.get("instruction_reprise"):
+                    prenom_greet = f" {reprise.get('prenom_prospect')}" if reprise.get("prenom_prospect") else ""
+                    reprise["instruction_reprise"] = f"Accueillir chaleureusement le retour de ce prospect ('Ravi de vous retrouver{prenom_greet} !'), faire référence à {reprise.get('sujet_precedent')} et poursuivre la discussion."
 
             scan_result["lead_crm"] = {
                 "lead_id": lead.get("id", lead_id),
@@ -438,11 +457,11 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
                 "poste": None
             },
             "reprise_conversation": {
-                "is_returning_lead": len(full_history) > 1,
-                "sujet_precedent": lead.get("douleur_identifiee") or "Besoins d'automatisation",
+                "is_returning_lead": len(full_history) > 1 or bool(lead.get("conversation_count", 0) > 1) or bool(lead.get("douleur_identifiee")),
+                "sujet_precedent": lead.get("douleur_identifiee") or lead.get("centre_interet") or "Besoins d'automatisation",
                 "derniere_etape": lead.get("phase_actuelle") or "setter",
                 "prenom_prospect": lead.get("prenom") or None,
-                "instruction_reprise": f"Saluer chaleureusement le retour de {lead.get('prenom') or 'ce prospect'} et reprendre la conversation sur {lead.get('douleur_identifiee') or 'son activité'}." if len(full_history) > 1 else None
+                "instruction_reprise": f"Saluer chaleureusement le retour de {lead.get('prenom') or 'ce prospect'} et reprendre la conversation sur {lead.get('douleur_identifiee') or 'son activité'}." if (len(full_history) > 1 or bool(lead.get("conversation_count", 0) > 1) or bool(lead.get("douleur_identifiee"))) else None
             },
             "rendez_vous": {
                 "demande_detectee": any(w in h_lower for w in ["meet", "rendez-vous", "rdv", "visio", "calendrier", "zoom"]),
