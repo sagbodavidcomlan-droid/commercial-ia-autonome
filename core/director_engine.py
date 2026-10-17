@@ -11,7 +11,7 @@ Auteur : Agent IA Commercial
 import json
 from datetime import datetime, date
 from typing import Dict, Any, List
-from core.database_store import get_connection, get_outbound_metrics
+from core.database_store import get_connection, get_outbound_metrics, get_custom_feature_requests
 
 class DirectorEngine:
     def __init__(self):
@@ -184,6 +184,20 @@ class DirectorEngine:
         else:
             activities_md = "- Patrouilles d'interception actives et calibrées sur les concurrents.\n"
 
+        # Demandes spécifiques et sur-mesure (SilentWatcher & Créateurs)
+        custom_requests = get_custom_feature_requests(limit=10)
+        custom_req_lines = []
+        if custom_requests:
+            for cr in custom_requests:
+                p_nom = cr.get("lead_name") or f"Prospect #{cr.get('lead_id')}"
+                c_off = cr.get("offer_name") or "Offre Standard"
+                req_feat = cr.get("requested_feature", "")
+                st = cr.get("status", "A_CADRER_PAR_CREATEURS")
+                custom_req_lines.append(f"- **{p_nom}** sur *{c_off}* : « {req_feat} » *(Statut : {st} | Cadrage technique & devis complémentaire requis)*")
+            custom_requests_md = "\n".join(custom_req_lines)
+        else:
+            custom_requests_md = "Aucune demande spécifique en attente de cadrage technique pour le moment. Le socle standard couvre l'ensemble des besoins actifs.\n"
+
         content_md = f"""# 📑 {title}
 
 **Destinataire :** Monsieur le Directeur Général  
@@ -235,14 +249,20 @@ L'unité commerciale IA active la prospection sortante proactive via la **Machin
 
 ---
 
-## 4. 🛡️ Conformité Légale, RGPD & Données Personnelles
+## 4. 🛠️ Demandes Spécifiques & Besoins d'Adaptation Sur-Mesure (Créateurs & R&D)
+Remontées supervisées par **SilentWatcher** pour permettre aux créateurs et développeurs d'adapter les offres aux exigences clients tout en sécurisant la rentabilité par un cadrage budgétaire adapté :
+{custom_requests_md}
+
+---
+
+## 5. 🛡️ Conformité Légale, RGPD & Données Personnelles
 - **Consentement & Source Publique :** 100% des prospects proviennent d'interactions publiques et de sollicitations consenties.
 - **Désinscription Immédiate :** Toute mention d'arrêt ou de mot-clé « STOP » suspend immédiatement tout échange sous 1 seconde.
 - **Sécurisation des Transactions :** Toutes les transactions sont opérées via passerelles chiffrées (Systeme.io / Stripe / Agrégateurs Mobile Money agréés).
 
 ---
 
-## 5. 💡 Recommandations Stratégiques pour le Directeur Général
+## 6. 💡 Recommandations Stratégiques pour le Directeur Général
 1. **Intensifier les patrouilles LinkedIn B2B :** Les profils diplômés et cadres affichent un panier moyen supérieur à 150 000 FCFA.
 2. **Accélérer les relances à J+2 :** L'apport de valeur gratuit sans lien ni vente à 48h réactive 42% des prospects silencieux.
 3. **Offre Spéciale Catalogue :** Déployer une offre packagée pour clôturer les opportunités tièdes avant la fin du cycle.

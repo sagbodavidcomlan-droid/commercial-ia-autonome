@@ -750,6 +750,26 @@ def init_db():
     """)
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_trend_topic ON market_trend_reports(topic)")
 
+    # 17. Table des demandes spécifiques et sur-mesure (SilentWatcher & Créateurs)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS custom_feature_requests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER,
+        lead_name TEXT,
+        lead_contact TEXT,
+        offer_id INTEGER,
+        offer_name TEXT,
+        requested_feature TEXT NOT NULL,
+        is_standard_included INTEGER DEFAULT 0,
+        technical_analysis TEXT,
+        commercial_impact TEXT,
+        status TEXT DEFAULT 'A_CADRER_PAR_CREATEURS',
+        created_at TEXT DEFAULT (datetime('now'))
+    )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cfr_lead ON custom_feature_requests(lead_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cfr_status ON custom_feature_requests(status)")
+
     conn.commit()
 
     # Remplissage de données initiales de démonstration si vide
@@ -3028,6 +3048,80 @@ def get_outbound_metrics(period_days: int = 30) -> Dict[str, Any]:
             "channels_breakdown": {},
             "recent_activities": []
         }
+    finally:
+        conn.close()
+
+
+def record_custom_feature_request(
+    lead_id: int,
+    requested_feature: str,
+    offer_name: str = "",
+    offer_id: int = 0,
+    is_standard_included: bool = False,
+    technical_analysis: str = "",
+    commercial_impact: str = "",
+    lead_name: str = "",
+    lead_contact: str = "",
+    status: str = "A_CADRER_PAR_CREATEURS"
+) -> int:
+    """
+    Consigne une demande spécifique / sur-mesure exprimée par un prospect.
+    Permet à SilentWatcher et aux créateurs de calibrer l'implémentation et le devis.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        c.execute("""
+            INSERT INTO custom_feature_requests (
+                lead_id, lead_name, lead_contact, offer_id, offer_name,
+                requested_feature, is_standard_included, technical_analysis,
+                commercial_impact, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        """, (
+            lead_id,
+            lead_name or "",
+            lead_contact or "",
+            offer_id or 0,
+            offer_name or "",
+            requested_feature or "",
+            1 if is_standard_included else 0,
+            technical_analysis or "",
+            commercial_impact or "",
+            status
+        ))
+        conn.commit()
+        req_id = c.lastrowid
+        return req_id
+    except Exception as e:
+        logger.error(f"Erreur record_custom_feature_request: {e}")
+        return 0
+    finally:
+        conn.close()
+
+
+def get_custom_feature_requests(limit: int = 50, status: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Récupère les demandes spécifiques consignées pour supervision et créateurs.
+    """
+    conn = get_connection()
+    c = conn.cursor()
+    try:
+        if status and status.lower() not in ("all", "toutes", "all_status"):
+            c.execute("""
+                SELECT * FROM custom_feature_requests
+                WHERE LOWER(status) = LOWER(?)
+                ORDER BY id DESC LIMIT ?
+            """, (status, limit))
+        else:
+            c.execute("""
+                SELECT * FROM custom_feature_requests
+                ORDER BY id DESC LIMIT ?
+            """, (limit,))
+        rows = [dict(r) for r in c.fetchall()]
+        return rows
+    except Exception as e:
+        logger.error(f"Erreur get_custom_feature_requests: {e}")
+        return []
     finally:
         conn.close()
 

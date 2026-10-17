@@ -281,6 +281,7 @@ class CommunicationQualityGuard:
                 not ctx.get('third_party_handling') and
                 not ctx.get('document_requested') and
                 not ctx.get('meeting_requested') and
+                not ctx.get('custom_feature_request') and
                 str(ctx.get('canal', '')).lower() in ['messenger', 'whatsapp', 'facebook_messenger'] and
                 len(msg.split()) > 30
             ),
@@ -485,6 +486,7 @@ class CommunicationQualityGuard:
         no_real_meet = bool(ctx.get('meeting_requested') and not ctx.get('real_meet_link'))
 
         is_inbound_opening = bool(ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1)
+        is_custom_feature = bool(ctx.get('custom_feature_request') or scan_result.get('demande_specifique', {}).get('detectee'))
 
         scoring_prompt = f"""Tu es un superviseur qualité strict pour un directeur commercial.
 Tu as la fiche de contexte complète de la conversation.
@@ -502,6 +504,7 @@ Signal de rupture détecté : {scan_result.get('progression_commerciale', {}).ge
 L'agent avait répondu hors sujet avant : {derniers.get('agent_a_repondu_hors_sujet', False)}
 Consigne Rendez-vous : {"Si aucun lien officiel n'a été fourni, l'agent ne DOIT PAS inventer de lien Meet fictif. Confirmer le créneau et indiquer l'envoi du lien par email est la SEULE réponse parfaite (attribuer OUI sur couverture)." if no_real_meet else "Répondre de façon adaptée"}
 Consigne Ouverture Inbound : {"Le prospect a initié le contact : zéro présentation intrusive ('C'est Dave Sagbo' interdit au premier message), max 2 lignes. S'il demande des services ou décrit un problème, poser d'abord une question sur son domaine ou son activité sans envoyer de catalogue est la SEULE réponse exacte attendue (attribuer OUI sur tous les critères)." if is_inbound_opening else "Répondre de façon adaptée"}
+Consigne Demande Spécifique Sur-Mesure : {"Le prospect a demandé une fonctionnalité ou intégration spécifique : l'agent ne DOIT PAS refuser, il confirme que c'est tout à fait possible grâce à l'adaptabilité sur-mesure de nos offres et pose le cadre d'un cadrage technique / devis complémentaire selon l'ampleur sans engagement gratuit irréaliste. C'est la SEULE réponse parfaite attendue (attribuer OUI sur tous les critères)." if is_custom_feature else "Répondre de façon adaptée"}
 
 === MESSAGE PROPOSÉ À ÉVALUER ===
 {message}

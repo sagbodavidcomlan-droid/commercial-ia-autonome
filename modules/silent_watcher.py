@@ -294,6 +294,88 @@ class SilentWatcher:
 
         return observations
 
+    def report_custom_feature_request(
+        self,
+        lead_id: int,
+        requested_feature: str,
+        offer_name: str = "",
+        offer_id: int = 0,
+        is_standard_included: bool = False,
+        technical_analysis: str = "",
+        commercial_impact: str = "",
+        lead_name: str = "",
+        lead_contact: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Rapport d'escalade d'une demande spécifique émise par un prospect.
+        Consigne l'événement, crée une observation pour le Superviseur Autonome,
+        génère une activité pour le cockpit administrateur et notifie les créateurs.
+        """
+        from core.database_store import record_custom_feature_request, log_activity
+        
+        req_id = record_custom_feature_request(
+            lead_id=lead_id,
+            requested_feature=requested_feature,
+            offer_name=offer_name,
+            offer_id=offer_id,
+            is_standard_included=is_standard_included,
+            technical_analysis=technical_analysis,
+            commercial_impact=commercial_impact,
+            lead_name=lead_name,
+            lead_contact=lead_contact,
+            status="A_CADRER_PAR_CREATEURS"
+        )
+
+        # 1. Observation SilentWatcher
+        obs = {
+            'agent': 'agent_vendeur',
+            'type': 'custom_feature_request',
+            'severity': 'warning' if not is_standard_included else 'info',
+            'title': f"Demande Spécifique Sur-Mesure #{req_id} : {requested_feature[:50]}",
+            'detail': (
+                f"Offre : {offer_name} (ID #{offer_id}) | "
+                f"Demande : {requested_feature} | "
+                f"Inclus standard : {'OUI' if is_standard_included else 'NON (Sur-mesure requis)'} | "
+                f"Impact commercial : {commercial_impact} | "
+                f"Analyse technique : {technical_analysis}"
+            ),
+            'excerpt': requested_feature[:200]
+        }
+        self._save_observation(lead_id, obs)
+
+        # 2. Journal d'activité Cockpit / Administrateur
+        try:
+            log_activity(
+                action=f"Demande spécifique reçue #{req_id}",
+                category="CUSTOM_REQUEST",
+                details=(
+                    f"Prospect : {lead_name or f'Lead #{lead_id}'} ({lead_contact or 'N/A'})\n"
+                    f"Offre concernée : {offer_name}\n"
+                    f"Fonctionnalité demandée : {requested_feature}\n"
+                    f"Statut : À cadrer par les créateurs\n"
+                    f"Impact : {commercial_impact}"
+                ),
+                lead_name=lead_name,
+                lead_phone=lead_contact,
+                status="ALERTE_CREATEURS"
+            )
+        except Exception as e_log:
+            logger.warning(f"Erreur log_activity dans report_custom_feature_request: {e_log}")
+
+        # 3. Notification temps réel (si disponible)
+        try:
+            from modules.realtime_notifier import notify_high_priority
+            notify_high_priority(
+                title=f"💡 Demande Spécifique Sur-Mesure #{req_id}",
+                message=f"Le lead {lead_name or f'#{lead_id}'} a exprimé un besoin spécifique sur '{offer_name}' : « {requested_feature} ». À implémenter/chiffrer par les créateurs.",
+                category="CUSTOM_REQUEST"
+            )
+        except Exception:
+            pass
+
+        logger.info(f"[SilentWatcher] Demande spécifique #{req_id} enregistrée et transmise pour lead #{lead_id} ({requested_feature[:60]}).")
+        return {"success": True, "request_id": req_id, "observation": obs}
+
     def _get_last_agent_message(self, lead_id: int) -> str:
         """Récupère le message précédent envoyé par l'agent à ce lead."""
         if not lead_id:

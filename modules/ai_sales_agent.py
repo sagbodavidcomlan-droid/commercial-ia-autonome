@@ -153,7 +153,24 @@ PSYCHOLOGIE & PRINCIPES COMMERCIAUX D'ÉLITE :
      * Document -> DocumentGenerator
      * Contact tiers -> Table liaison_contacts & anti-reprospection
      * Agenda -> Google Calendar / Agenda tasks
-   - Zéro simulation, zéro hallucination. Si un sous-système est indisponible, transparence immédiate avec le prospect."""
+     * Demande spécifique sur-mesure -> SilentWatcher & Superviseur Autonome
+   - Zéro simulation, zéro hallucination. Si un sous-système est indisponible, transparence immédiate avec le prospect.
+
+17. RÈGLE 32 — DEMANDES SPÉCIFIQUES, FICHE TECHNIQUE & PROTECTION RENTABILITÉ :
+   Quand le prospect demande des fonctionnalités spécifiques, des intégrations sur mesure ou si le système peut répondre à un besoin particulier :
+   1. SCAN DE LA FICHE TECHNIQUE DE L'OFFRE :
+      - L'agent s'appuie sur la fiche technique de l'offre pour vérifier si le service fait partie de l'offre standard.
+      - Si OUI (déjà inclus) : valider immédiatement avec clarté et assurance en expliquant comment le système le gère.
+      - Si NON (non inclus dans la formule standard) :
+        -> INTERDICTION FORMELLE DE REFUSER ("non c'est impossible", "on ne fait pas" = STRICTEMENT BANNIS).
+        -> Faire savoir avec transparence que ce n'est pas dans le socle standard de base, mais que c'est TOUT À FAIT POSSIBLE car la particularité et la force de notre service est d'adapter et concevoir nos solutions sur mesure selon les besoins réels de nos clients.
+   2. PROTECTION DE LA RENTABILITÉ (NE PAS ÊTRE PERDANT !) :
+      - Les demandes spécifiques peuvent être énormes et nécessiter un développement sur mesure conséquent.
+      - L'agent ne doit JAMAIS s'engager sur une personnalisation lourde gratuitement ou au tarif standard.
+      - Poser fermement le cadre : préciser qu'il s'agit d'une personnalisation spécifique qui fait l'objet d'un cadrage technique et d'un ajustement tarifaire / devis complémentaire selon l'ampleur du développement.
+      - Poser une question de cadrage pour évaluer le périmètre précis (ex: quel est votre outil actuel, quel est le volume ?).
+   3. RAPPORT D'ESCALADE SILENTWATCHER :
+      - L'agent consigne et transmet immédiatement la demande à SilentWatcher & Superviseur Autonome pour alerter l'administrateur et permettre aux créateurs d'implémenter ou chiffrer la demande."""
 
 # Base de connaissances des 12 types d'objections (Section 3.2 du cours)
 OBJECTIONS_KNOWLEDGE_BASE = {
@@ -2008,6 +2025,138 @@ RÈGLES STRICTES :
                 logger.warning(f"Appel Gemini plein contexte ({mod}) : {e}")
 
         return None
+
+    def check_technical_feature_request(
+        self,
+        user_message: str,
+        lead_id: int = 0,
+        scan_result: Optional[Dict[str, Any]] = None,
+        lead_data: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Scanne la fiche technique de l'offre pour vérifier si une demande spécifique
+        du prospect fait partie du service standard ou requiert une adaptation sur-mesure.
+        Retourne un dictionnaire d'évaluation ou None si ce n'est pas une question technique.
+        """
+        import re
+        msg_clean = (user_message or "").strip().lower()
+        if len(msg_clean) < 6:
+            return None
+
+        # 1. Détection d'une question ou demande technique spécifique
+        tech_indicators = [
+            r"\best[- ]?ce que (?:votre |le |l['’])?(?:syst[èe]me|outil|solution|offre|logiciel|service)?\s*(?:peut|pourrait|prend en compte|prend en charge|g[èe]re|inclut|int[èe]gre|supporte|synchronise|permet|fait|marche avec)\b",
+            r"\best[- ]?il possible d[e']?\b",
+            r"\best[- ]?ce possible d[e']?\b",
+            r"\bpeut[- ]on (?:ajouter|int[èe]grer|connecter|synchroniser|avoir|utiliser|lier|faire)\b",
+            r"\bavez[- ]vous (?:une option|un module|la possibilit[eé]|la fonctionnalit[eé]|un moyen)\b",
+            r"\best[- ]?ce compatible avec\b",
+            r"\bpossible d['’]avoir\b",
+            r"\bon aimerait aussi\b",
+            r"\bint[èe]gration avec\b",
+            r"\bconnexion (?:avec|[àa]|au)\b",
+            r"\bsynchronis(?:er|ation|e)\b",
+            r"\blogiciel de caisse\b",
+            r"\berp\b",
+            r"\bmulti[- ]?(?:restaurants?|boutiques?|[ée]tablissements?|sites?|comptes?)\b",
+            r"\bg[ée]olocalis(?:er|ation|e)\b",
+            r"\bpersonnalis(?:er|ation|é)\b",
+            r"\bsur[- ]mesure\b"
+        ]
+
+        # Exclure les questions purement logistiques/commerciales de base (délais, horaires, prise de contact)
+        # qui ne constituent pas une demande d'adaptation ou d'intégration technique sur-mesure
+        non_custom_general_topics = [
+            r"\bquand\b", r"\bd[ée]lais?\b", r"\bcombien de temps\b", r"\bdur[ée]e\b", r"\bhoraires?\b", r"\bdisponibilit[ée]\b"
+        ]
+        has_custom_keyword = any(re.search(pat, msg_clean) for pat in tech_indicators)
+        if not has_custom_keyword and any(re.search(pat, msg_clean) for pat in non_custom_general_topics):
+            return None
+
+        scanner_demande = scan_result.get("demande_specifique", {}) if scan_result else {}
+        is_tech = has_custom_keyword or bool(scanner_demande.get("detectee"))
+
+        if not is_tech:
+            return None
+
+        # 2. Récupérer l'offre concernée
+        offer_id = None
+        offer_name = "Système d'Automatisation & Closing WhatsApp"
+        if scan_result and scan_result.get("offre_recommandee"):
+            offer_id = scan_result["offre_recommandee"].get("offre_id")
+            offer_name = scan_result["offre_recommandee"].get("titre") or offer_name
+        elif lead_data and lead_data.get("offre_matchee_id"):
+            offer_id = lead_data.get("offre_matchee_id")
+
+        from core.catalog_engine import CatalogEngine
+        cat_engine = CatalogEngine()
+        catalog_item = None
+        if offer_id:
+            catalog_item = cat_engine.get_item_by_id(int(offer_id))
+        if not catalog_item:
+            items = cat_engine.get_items(statut="Actif")
+            if items:
+                catalog_item = items[0]
+                offer_id = catalog_item.get("id")
+                offer_name = catalog_item.get("nom")
+
+        ft = {}
+        if catalog_item:
+            ft = catalog_item.get("fiche_technique") or {}
+
+        caracteristiques = ft.get("caracteristiques", [])
+        desc = ft.get("description_courte", "")
+        fiche_text = " ".join(caracteristiques + [desc]).lower()
+
+        # 3. Vérification si la fonctionnalité fait partie du socle standard
+        standard_keywords = {
+            "mobile money": ["wave", "mtn", "moov", "orange money", "paiement", "encaisser", "mobile money", "momo"],
+            "relances": ["relance", "suivi", "automatique", "message programmé", "flottement"],
+            "catalogue": ["menu", "catalogue", "produits", "commandes whatsapp", "réservation"]
+        }
+
+        is_standard_included = False
+        matched_feature_desc = ""
+
+        heavy_custom_keywords = [
+            "logiciel de caisse", "fidelio", "sage", "erp", "multi-restaurant",
+            "multi-etablissement", "livreur", "gps", "application mobile", "ios", "sap"
+        ]
+
+        if scanner_demande.get("fait_partie_offre_standard") is True:
+            if not any(h in msg_clean for h in heavy_custom_keywords):
+                is_standard_included = True
+                matched_feature_desc = scanner_demande.get("explication_technique") or "Cette prestation fait partie intégrante du cadre de l'offre standard."
+
+        if not is_standard_included:
+            for cat_name, kw_list in standard_keywords.items():
+                if any(kw in msg_clean for kw in kw_list):
+                    if any(kw in fiche_text for kw in kw_list) or "mobile money" in fiche_text or "relance" in fiche_text:
+                        if not any(h in msg_clean for h in heavy_custom_keywords):
+                            is_standard_included = True
+                            matched_feature_desc = f"La prise en charge {cat_name} fait partie intégrante du système configuré clé en main."
+                            break
+
+        # Sizing question si sur-mesure
+        sizing_q = "Pour vous donner un ordre de grandeur précis, quel outil ou format utilisez-vous actuellement ?"
+        if "caisse" in msg_clean or "logiciel" in msg_clean:
+            sizing_q = "Quel est le nom de votre logiciel actuel et dispose-t-il d'une passerelle ou export de données ?"
+        elif "multi" in msg_clean or "restaurant" in msg_clean or "boutique" in msg_clean:
+            sizing_q = "Combien d'établissements ou de points de vente souhaitez-vous interconnecter au dispositif ?"
+        elif "livr" in msg_clean or "gps" in msg_clean:
+            sizing_q = "Comment gérez-vous l'affectation de vos livreurs aujourd'hui ?"
+
+        return {
+            "is_technical_request": True,
+            "feature_description": user_message.strip(),
+            "is_standard_included": is_standard_included,
+            "offer_id": offer_id or 7,
+            "offer_name": offer_name,
+            "included_details": matched_feature_desc,
+            "sizing_question": sizing_q,
+            "technical_analysis": f"Examen fiche technique offre #{offer_id} ({offer_name}) : {'Inclus dans le socle de base' if is_standard_included else 'Spécifique / Nécessite cadrage créateurs et devis complémentaire'}"
+        }
+
     def build_agent_prompt_from_scan(self, scan_result: Dict[str, Any], system_prompt: str) -> str:
         """
         Construit le prompt de génération en injectant la fiche de contexte du scanner.
@@ -2052,6 +2201,9 @@ ANALYSE DES DERNIERS ÉCHANGES :
 - L'agent a répondu hors sujet précédemment : {derniers.get('agent_a_repondu_hors_sujet', False)}
 - L'agent a utilisé un template : {derniers.get('agent_a_utilise_template', False)}
 - Question du prospect restée sans réponse : {derniers.get('question_sans_reponse', 'aucune')}
+
+DEMANDE SPÉCIFIQUE DÉTECTÉE :
+{('OUI — ' + str(scan_result.get('demande_specifique', {}).get('besoin_exprime')) + ' (Inclus standard : ' + ('OUI' if scan_result.get('demande_specifique', {}).get('fait_partie_offre_standard') else 'NON / Sur-mesure requis - Appliquer RÈGLE 32 : ne pas refuser, valoriser adaptabilité sur-mesure, poser cadre devis/cadrage technique et poser question de dimensionnement)')) if scan_result.get('demande_specifique', {}).get('detectee') else 'AUCUNE DEMANDE PARTICULIÈRE'}
 
 CE QUE TU DOIS COUVRIR DANS TA RÉPONSE :
 {instruc.get('quoi_dire', 'Répondre directement et naturellement')}
@@ -2378,6 +2530,69 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 'purchase_signal_detected': True,
                 'link_allowed': True,
                 'meeting_requested': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+
+        # 0.6 DEMANDES SPÉCIFIQUES, FICHE TECHNIQUE & ESCALADE SILENTWATCHER (RÈGLE 32)
+        tech_eval = self.check_technical_feature_request(
+            user_message=user_message,
+            lead_id=lead_id or 0,
+            scan_result=scan_result,
+            lead_data=lead_data
+        )
+        if tech_eval and tech_eval.get("is_technical_request"):
+            is_included = tech_eval.get("is_standard_included", False)
+            feat_desc = tech_eval.get("feature_description", user_message)
+            offer_name = tech_eval.get("offer_name", "notre système")
+            offer_id = tech_eval.get("offer_id", 0)
+            analysis = tech_eval.get("technical_analysis", "")
+
+            # Escalade automatique vers SilentWatcher & Superviseur Autonome
+            try:
+                from modules.silent_watcher import watcher_instance
+                lead_name = (lead_data.get("nom_complet") or lead_data.get("prenom") or f"Lead #{lead_id}") if lead_data else f"Lead #{lead_id}"
+                lead_contact = (lead_data.get("whatsapp") or lead_data.get("telephone") or lead_data.get("email") or channel) if lead_data else channel
+                watcher_instance.report_custom_feature_request(
+                    lead_id=lead_id or 0,
+                    requested_feature=feat_desc,
+                    offer_name=offer_name,
+                    offer_id=offer_id,
+                    is_standard_included=is_included,
+                    technical_analysis=analysis,
+                    commercial_impact="Inclus dans l'offre standard" if is_included else "Nécessite cadrage technique et devis/supplément complémentaire",
+                    lead_name=lead_name,
+                    lead_contact=lead_contact
+                )
+            except Exception as e_watch_esc:
+                logger.warning(f"Note escalade SilentWatcher demande spécifique : {e_watch_esc}")
+
+            if is_included:
+                detail_inc = tech_eval.get("included_details") or "Cette option est déjà intégrée et prête à l'emploi dans notre système standard."
+                proposed = (
+                    f"Oui, c'est parfaitement intégré : {detail_inc}\n\n"
+                    f"Avez-vous d'autres spécificités techniques à vérifier avant la mise en place ?"
+                )
+            else:
+                sizing_q = tech_eval.get("sizing_question") or "Pour vous donner un ordre de grandeur précis, quel outil ou format utilisez-vous actuellement ?"
+                proposed = (
+                    f"Ce n'est pas dans notre formule standard de base, mais c'est tout à fait possible : notre particularité est justement d'adapter nos solutions sur mesure selon les besoins réels de chaque client.\n\n"
+                    f"Comme il s'agit d'une personnalisation spécifique, cela fait l'objet d'un cadrage technique et d'un ajustement sur mesure selon la complexité. {sizing_q}"
+                )
+
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': False,
+                'custom_feature_request': True,
+                'is_standard_included': is_included,
                 'stop_signal_detected': False,
                 'last_prospect_message': user_message,
                 'conversation_history': history,

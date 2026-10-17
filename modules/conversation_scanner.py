@@ -159,10 +159,27 @@ class ConversationScanner:
             catalog_rows = c.fetchall()
             catalogue = [dict(r) for r in catalog_rows]
 
-            catalogue_text = "\n".join([
-                f"#{o['id']} — {o.get('nom')} : {o.get('prix_vente', 0)} {o.get('devise', 'FCFA')} → {o.get('url_externe', 'N/A')}"
-                for o in catalogue
-            ])
+            catalogue_lines = []
+            for o in catalogue:
+                ft_str = ""
+                try:
+                    raw_ft = o.get('fiche_technique_json')
+                    ft = json.loads(raw_ft) if isinstance(raw_ft, str) and raw_ft.strip() else (raw_ft or {})
+                    carac = ft.get('caracteristiques', [])
+                    desc = ft.get('description_courte', '')
+                    details = []
+                    if desc:
+                        details.append(desc)
+                    if carac:
+                        details.append("Inclus: " + "; ".join(carac[:4]))
+                    if details:
+                        ft_str = " [" + " | ".join(details) + "]"
+                except Exception:
+                    pass
+                catalogue_lines.append(
+                    f"#{o['id']} — {o.get('nom')} : {o.get('prix_vente', 0)} {o.get('devise', 'FCFA')} → {o.get('url_externe', 'N/A')}{ft_str}"
+                )
+            catalogue_text = "\n".join(catalogue_lines)
 
             # ÉTAPE 4 : Construire le texte complet de la conversation
             conversation_text = "\n".join([
@@ -184,7 +201,7 @@ Ne te base jamais uniquement sur les derniers messages — lis tout avec une rig
 === NOUVEAU MESSAGE DU PROSPECT ===
 {new_message}
 
-=== CATALOGUE DES OFFRES DISPONIBLES ===
+=== CATALOGUE DES OFFRES DISPONIBLES & FICHES TECHNIQUES ===
 {catalogue_text}
 
 Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
@@ -213,6 +230,13 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
     "outils_actuels": ["ce que le prospect utilise déjà (ex: WhatsApp manuel, carnets)"],
     "douleurs_explicites": ["ce qui lui coûte du temps/argent ou bloque sa croissance"],
     "objectifs_declares": ["ce qu'il veut atteindre concrètement"]
+  }},
+
+  "demande_specifique": {{
+    "detectee": false,
+    "besoin_exprime": "Description précise de la fonctionnalité technique ou intégration logicielle spécifique demandée par le client (ex: liaison ERP/logiciel de caisse, multi-établissements, module sur-mesure), ou null si c'est une simple question commerciale ou logistique (délais, tarifs de base, prise de RDV)",
+    "fait_partie_offre_standard": null,
+    "explication_technique": "Est-ce déjà inclus dans la fiche technique standard de l offre ou est-ce du sur-mesure nécessitant un cadrage/supplément"
   }},
 
   "progression_commerciale": {{
@@ -357,6 +381,12 @@ Analyse tout et réponds UNIQUEMENT en JSON valide selon ce schéma strict :
                 "outils_actuels": ["WhatsApp manuel"],
                 "douleurs_explicites": ["perte de temps manuelle", "manque d'automatisation"],
                 "objectifs_declares": ["gagner du temps", "fidéliser les clients"]
+            },
+            "demande_specifique": {
+                "detectee": any(w in h_lower for w in ["est-ce que ca peut", "est-ce que c'est possible", "peut-on", "compatible", "integrer", "sur mesure", "specifique", "logiciel de caisse", "synchronis"]),
+                "besoin_exprime": new_message if any(w in h_lower for w in ["est-ce que ca peut", "est-ce que c'est possible", "peut-on", "compatible", "integrer", "sur mesure", "specifique"]) else None,
+                "fait_partie_offre_standard": None,
+                "explication_technique": "Évaluation technique à confronter à la fiche technique de l'offre"
             },
             "progression_commerciale": {
                 "phase_actuelle": "closer" if is_purchase else (lead.get("phase_actuelle") or "setter"),
