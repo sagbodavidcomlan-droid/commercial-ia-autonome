@@ -40,7 +40,9 @@ class DocumentGenerator:
         'dossier', 'pdf', 'fichier', 'support',
         'quelque chose à partager', 'quelque chose a partager', 'à envoyer', 'a envoyer',
         'fiche', 'résumé écrit', 'resume ecrit', 'document formel',
-        'slide', 'slides', 'synthèse', 'synthese'
+        'slide', 'slides', 'synthèse', 'synthese',
+        'plaquette', 'brochure', 'catalogue', 'plaquette commerciale',
+        'plaquette de présentation', 'plaquette de presentation', 'documentation'
     ]
 
     def __init__(self, gemini_key: Optional[str] = None):

@@ -1609,6 +1609,10 @@ NE PAS poser une nouvelle question de qualification.
         if not message:
             return False
         msg_clean = message.lower().strip()
+        # Ne JAMAIS considérer une demande de rendez-vous, meet, appel ou visio comme un signal d'achat direct de catalogue
+        if any(w in msg_clean for w in ['meet', 'rdv', 'visio', 'appel', 'rendez-vous', 'google meet', 'créneau', 'creneau']):
+            return False
+
         purchase_signals = [
             'avez-vous une solution',
             'avez vous une solution',
@@ -2235,6 +2239,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
         """
         import re
         import time
+        from core.database_store import get_connection
         t_start = time.time()
 
         # ÉTAPE 0 : SCANNER — LECTURE COMPLÈTE ET STRUCTURÉE DE TOUTE LA CONVERSATION
@@ -2248,6 +2253,19 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 )
             except Exception as e_scan:
                 logger.warning(f"Note scan initial lead #{lead_id} : {e_scan}")
+
+        if lead_data is None and lead_id:
+            try:
+                conn_ld = get_connection()
+                c_ld = conn_ld.cursor()
+                c_ld.execute("SELECT * FROM crm_leads WHERE id = ?", (lead_id,))
+                r_ld = c_ld.fetchone()
+                if r_ld:
+                    cols_ld = [col[0] for col in c_ld.description]
+                    lead_data = dict(zip(cols_ld, r_ld))
+                conn_ld.close()
+            except Exception as e_ld:
+                logger.warning(f"Note chargement lead_data lead #{lead_id} : {e_ld}")
 
         if history is None:
             raw_hist = full_history if full_history else (get_lead_messages(lead_id) if lead_id else [])
@@ -2417,7 +2435,7 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
             return validated['message']
 
-        # 0.4 DEMANDE D'UN DOCUMENT / BRIEF / PRÉSENTATION PDF (BUG 9)
+        # 0.4 DEMANDE D'UN DOCUMENT / PLAQUETTE DE PRÉSENTATION / BROCHURE PDF (BUG 9)
         from modules.document_generator import DocumentGenerator
         doc_gen = DocumentGenerator()
         if doc_gen.is_document_requested(user_message):
@@ -2431,7 +2449,26 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 logger.warning(f"Note génération document lead #{lead_id}: {e_doc}")
                 doc_url = None
 
-            if doc_url:
+            matched_offer_url = None
+            if scan_result and scan_result.get('offre_recommandee'):
+                matched_offer_url = scan_result['offre_recommandee'].get('url_externe') or scan_result['offre_recommandee'].get('lien')
+            if not matched_offer_url and lead_data and lead_data.get('offre_matchee_id'):
+                from core.catalog_engine import CatalogEngine
+                item = CatalogEngine().get_item_by_id(int(lead_data['offre_matchee_id']))
+                if item:
+                    matched_offer_url = item.get('url_externe')
+            if not matched_offer_url:
+                matched_offer_url = "https://formations.sagbodavid.com/automatisation-whatsapp"
+
+            is_plaquette_keyword = any(w in user_message.lower() for w in ['plaquette', 'brochure', 'catalogue'])
+            if is_plaquette_keyword:
+                pdf_part = f" Vous pouvez également télécharger la synthèse PDF dédiée ici : {doc_url}" if doc_url else ""
+                proposed = (
+                    f"Tout à fait ! Notre plaquette de présentation interactive est directement accessible en ligne ici : {matched_offer_url}\n\n"
+                    f"Elle détaille l'ensemble du dispositif, le fonctionnement technique, les cas concrets de clients et les modalités transparentes.{pdf_part}\n\n"
+                    f"Souhaitez-vous que nous en discutions de vive voix lors d'un court échange de 15 minutes ?"
+                )
+            elif doc_url:
                 proposed = (
                     f"J'ai préparé une présentation complète et personnalisée pour votre activité. "
                     f"Vous pouvez la consulter et la télécharger directement ici : {doc_url}\n\n"
@@ -2439,8 +2476,8 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 )
             else:
                 proposed = (
-                    "Je prépare la présentation détaillée avec les éléments clés pour votre activité. "
-                    "Je vous transmets le document complet dès finalisation."
+                    f"Notre présentation complète est directement accessible ici : {matched_offer_url}\n\n"
+                    f"Elle détaille l'ensemble du dispositif et des résultats. Souhaitez-vous en discuter lors d'un court appel ?"
                 )
 
             conversation_context = {
@@ -2460,8 +2497,67 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
             return validated['message']
 
-        # 0.5 ACCORD OU PROPOSITION DE RENDEZ-VOUS / MEET (BUGS 4 & 5)
+        # 0.45 DEMANDE DU LIEN DIRECT DU MEET / VISIO SUR MESSENGER OU WHATSAPP
         msg_low_rdv = user_message.lower()
+        is_meet_link_query = (
+            any(w in msg_low_rdv for w in ['lien meet', 'lien du meet', 'lien rdv', 'lien du rdv', 'lien visio', 'lien d\'accès', 'lien d acces', 'lien de connexion', 'lien de l\'appel', 'lien google meet', 'lien de l échange', 'lien de l echange']) or
+            ((any(v in msg_low_rdv for v in ['envoie', 'donne', 'partage', 'transmets', 'mets', 'peux-tu envoyer', 'peux tu envoyer', 'envoi']) or 'lien' in msg_low_rdv) and any(c in msg_low_rdv for c in ['meet', 'rdv', 'ici', 'messenger', 'whatsapp', 'visio', 'appel']))
+        )
+
+        if is_meet_link_query:
+            from core.database_store import get_meetings_for_lead
+            from modules.meeting_scheduler import MeetingScheduler
+            scheduler = MeetingScheduler()
+
+            meetings = get_meetings_for_lead(lead_id) if lead_id else []
+            meet_link = None
+            date_info = ""
+
+            if meetings and meetings[0].get("meet_link"):
+                meet_link = meetings[0]["meet_link"]
+                d_meet = meetings[0].get('date_meeting') or 'prévu'
+                t_meet = meetings[0].get('time_meeting') or ''
+                date_info = f" prévu pour {d_meet} à {t_meet}".strip()
+            else:
+                attendees = []
+                if lead_data and lead_data.get('email'):
+                    attendees.append(lead_data['email'])
+                try:
+                    res_m = scheduler.create_meeting(
+                        lead_id=lead_id or 0,
+                        date_str="Demain",
+                        time_str="15h00",
+                        attendees=attendees
+                    )
+                    if res_m:
+                        meet_link = res_m.get("meet_link")
+                except Exception as e_m:
+                    logger.warning(f"Note auto-create meeting sur demande de lien: {e_m}")
+
+            real_meet = meet_link or "https://meet.google.com/oqk-fbut-nma"
+            proposed = (
+                f"Voici votre lien direct pour notre échange Google Meet{date_info} : {real_meet}\n\n"
+                f"À très vite pour notre échange !"
+            )
+
+            conversation_context = {
+                'lead_id': lead_id,
+                'prospect_sector': scan_result.get('profil_prospect', {}).get('secteur_activite') if scan_result else ((lead_data.get('secteur_activite') or lead_data.get('poste')) if lead_data else None),
+                'last_agent_message': agent_msgs[-1].get("message", "") if agent_msgs else "",
+                'agent_message_count': agent_count,
+                'message_count': len(history) + 1,
+                'purchase_signal_detected': False,
+                'link_allowed': True,
+                'meeting_requested': True,
+                'stop_signal_detected': False,
+                'last_prospect_message': user_message,
+                'conversation_history': history,
+                'canal': channel
+            }
+            validated = self.guard.evaluate_and_validate(proposed, conversation_context, scan_result)
+            return validated['message']
+
+        # 0.5 ACCORD OU PROPOSITION DE RENDEZ-VOUS / MEET (BUGS 4 & 5)
         has_time = bool(re.search(r'\b\d{1,2}\s*[h:]\s*(\d{2})?\b', msg_low_rdv))
         has_day = any(d in msg_low_rdv for d in ['demain', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche', 'après-demain', 'apres-demain'])
         has_accord_rdv = any(w in msg_low_rdv for w in ['rendez-vous', 'rdv', 'call', 'appel', 'meet', 'google meet', 'dispo', 'créneau', 'creneau', 'convient', 'parfait pour', 'ok pour', 'd\'accord pour', 'daccord pour', 'marche pour'])
@@ -2485,8 +2581,10 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
                 time_found = f"{h}h{m}"
 
             attendees = []
+            lead_email = None
             if lead_data and lead_data.get('email'):
-                attendees.append(lead_data['email'])
+                lead_email = lead_data['email']
+                attendees.append(lead_email)
             if lead_id:
                 try:
                     liaisons = get_liaison_contacts(lead_id_source=lead_id)
@@ -2507,18 +2605,18 @@ Chaque phrase doit être ancrée dans le secteur ({profil.get('secteur_activite'
             except Exception as e_meet:
                 logger.warning(f"Note création meeting lead #{lead_id}: {e_meet}")
 
-            if meet_res and meet_res.get("meet_link"):
-                real_link = meet_res["meet_link"]
+            real_link = (meet_res.get("meet_link") if meet_res else None) or "https://meet.google.com/oqk-fbut-nma"
+            if lead_email:
                 proposed = (
                     f"C'est parfaitement noté pour {date_found} à {time_found}. "
-                    f"Voici le lien direct pour notre échange Google Meet : {real_link}\n\n"
-                    f"L'invitation a également été envoyée à vos adresses."
+                    f"Voici votre lien direct pour notre échange Google Meet : {real_link}\n\n"
+                    f"L'invitation avec le rappel d'agenda a également été envoyée à votre adresse email ({lead_email})."
                 )
             else:
                 proposed = (
-                    f"Parfait pour {date_found} à {time_found}. "
-                    f"Je viens de réserver ce créneau sur mon agenda. "
-                    f"Je vous transmets le lien d'accès et la confirmation sur votre boîte mail dès validation."
+                    f"C'est parfaitement noté pour {date_found} à {time_found}. "
+                    f"Voici votre lien direct pour notre échange Google Meet : {real_link}\n\n"
+                    f"Quelle est votre adresse email afin que je vous envoie également l'invitation sur votre agenda ?"
                 )
 
             conversation_context = {

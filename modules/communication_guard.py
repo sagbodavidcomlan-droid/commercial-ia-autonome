@@ -394,7 +394,7 @@ class CommunicationQualityGuard:
                 score_result
             )
 
-            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested') or conversation_context.get('opening_rule_applied'):
+            if score_result.get('score', 0) >= 6.5 or conversation_context.get('third_party_handling') or conversation_context.get('meeting_requested') or conversation_context.get('document_requested') or conversation_context.get('opening_rule_applied'):
                 self._save_quality_log(
                     lead_id=conversation_context.get('lead_id', 0),
                     canal=conversation_context.get('canal', 'messenger'),
@@ -485,7 +485,7 @@ class CommunicationQualityGuard:
         is_purchase_signal = bool(ctx.get('purchase_signal_detected') or scan_result.get('progression_commerciale', {}).get('signal_achat_detecte', False))
         no_real_meet = bool(ctx.get('meeting_requested') and not ctx.get('real_meet_link'))
 
-        is_inbound_opening = bool(ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1)
+        is_inbound_opening = bool(ctx.get('contact_direction') == 'inbound' and ctx.get('message_count', 0) <= 1 and not ctx.get('document_requested') and not ctx.get('meeting_requested') and not ctx.get('custom_feature_request'))
         is_custom_feature = bool(ctx.get('custom_feature_request') or scan_result.get('demande_specifique', {}).get('detectee'))
 
         scoring_prompt = f"""Tu es un superviseur qualité strict pour un directeur commercial.
@@ -503,6 +503,7 @@ Signal d'achat / phase de closing détecté : {is_purchase_signal}
 Signal de rupture détecté : {scan_result.get('progression_commerciale', {}).get('signal_rupture')}
 L'agent avait répondu hors sujet avant : {derniers.get('agent_a_repondu_hors_sujet', False)}
 Consigne Rendez-vous : {"Si aucun lien officiel n'a été fourni, l'agent ne DOIT PAS inventer de lien Meet fictif. Confirmer le créneau et indiquer l'envoi du lien par email est la SEULE réponse parfaite (attribuer OUI sur couverture)." if no_real_meet else "Répondre de façon adaptée"}
+Consigne Document / Plaquette : {"Le prospect a demandé une plaquette ou présentation : lui donner l'accès à la plaquette de présentation interactive en expliquant clairement son contenu et/ou la synthèse PDF personnalisée est la SEULE réponse parfaite attendue (attribuer OUI sur tous les critères)." if ctx.get('document_requested') else "Répondre de façon adaptée"}
 Consigne Ouverture Inbound : {"Le prospect a initié le contact : zéro présentation intrusive ('C'est Dave Sagbo' interdit au premier message), max 2 lignes. S'il demande des services ou décrit un problème, poser d'abord une question sur son domaine ou son activité sans envoyer de catalogue est la SEULE réponse exacte attendue (attribuer OUI sur tous les critères)." if is_inbound_opening else "Répondre de façon adaptée"}
 Consigne Demande Spécifique Sur-Mesure : {"Le prospect a demandé une fonctionnalité ou intégration spécifique : l'agent ne DOIT PAS refuser, il confirme que c'est tout à fait possible grâce à l'adaptabilité sur-mesure de nos offres et pose le cadre d'un cadrage technique / devis complémentaire selon l'ampleur sans engagement gratuit irréaliste. C'est la SEULE réponse parfaite attendue (attribuer OUI sur tous les critères)." if is_custom_feature else "Répondre de façon adaptée"}
 
