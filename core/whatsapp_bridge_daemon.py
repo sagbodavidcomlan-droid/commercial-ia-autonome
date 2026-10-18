@@ -225,7 +225,7 @@ class WhatsAppBridgeDaemon:
                             except Exception:
                                 pass
                             logger.warning(f"Le processus WhatsApp Bridge s'est arrêté (Code: {self.process.returncode}): {err_out}")
-                            self.status_message = f"Arrêt (code {self.process.returncode}): {err_out.strip()[:180]}"
+                            self.status_message = f"Arrêt (code {self.process.returncode}): {err_out.strip()[:1500]}"
                             break
 
                 except Exception as e:

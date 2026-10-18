@@ -1,4 +1,22 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
+let makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers;
+
+async function loadBaileys() {
+    try {
+        const baileys = await import('@whiskeysockets/baileys');
+        makeWASocket = baileys.default || baileys.makeWASocket;
+        useMultiFileAuthState = baileys.useMultiFileAuthState;
+        DisconnectReason = baileys.DisconnectReason;
+        fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+        Browsers = baileys.Browsers;
+    } catch (importErr) {
+        const baileys = require('@whiskeysockets/baileys');
+        makeWASocket = baileys.default || baileys.makeWASocket;
+        useMultiFileAuthState = baileys.useMultiFileAuthState;
+        DisconnectReason = baileys.DisconnectReason;
+        fetchLatestBaileysVersion = baileys.fetchLatestBaileysVersion;
+        Browsers = baileys.Browsers;
+    }
+}
 const pino = require('pino');
 const express = require('express');
 const qrcode = require('qrcode');
@@ -19,6 +37,9 @@ let connectionStatus = 'DISCONNECTED'; // DISCONNECTED, SCAN_QR, CONNECTED
 let connectedNumber = null;
 
 async function startWhatsApp(pairingPhone = '2290194933458') {
+    if (!makeWASocket) {
+        await loadBaileys();
+    }
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
 
