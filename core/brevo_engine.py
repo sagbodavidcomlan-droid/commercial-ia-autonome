@@ -152,8 +152,7 @@ class BrevoEngine:
 
         url = f"{BREVO_API_BASE}/whatsapp/sendMessage"
         payload: Dict[str, Any] = {
-            "recipient": clean_recipient,
-            "contactNumber": clean_recipient,
+            "contactNumbers": [clean_recipient],
             "text": text
         }
         if sender:
@@ -181,9 +180,14 @@ class BrevoEngine:
         except urllib.error.HTTPError as e:
             try:
                 err_data = json.loads(e.read().decode("utf-8"))
-                err_msg = err_data.get("message", f"Erreur HTTP {e.code}")
+                raw_msg = err_data.get("message", f"Erreur HTTP {e.code}")
             except Exception:
-                err_msg = f"Erreur HTTP {e.code}"
+                raw_msg = f"Erreur HTTP {e.code}"
+            
+            if "not registered" in raw_msg.lower():
+                err_msg = "Le numéro WhatsApp n'est pas encore enregistré/activé dans votre compte Brevo (Menu Campagnes > WhatsApp)."
+            else:
+                err_msg = raw_msg
             logger.warning(f"Brevo WhatsApp HTTP {e.code} vers {clean_recipient}: {err_msg}")
             return {
                 "success": False,
