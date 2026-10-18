@@ -7862,6 +7862,9 @@ function renderVideoReelPreview(result) {
   const keyframeUrl = result.keyframe_url || "";
   const keyframeFilename = result.keyframe_filename || "keyframe_9_16.jpeg";
 
+  const videoUrl = result.video_url || "";
+  const videoFilename = result.video_filename || "reel_dave_sagbo.mp4";
+
   container.innerHTML = `
     <div class="w-full space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-md">
@@ -7870,12 +7873,17 @@ function renderVideoReelPreview(result) {
             <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
             <span class="text-xs font-black">Vidéo Reel 9:16 & Voix-Off Multimodale (TikTok / Reels / Shorts)</span>
             <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">ElevenLabs Audio</span>
-            <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">MiniMax Keyframe</span>
+            ${videoUrl ? '<span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">Ray 3.2 / Veo MP4</span>' : '<span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">MiniMax Keyframe</span>'}
           </div>
           <p class="text-[11px] text-slate-400">Durée : ${result.duration_seconds || 35}s &bull; Mot-clé : <strong class="text-amber-400 font-mono">${escapeHtml(result.trigger_keyword || 'CLOSING')}</strong></p>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
+          ${videoUrl ? `
+            <a href="${videoUrl}" download="${videoFilename}" target="_blank" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="video" class="w-3.5 h-3.5"></i> Télécharger Clip Vidéo MP4
+            </a>
+          ` : ''}
           ${voiceoverUrl ? `
             <a href="${voiceoverUrl}" download="${voiceoverFilename}" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
               <i data-lucide="volume-2" class="w-3.5 h-3.5"></i> Télécharger Voix-Off MP3
@@ -7891,11 +7899,15 @@ function renderVideoReelPreview(result) {
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
-        <!-- Écran Smartphone 9:16 Stylisé avec Keyframe MiniMax & Player Audio -->
+        <!-- Écran Smartphone 9:16 Stylisé avec Vidéo MP4 ou Keyframe MiniMax & Player Audio -->
         <div class="lg:col-span-5 flex flex-col items-center">
-          <div class="relative w-full max-w-[290px] aspect-[9/16] bg-slate-950 rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col justify-between p-5 select-none" style="${keyframeUrl ? `background-image: url('${keyframeUrl}'); background-size: cover; background-position: center;` : ''}">
+          <div class="relative w-full max-w-[290px] aspect-[9/16] bg-slate-950 rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col justify-between p-5 select-none" style="${!videoUrl && keyframeUrl ? `background-image: url('${keyframeUrl}'); background-size: cover; background-position: center;` : ''}">
             
-            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/70 pointer-events-none"></div>
+            ${videoUrl ? `
+              <video src="${videoUrl}" autoplay loop muted playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+            ` : ''}
+
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/70 pointer-events-none"></div>
 
             <div class="relative z-10 flex items-center justify-between">
               <div class="flex items-center gap-2">
@@ -7906,7 +7918,7 @@ function renderVideoReelPreview(result) {
                 </div>
               </div>
               <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600/90 text-white uppercase tracking-wider shadow">
-                REEL 9:16
+                ${videoUrl ? 'VIDÉO HD 9:16' : 'REEL 9:16'}
               </span>
             </div>
 
