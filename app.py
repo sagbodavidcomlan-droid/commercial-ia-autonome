@@ -61,6 +61,7 @@ from core.telephony_engine import telephony_engine
 from core.market_intelligence_engine import market_intelligence_engine
 from core.database_store import get_competitors_intel, get_market_trend_reports
 from core.brevo_engine import BrevoEngine, get_brevo_credentials
+from core.whatsapp_bridge_daemon import whatsapp_bridge_daemon
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -91,6 +92,9 @@ autopilot_daemon.start()
 
 # Démarrage de SilentWatcher (Superviseur Autonome)
 watcher_instance.start()
+
+# Démarrage de la passerelle WhatsApp QR / Baileys
+whatsapp_bridge_daemon.start()
 
 
 class SalesPlatformHandler(SimpleHTTPRequestHandler):

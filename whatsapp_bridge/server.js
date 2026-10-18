@@ -60,8 +60,10 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
             try {
                 currentQrCodeDataUrl = await qrcode.toDataURL(qr, { margin: 2, scale: 8 });
                 const base64Data = currentQrCodeDataUrl.split(',')[1];
-                const qrPath = '/home/dave/.gemini/antigravity/brain/6132d17c-7db0-4b8b-b2af-77f411c639a9/whatsapp_qr.png';
-                fs.writeFileSync(qrPath, Buffer.from(base64Data, 'base64'));
+                const qrStaticPath = path.join(__dirname, '..', 'web', 'static', 'whatsapp_qr.png');
+                try {
+                    fs.writeFileSync(qrStaticPath, Buffer.from(base64Data, 'base64'));
+                } catch (e) {}
             } catch (err) {
                 console.error('Erreur génération QR:', err);
             }
@@ -69,13 +71,23 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
 
         if (connection === 'close') {
             const statusCode = (lastDisconnect?.error)?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             connectionStatus = 'DISCONNECTED';
             currentPairingCode = null;
             currentQrCodeDataUrl = null;
             connectedNumber = null;
-            console.log(`❌ [WhatsApp Bridge] Déconnecté (Code: ${statusCode}). Reconnexion: ${shouldReconnect}`);
-            if (shouldReconnect) {
+            console.log(`❌ [WhatsApp Bridge] Déconnecté (Code: ${statusCode})`);
+
+            if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
+                console.log(`🧹 [WhatsApp Bridge] Session expirée / déconnectée (401). Nettoyage de la session et redémarrage pour nouveau QR...`);
+                try {
+                    if (fs.existsSync(AUTH_DIR)) {
+                        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+                    }
+                } catch (cleanErr) {
+                    console.error('Erreur nettoyage auth_info:', cleanErr);
+                }
+                setTimeout(() => startWhatsApp(pairingPhone), 1500);
+            } else {
                 setTimeout(() => startWhatsApp(pairingPhone), 3000);
             }
         } else if (connection === 'open') {

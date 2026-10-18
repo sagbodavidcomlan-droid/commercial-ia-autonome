@@ -4759,9 +4759,13 @@ async function refreshWhatsAppQr() {
     const res = await fetch("/api/whatsapp/qr");
     const data = await res.json();
 
+    const pairingBox = document.getElementById("wa-pairing-code-box");
+    const pairingVal = document.getElementById("wa-pairing-code-value");
+
     if (data.status === "CONNECTED" || data.connected) {
       if (loading) loading.classList.add("hidden");
       if (connectedDiv) connectedDiv.classList.remove("hidden");
+      if (pairingBox) pairingBox.classList.add("hidden");
       const numSpan = document.getElementById("wa-connected-number");
       if (numSpan) numSpan.innerText = `Numéro lié : +${data.number || ""}`;
       if (statusText) statusText.innerText = "Session active. Vos prospects reçoivent les réponses de Dave Sagbo.";
@@ -4772,9 +4776,19 @@ async function refreshWhatsAppQr() {
         img.src = data.qrDataUrl;
         img.classList.remove("hidden");
       }
-      if (statusText) statusText.innerText = "Scannez ce QR Code avec WhatsApp sur votre téléphone.";
+      if (data.pairingCode && pairingBox && pairingVal) {
+        pairingVal.innerText = data.pairingCode;
+        pairingBox.classList.remove("hidden");
+      } else if (pairingBox) {
+        pairingBox.classList.add("hidden");
+      }
+      if (statusText) statusText.innerText = "Scannez ce QR Code ou entrez le code d'association sur votre téléphone.";
       if (btnLogout) btnLogout.classList.add("hidden");
     } else {
+      if (data.pairingCode && pairingBox && pairingVal) {
+        pairingVal.innerText = data.pairingCode;
+        pairingBox.classList.remove("hidden");
+      }
       if (statusText) statusText.innerText = data.message || "En attente du QR Code...";
     }
   } catch (err) {
@@ -4786,6 +4800,9 @@ async function pollWhatsAppQrStatus() {
   try {
     const res = await fetch("/api/whatsapp/status");
     const data = await res.json();
+    const pairingBox = document.getElementById("wa-pairing-code-box");
+    const pairingVal = document.getElementById("wa-pairing-code-value");
+
     if (data.status === "CONNECTED") {
       const loading = document.getElementById("wa-qr-loading");
       const img = document.getElementById("wa-qr-image");
@@ -4795,12 +4812,16 @@ async function pollWhatsAppQrStatus() {
 
       if (loading) loading.classList.add("hidden");
       if (img) img.classList.add("hidden");
+      if (pairingBox) pairingBox.classList.add("hidden");
       if (connectedDiv) connectedDiv.classList.remove("hidden");
       const numSpan = document.getElementById("wa-connected-number");
       if (numSpan) numSpan.innerText = `Numéro : +${data.number}`;
       if (statusText) statusText.innerText = "Connecté avec succès ! L'agent est opérationnel 24h/24.";
       if (btnLogout) btnLogout.classList.remove("hidden");
       checkWhatsAppBridgeStatus();
+    } else if (data.pairingCode && pairingBox && pairingVal) {
+      pairingVal.innerText = data.pairingCode;
+      pairingBox.classList.remove("hidden");
     }
   } catch (e) {}
 }
