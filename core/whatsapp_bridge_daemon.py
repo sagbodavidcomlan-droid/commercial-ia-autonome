@@ -204,31 +204,34 @@ class WhatsAppBridgeDaemon:
             if not self.is_bridge_reachable():
                 logger.info("La passerelle WhatsApp (port 3001) n'est pas active. Lancement du processus Node.js...")
                 try:
+                    log_file = BRIDGE_DIR / "bridge.log"
+                    log_f = open(log_file, "a", encoding="utf-8")
                     self.process = subprocess.Popen(
                         [node_bin, "server.js"],
                         cwd=str(BRIDGE_DIR),
-                        stdout=subprocess.PIPE,
+                        stdout=log_f,
                         stderr=subprocess.STDOUT,
                         env=env,
-                        text=True,
-                        bufsize=1
+                        text=True
                     )
                     logger.info(f"Processus WhatsApp Bridge démarré (PID: {self.process.pid})")
 
                     for _ in range(15):
                         time.sleep(1)
                         if self.is_bridge_reachable():
-                            logger.info("Passerelle WhatsApp opérationnelle sur http://localhost:3001")
+                            logger.info("Passerelle WhatsApp opérationnelle sur http://127.0.0.1:3001")
                             self.status_message = "Passerelle WhatsApp active et joignable."
                             break
                         if self.process.poll() is not None:
                             err_out = ""
                             try:
-                                err_out = self.process.stdout.read()
+                                if log_file.exists():
+                                    with open(log_file, "r", encoding="utf-8") as f_err:
+                                        err_out = f_err.read()[-1000:]
                             except Exception:
                                 pass
                             logger.warning(f"Le processus WhatsApp Bridge s'est arrêté (Code: {self.process.returncode}): {err_out}")
-                            self.status_message = f"Arrêt (code {self.process.returncode}): {err_out.strip()[:1500]}"
+                            self.status_message = f"Arrêt (code {self.process.returncode}): {err_out.strip()[:500]}"
                             break
 
                 except Exception as e:

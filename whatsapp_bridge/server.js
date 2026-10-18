@@ -47,6 +47,14 @@ let connectionStatus = 'DISCONNECTED'; // DISCONNECTED, SCAN_QR, CONNECTED
 let connectedNumber = null;
 
 async function startWhatsApp(pairingPhone = null) {
+    if (sock) {
+        try {
+            sock.ev.removeAllListeners();
+            sock.end(new Error('Redémarrage propre du socket WhatsApp'));
+        } catch (e) {}
+        sock = null;
+    }
+
     if (!makeWASocket) {
         await loadBaileys();
     }
@@ -209,10 +217,12 @@ async function startWhatsApp(pairingPhone = null) {
 }
 
 app.get('/status', (req, res) => {
+    const isActuallyConnected = connectionStatus === 'CONNECTED' || Boolean(sock && sock.user && sock.user.id);
+    const num = connectedNumber || (sock?.user?.id ? sock.user.id.split(':')[0] : null);
     res.json({
-        status: connectionStatus,
-        number: connectedNumber,
-        hasQr: !!currentQrCodeDataUrl,
+        status: isActuallyConnected ? 'CONNECTED' : connectionStatus,
+        number: num,
+        hasQr: !isActuallyConnected && !!currentQrCodeDataUrl,
         pairingCode: currentPairingCode
     });
 });
@@ -225,8 +235,10 @@ app.get('/pairing-code', (req, res) => {
 });
 
 app.get('/qr', (req, res) => {
-    if (connectionStatus === 'CONNECTED') {
-        return res.json({ connected: true, number: connectedNumber, status: 'CONNECTED' });
+    const isActuallyConnected = connectionStatus === 'CONNECTED' || Boolean(sock && sock.user && sock.user.id);
+    const num = connectedNumber || (sock?.user?.id ? sock.user.id.split(':')[0] : null);
+    if (isActuallyConnected) {
+        return res.json({ connected: true, number: num, status: 'CONNECTED' });
     }
     res.json({
         connected: false,
@@ -239,7 +251,8 @@ app.get('/qr', (req, res) => {
 app.post('/send', async (req, res) => {
     const { phone, text } = req.body;
     if (!phone || !text) return res.status(400).json({ success: false, error: 'Paramètres manquants' });
-    if (connectionStatus !== 'CONNECTED' || !sock) return res.status(503).json({ success: false, error: 'Non connecté' });
+    const isActuallyConnected = connectionStatus === 'CONNECTED' || Boolean(sock && sock.user && sock.user.id);
+    if (!isActuallyConnected || !sock) return res.status(503).json({ success: false, error: 'Non connecté à WhatsApp' });
 
     try {
         let cleanPhone = phone.replace(/[^0-9]/g, '');
