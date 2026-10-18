@@ -162,6 +162,8 @@ class WhatsAppBridgeDaemon:
         node_dir = str(Path(node_bin).parent)
         env["PATH"] = f"{node_dir}:{env.get('PATH', '')}"
         env["npm_config_cache"] = "/tmp/.npm-cache"
+        env["PORT"] = "3001"
+        env["WHATSAPP_BRIDGE_PORT"] = "3001"
 
         # S'assurer que les modules node_modules sont installés
         baileys_dir = BRIDGE_DIR / "node_modules" / "@whiskeysockets" / "baileys"

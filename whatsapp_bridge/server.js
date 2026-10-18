@@ -26,7 +26,7 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.WHATSAPP_BRIDGE_PORT || 3001;
 const AI_WEBHOOK_URL = process.env.AI_WEBHOOK_URL || 'https://commercial-ia-autonome.onrender.com/webhook/whatsapp';
 const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
 
