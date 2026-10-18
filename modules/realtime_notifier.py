@@ -281,6 +281,8 @@ class RealtimeNotifier:
             f"⏰ *Date & Heure :* {time_slot}\n"
             f"📝 *Objet :* {summary}\n\n"
             f"🔗 *Lien Google Meet :*\n{meet_link}\n\n"
+            f"💼 *Dossier de passation commerciale :*\n"
+            f"Un briefing complet (besoins, objections, conseils de closing) vient de vous être envoyé par email !\n\n"
             f"L'invitation a été ajoutée automatiquement à votre Google Calendar."
         )
         wa_res = self.send_whatsapp_alert(wa_text)

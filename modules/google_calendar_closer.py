@@ -236,7 +236,8 @@ class GoogleCalendarCloser:
             "contact_name": contact_name,
             "contact_email": contact_email,
             "summary": summary,
-            "message": f"Appel de closing planifié avec Google Meet ({meet_link})"
+            "message": f"Appel de closing planifié avec Google Meet ({meet_link})",
+            "lead_id": lead_id
         }
 
         # Déclenchement de l'alerte omnicanale instantanée à Dave
@@ -246,6 +247,21 @@ class GoogleCalendarCloser:
             notifier.notify_meeting_booked(booking_res)
         except Exception as e:
             logger.warning(f"Notification booking error: {e}")
+
+        # Envoi du Dossier de Passation Commerciale (SDR -> Closer/Négociateur)
+        if lead_id:
+            try:
+                from modules.handover_briefing_engine import get_handover_engine
+                get_handover_engine().send_handover_briefing(
+                    lead_id=str(lead_id),
+                    meeting_data={
+                        "meet_link": meet_link,
+                        "date_reunion": event_start,
+                        "title": summary
+                    }
+                )
+            except Exception as e_hb:
+                logger.warning(f"Note handover briefing send error in GoogleCalendarCloser: {e_hb}")
 
         return booking_res
 

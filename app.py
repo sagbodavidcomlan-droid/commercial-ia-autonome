@@ -487,6 +487,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         elif path.startswith("/api/crm/leads/") and path.endswith("/enrich"):
             lead_id = path.replace("/api/crm/leads/", "").replace("/enrich", "").strip()
             self.handle_api_crm_lead_enrich(lead_id)
+        elif path.startswith("/api/crm/leads/") and path.endswith("/send-handover-briefing"):
+            lead_id = path.replace("/api/crm/leads/", "").replace("/send-handover-briefing", "").strip()
+            self.handle_api_crm_lead_send_handover_briefing(lead_id, body)
         elif path == "/api/enrichment/verify-email":
             self.handle_api_enrichment_verify_email(body)
         else:
@@ -2632,6 +2635,21 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             lead_id_int = int(lead_id)
             enricher = get_enricher()
             res = enricher.enrich_lead(lead_id_int)
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_crm_lead_send_handover_briefing(self, lead_id, body):
+        try:
+            from modules.handover_briefing_engine import get_handover_engine
+            engine = get_handover_engine()
+            meeting_data = body.get("meeting_data") if isinstance(body, dict) else None
+            recipient_email = body.get("recipient_email") if isinstance(body, dict) else None
+            res = engine.send_handover_briefing(
+                lead_id=str(lead_id),
+                meeting_data=meeting_data,
+                recipient_email=recipient_email
+            )
             self.send_json_response(res)
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)

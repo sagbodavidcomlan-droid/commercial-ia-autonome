@@ -129,6 +129,7 @@ class MeetingScheduler:
         try:
             from modules.realtime_notifier import get_notifier
             get_notifier().notify_meeting_booked({
+                "lead_id": lead_id,
                 "contact_name": attendees[0] if attendees else f"Lead #{lead_id}",
                 "contact_email": attendees[0] if attendees else "Non renseigné",
                 "meeting_link": meeting_data["meet_link"],
@@ -137,6 +138,20 @@ class MeetingScheduler:
             })
         except Exception as e_notif:
             logger.warning(f"Note alerte RDV booked: {e_notif}")
+
+        # ÉTAPE 6 : Envoi du Dossier de Passation Commerciale (SDR -> Closer/Négociateur)
+        try:
+            from modules.handover_briefing_engine import get_handover_engine
+            get_handover_engine().send_handover_briefing(
+                lead_id=str(lead_id),
+                meeting_data={
+                    "meet_link": meeting_data["meet_link"],
+                    "date_reunion": f"{date_str} à {time_str}",
+                    "title": subject
+                }
+            )
+        except Exception as e_brief:
+            logger.warning(f"Note handover briefing send: {e_brief}")
 
         return {
             "meeting_id": meeting_id,
