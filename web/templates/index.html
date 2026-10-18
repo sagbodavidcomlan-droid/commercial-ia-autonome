@@ -4258,335 +4258,227 @@
       <!-- TAB STUDIO CRÉATIF & IDENTITÉ DE MARQUE IA (DESIGN SETO AI STUDIO x INVO PREMIUM) -->
       <section id="tab-creative" class="tab-pane hidden space-y-6">
 
-        <!-- 1. HERO STUDIO SETO : ÉTOILE HOLOGRAPHIQUE & PROMPT DOCK FLOTTANT -->
-        <div class="relative rounded-3xl bg-white border border-slate-200/80 p-8 sm:p-12 shadow-xs overflow-hidden">
+        <!-- ========================================================================= -->
+        <!-- STUDIO CRÉATIF HAUTE COUTURE — DAVE SAGBO BRAND BIBLE (PUR & ÉPURÉ) -->
+        <!-- ========================================================================= -->
+        <div class="relative rounded-3xl bg-gradient-to-b from-white via-slate-50/40 to-white border border-slate-200/80 p-6 sm:p-10 shadow-xs overflow-hidden space-y-7">
           
-          <!-- Lueur de fond diffuse et raffinée -->
-          <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-br from-blue-400/10 via-[#0062ff]/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <!-- Lueur d'ambiance Dave Sagbo (#0A1128, #F39C12, #0062FF) -->
+          <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-64 bg-gradient-to-r from-blue-600/10 via-amber-500/10 to-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-          <!-- Top Pill Tabs (Style SETO : Chat, My Project, Brand Voice, Templates, Tools) -->
-          <div class="flex items-center justify-between gap-4 pb-8 border-b border-slate-100 flex-wrap relative z-10">
-            <div class="flex items-center gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
-              <button type="button" onclick="document.getElementById('creative-topic')?.focus();" class="px-4 py-1.5 rounded-xl text-xs font-black bg-[#0062ff] text-white shadow-xs cursor-pointer">Studio Créatif</button>
-              <button type="button" onclick="loadBrandBible()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Brand Bible</button>
-              <button type="button" onclick="loadCreativeCalendar()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Calendrier</button>
-              <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 transition">Canaux & Options</button>
+          <!-- 1. En-tête Chic & Épuré -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 relative z-10">
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-2xl bg-[#0A1128] text-white flex items-center justify-center font-black shadow-lg shadow-slate-950/20 border border-slate-800">
+                <span class="text-base font-extrabold tracking-wider bg-gradient-to-tr from-amber-400 via-amber-200 to-white bg-clip-text text-transparent">DS</span>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Studio Créatif Haute Définition</h2>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200/80">Brand Bible</span>
+                </div>
+                <p class="text-xs text-slate-500 font-medium">Concevez en 1 clic vos Carrousels PDF LinkedIn, Vidéos Reels avec Voix-off et Affiches Publicitaires HD.</p>
+              </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black bg-blue-50 text-[#0062ff] border border-blue-200/80">
-                <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-pulse"></span>
-                Invo Brand Intelligence Active
-              </span>
+            <!-- Liens d'action rapides et discrets -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <button type="button" onclick="loadBrandBible()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="book-open" class="w-3.5 h-3.5 text-amber-500"></i>
+                <span>Brand Bible</span>
+              </button>
+              <button type="button" onclick="loadCreativeCalendar()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="calendar" class="w-3.5 h-3.5 text-[#0062ff]"></i>
+                <span>Calendrier</span>
+              </button>
+              <button type="button" onclick="loadCreativeGallery()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-2xs flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-purple-600"></i>
+                <span>Galerie</span>
+              </button>
             </div>
           </div>
 
-          <!-- Étoile Holographique SETO au Centre & Salutation -->
-          <div class="flex flex-col items-center justify-center text-center space-y-4 pt-6 pb-4 relative z-10">
-            
-            <!-- Emblème 4 Branches Iridescent SETO -->
-            <div class="relative group cursor-pointer" onclick="document.getElementById('creative-topic').focus();">
-              <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-blue-500/20 via-indigo-500/15 to-purple-500/20 flex items-center justify-center backdrop-blur-md border border-white/60 shadow-lg shadow-blue-500/10 group-hover:scale-105 transition-transform duration-300">
-                <svg width="42" height="42" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-sm">
-                  <path d="M50 0 C50 35, 65 50, 100 50 C65 50, 50 65, 50 100 C50 65, 35 50, 0 50 C35 50, 50 35, 50 0 Z" fill="url(#seto-star-grad)" />
-                  <defs>
-                    <linearGradient id="seto-star-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#0062ff" />
-                      <stop offset="50%" stop-color="#6366f1" />
-                      <stop offset="100%" stop-color="#ec4899" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-
-            <div class="space-y-1.5">
-              <h1 class="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-                Bonjour, Dave Sagbo !
-              </h1>
-              <p class="text-sm text-slate-500 font-medium max-w-md mx-auto">
-                Quelle création à haute conversion souhaitez-vous concevoir aujourd'hui pour votre marque ?
-              </p>
-            </div>
-
-          </div>
-
-          <!-- 3 CARTES D'ACTION RAPIDE SETO ÉPURÉES -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto my-6 relative z-10">
-            
-            <!-- Carte 1 : Pack Omnicanal 360° -->
-            <div onclick="document.getElementById('creative-format-type').value='PACK_OMNICHANNEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
-              <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black group-hover:scale-105 transition">
-                  <i data-lucide="sparkles" class="w-5 h-5 text-amber-500"></i>
-                </div>
-                <span class="text-[10px] font-black uppercase text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Recommandé</span>
-              </div>
-              <div>
-                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Pack Omnicanal 360°</h4>
-                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Carrousel + Storyboard Vidéo + Post d'autorité + Ads générés en 1 clic.</p>
-              </div>
-            </div>
-
-            <!-- Carte 2 : Carrousel Graphique -->
-            <div onclick="document.getElementById('creative-format-type').value='CAROUSEL'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
-              <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black group-hover:scale-105 transition">
-                  <i data-lucide="layers" class="w-5 h-5 text-[#0062ff]"></i>
-                </div>
-                <span class="text-[10px] font-black uppercase text-[#0062ff] bg-blue-50 px-2 py-0.5 rounded-full">8 Slides</span>
-              </div>
-              <div>
-                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Carrousel Visuel Pro</h4>
-                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Slides SVG ultra-contrastées prêtes pour LinkedIn & Instagram (norme 4:5).</p>
-              </div>
-            </div>
-
-            <!-- Carte 3 : Motion Design & Video Script -->
-            <div onclick="document.getElementById('creative-format-type').value='MOTION_VIDEO'; document.getElementById('creative-topic').focus();" class="p-5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 hover:border-[#0062ff]/60 shadow-xs hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between">
-              <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-black group-hover:scale-105 transition">
-                  <i data-lucide="video" class="w-5 h-5 text-purple-600"></i>
-                </div>
-                <span class="text-[10px] font-black uppercase text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">9:16 Viral</span>
-              </div>
-              <div>
-                <h4 class="text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Storyboard Motion</h4>
-                <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">Scripts rythmés avec timecodes, SFX et zooms pour TikTok, Reels & WhatsApp.</p>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- CHAMP DE COMMANDE CRÉATIF SETO FLOTTANT -->
-          <div class="max-w-3xl mx-auto w-full relative z-10">
-            <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-3 shadow-sm hover:border-[#0062ff]/60 focus-within:border-[#0062ff] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#0062ff]/10 transition-all space-y-3">
+          <!-- 2. Les 4 Cartes de Formats d'Élite (Sélection Intuitive en 1 Clic) -->
+          <div class="space-y-2 relative z-10">
+            <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400">1. Choisissez votre Format Stratégique</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               
-              <div class="flex items-center gap-3 px-2 pt-1">
-                <span class="text-[#0062ff] text-base font-black">✦</span>
+              <!-- Carte 1 : Carrousel PDF LinkedIn -->
+              <div id="card-format-carousel-pdf" data-format="CAROUSEL_PDF" onclick="selectCreativeFormat('CAROUSEL_PDF')" class="p-4 rounded-2xl border-2 border-[#0062ff] bg-blue-50/40 ring-2 ring-[#0062ff]/20 shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:shadow-md">
+                <div class="flex items-center justify-between mb-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-black group-hover:scale-105 transition">
+                    <i data-lucide="file-text" class="w-5 h-5 text-purple-600"></i>
+                  </div>
+                  <span class="text-[9px] font-black uppercase text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full">Doc PDF 4:5</span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Carrousel PDF LinkedIn</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Document multipages vectoriel natif 1080x1350 pt pour l'algorithme.</p>
+                </div>
+              </div>
+
+              <!-- Carte 2 : Vidéo Reel 9:16 + Voix-Off -->
+              <div id="card-format-video-reel" data-format="VIDEO_REEL" onclick="selectCreativeFormat('VIDEO_REEL')" class="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-md">
+                <div class="flex items-center justify-between mb-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-black group-hover:scale-105 transition">
+                    <i data-lucide="video" class="w-5 h-5 text-rose-600"></i>
+                  </div>
+                  <span class="text-[9px] font-black uppercase text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full">Reel 9:16 + Voix</span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Vidéo Reel & Voix-Off</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Clip MP4 animé + voix française ElevenLabs (TikTok, Reels, Shorts).</p>
+                </div>
+              </div>
+
+              <!-- Carte 3 : Affiche Publicitaire HD -->
+              <div id="card-format-visual-ad" data-format="VISUAL_AD" onclick="selectCreativeFormat('VISUAL_AD')" class="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-md">
+                <div class="flex items-center justify-between mb-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-blue-100 text-[#0062ff] flex items-center justify-center font-black group-hover:scale-105 transition">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-[#0062ff]"></i>
+                  </div>
+                  <span class="text-[9px] font-black uppercase text-[#0062ff] bg-blue-100/80 px-2 py-0.5 rounded-full">Multi-Moteurs</span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Affiche Publicitaire HD</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Visuels photoréalistes de vente (MiniMax Image-01, FLUX.1 & Gemini Pro).</p>
+                </div>
+              </div>
+
+              <!-- Carte 4 : Pack Omnicanal 360° -->
+              <div id="card-format-pack-360" data-format="PACK_OMNICHANNEL" onclick="selectCreativeFormat('PACK_OMNICHANNEL')" class="p-4 rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-md">
+                <div class="flex items-center justify-between mb-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black group-hover:scale-105 transition">
+                    <i data-lucide="layers" class="w-5 h-5 text-amber-600"></i>
+                  </div>
+                  <span class="text-[9px] font-black uppercase text-amber-700 bg-amber-100/80 px-2 py-0.5 rounded-full">Pack Complet</span>
+                </div>
+                <div>
+                  <h4 class="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#0062ff] transition-colors">Pack Omnicanal 360°</h4>
+                  <p class="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Carrousel + Storyboard + Post d'autorité + Ads générés en 1 clic.</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Champ caché pour le format cible actif -->
+          <input type="hidden" id="creative-format-type" value="CAROUSEL_PDF">
+
+          <!-- 3. Pupitre de Saisie & Contrôles Chic -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-sm space-y-4 relative z-10">
+            <div>
+              <label class="block text-[11px] font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                2. Définissez votre Sujet, Problème Client ou Offre Commerciale
+              </label>
+              <div class="relative">
                 <input 
                   type="text" 
                   id="creative-topic" 
                   value="Automatiser ses relances WhatsApp et tripler ses ventes"
                   placeholder="Décrivez votre idée, offre, problème client ou angle psychologique..."
-                  class="w-full bg-transparent text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none font-semibold"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs sm:text-sm font-semibold text-slate-900 focus:bg-white focus:border-[#0062ff] focus:ring-4 focus:ring-[#0062ff]/10 focus:outline-none transition"
                   onkeydown="if(event.key === 'Enter'){ event.preventDefault(); triggerGenerateCreative(); }"
                 >
               </div>
-
-              <!-- Toolbar Inférieure SETO -->
-              <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70 flex-wrap">
-                
-                <div class="flex items-center gap-1.5 overflow-x-auto">
-                  <button type="button" onclick="loadBrandBible()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
-                    <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-400"></i>
-                    <span>Brand Bible</span>
-                  </button>
-                  <button type="button" onclick="document.getElementById('creative-settings-drawer')?.classList.toggle('hidden')" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
-                    <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-slate-400"></i>
-                    <span>Options Canaux</span>
-                  </button>
-                  <button type="button" onclick="loadCreativeCalendar()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition shadow-2xs">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
-                    <span>Planning TimeFrame</span>
-                  </button>
-                </div>
-
-                <div class="flex items-center gap-2 ml-auto">
-                  <button type="button" onclick="triggerGenerateCreative()" id="btn-generate-creative" class="px-5 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 active:scale-95 text-white font-extrabold text-xs flex items-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
-                    <i data-lucide="wand-2" class="w-4 h-4 text-white"></i>
-                    <span>Générer avec la Brand Bible</span>
-                  </button>
-                </div>
-
-              </div>
-
             </div>
-          </div>
 
-          <!-- TIROIR D'OPTIONS DE DIFFUSION (Format, Réseau, Offre Associée) -->
-          <div id="creative-settings-drawer" class="max-w-3xl mx-auto w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mt-4 relative z-10">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Format Cible</label>
-              <select id="creative-format-type" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
-                <option value="CAROUSEL_PDF" selected>📑 Carrousel PDF LinkedIn (5-8 Slides + Document PDF)</option>
-                <option value="VIDEO_REEL">🎥 Vidéo Reel 9:16 + Voix-Off ElevenLabs (MP4/MP3)</option>
-                <option value="PACK_OMNICHANNEL">🌟 Pack Omnicanal 360°</option>
-                <option value="CAROUSEL">Carrousel Graphique (8 slides SVG)</option>
-                <option value="MOTION_VIDEO">Storyboard Motion (30-45s)</option>
-                <option value="AUTHORITY_POST">Post d'Autorité & Storytelling</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Canal Principal</label>
-              <select id="creative-channel" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
-                <option value="LINKEDIN">LinkedIn (Décideurs B2B)</option>
-                <option value="INSTAGRAM">Instagram (Carrousel / Reels)</option>
-                <option value="TIKTOK">TikTok (Vidéo rythmée)</option>
-                <option value="FACEBOOK">Facebook (Communauté)</option>
-                <option value="WHATSAPP_STATUS">Statut WhatsApp (Direct)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Offre Catalogue Liée</label>
-              <select id="creative-catalog-item" onchange="onCreativeCatalogItemChange()" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
-                <option value="">-- Sujet Libre --</option>
-              </select>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- 2. ESPACE DE PRÉVISUALISATION & RENDU GRAPHIQUE HAUTE DÉFINITION -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-4">
-          <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-black">
-                <i data-lucide="layout" class="w-5 h-5 text-[#0062ff]"></i>
-              </div>
+            <!-- Ligne de Paramètres Épurée (Canal, Moteur Visuel, Style) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               <div>
-                <h3 class="text-base font-black text-slate-900" id="creative-preview-title">Aperçu du Rendu Graphique & Motion</h3>
-                <p class="text-[11px] text-slate-400 font-semibold">Direction Artistique Invo Haute Définition</p>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Canal de Diffusion</label>
+                <select id="creative-channel" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-[#0062ff]">
+                  <option value="LINKEDIN">LinkedIn (Décideurs B2B)</option>
+                  <option value="INSTAGRAM">Instagram (Carrousel / Reels)</option>
+                  <option value="TIKTOK">TikTok (Vidéo rythmée)</option>
+                  <option value="WHATSAPP_STATUS">Statut WhatsApp (Direct)</option>
+                  <option value="FACEBOOK">Facebook (Communauté)</option>
+                </select>
               </div>
-            </div>
-            <span id="creative-format-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-              Prêt à générer
-            </span>
-          </div>
 
-          <!-- Zone de Rendu Dynamique -->
-          <div id="creative-render-container" class="min-h-[380px] flex items-center justify-center bg-slate-50/60 border border-dashed border-slate-200 rounded-2xl p-6">
-            <div class="text-center space-y-3 max-w-sm">
-              <div class="w-14 h-14 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center mx-auto mb-2">
-                <i data-lucide="palette" class="w-7 h-7 text-[#0062ff]"></i>
-              </div>
-              <h4 class="text-sm font-bold text-slate-800">Aucune création générée pour l'instant</h4>
-              <p class="text-xs text-slate-500 leading-relaxed">
-                Cliquez sur <strong>« Générer avec la Brand Bible »</strong> ci-dessus pour composer instantanément votre pack omnicanal, votre carrousel SVG ou votre storyboard vidéo.
-              </p>
-            </div>
-          </div>
-
-          <!-- Footer Action : Enregistrer au Calendrier -->
-          <div id="creative-save-actions" class="hidden pt-4 border-t border-slate-100 flex items-center justify-between">
-            <div class="text-xs text-slate-600">
-              Mot-clé Social Selling : <strong id="creative-trigger-keyword-display" class="text-[#0062ff] font-mono">SYSTÈME</strong>
-            </div>
-            <button onclick="saveCurrentCreativeToCalendar()" class="px-4 py-2.5 rounded-2xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer">
-              <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
-              <span>Planifier au Calendrier Éditorial</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- SECTION 2.BIS : STUDIO VISUEL & AFFICHES PUBLICITAIRES HD (COMPOSIO GEMINI IMAGE AI) -->
-        <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-            <div class="flex items-center gap-3">
-              <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center font-black shadow-md shadow-blue-500/20">
-                <i data-lucide="image" class="w-6 h-6 text-white"></i>
-              </div>
               <div>
-                <h3 class="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <span>Générateur d'Affiches Publicitaires HD & Visuels de Vente</span>
-                  <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200/80">MiniMax & FLUX & Gemini Multi-Moteurs</span>
-                </h3>
-                <p class="text-xs text-slate-400 font-medium">Créez des visuels publicitaires professionnels percutants pour vos campagnes WhatsApp, Meta Ads et LinkedIn.</p>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Moteur d'IA Visuelle</label>
+                <select id="visual-ad-engine" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-[#0062ff]">
+                  <option value="minimax" selected>⚡ MiniMax Image-01 (Rapide & Réaliste)</option>
+                  <option value="flux">🎨 BFL FLUX.1 (Détails & Typo)</option>
+                  <option value="gemini">✨ Gemini Pro Image</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Format & Ambiance</label>
+                <select id="visual-ad-style" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:bg-white focus:outline-none focus:border-[#0062ff]">
+                  <option value="saas_workspace">💻 SaaS Minimaliste (Tech, B2B)</option>
+                  <option value="mobile_money_sales">📱 Mobile Money & Ventes (Afrique)</option>
+                  <option value="retail_commerce">🛍️ Retail & Commerce Moderne</option>
+                  <option value="authority_founder">👔 Leader & Fondateur d'Autorité</option>
+                </select>
+                <input type="hidden" id="visual-ad-ratio" value="1:1">
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="loadCreativeGallery()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
-                <span>Rafraîchir Galerie</span>
+
+            <!-- Grand Bouton de Génération Royal -->
+            <div class="pt-2">
+              <button 
+                type="button" 
+                onclick="triggerGenerateCreative()" 
+                id="btn-generate-creative" 
+                class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0062ff] via-indigo-600 to-[#0A1128] hover:from-blue-600 hover:to-indigo-700 active:scale-[0.99] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition cursor-pointer"
+              >
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
+                <span id="btn-generate-creative-text">Générer le Carrousel PDF LinkedIn (1080x1350 pt)</span>
               </button>
             </div>
           </div>
 
-          <!-- Formulaire de Génération Visuelle -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-            
-            <!-- Colonne Contrôles (7 colonnes) -->
-            <div class="lg:col-span-7 space-y-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Sujet de l'Affiche ou Titre de l'Offre</label>
-                <div class="relative">
-                  <input type="text" id="visual-ad-topic" placeholder="Ex: Clôturer 5x plus de ventes sur WhatsApp sans prospecter manuellement" class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0062ff] focus:ring-4 focus:ring-[#0062ff]/10 rounded-2xl p-3 text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none transition">
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Moteur d'IA Visuelle</label>
-                  <select id="visual-ad-engine" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
-                    <option value="minimax" selected>⚡ MiniMax Image-01 (Rapide)</option>
-                    <option value="flux">🎨 BFL FLUX.1 (Détails)</option>
-                    <option value="gemini">✨ Gemini Pro Image</option>
-                  </select>
+          <!-- 4. Scène de Rendu Unique & Majestueuse -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-7 shadow-xs space-y-4 relative z-10">
+            <div class="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-blue-50 text-[#0062ff] flex items-center justify-center font-bold">
+                  <i data-lucide="layout" class="w-4 h-4 text-[#0062ff]"></i>
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Style Visuel & Ambiance</label>
-                  <select id="visual-ad-style" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
-                    <option value="saas_workspace">💻 SaaS Workspace</option>
-                    <option value="mobile_money_sales">📱 Mobile Money & Ventes</option>
-                    <option value="retail_commerce">🛍️ Retail & Commerce</option>
-                    <option value="authority_founder">👔 Leader & Fondateur</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Format & Ratio</label>
-                  <select id="visual-ad-ratio" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
-                    <option value="1:1">⏹️ Carré 1:1 (WhatsApp, Insta)</option>
-                    <option value="9:16">📱 Vertical 9:16 (Statut, Reels)</option>
-                    <option value="16:9">🖥️ Paysage 16:9 (Web, YouTube)</option>
-                  </select>
+                  <h3 class="text-sm sm:text-base font-black text-slate-900" id="creative-preview-title">Aperçu du Rendu Multimodal</h3>
+                  <p class="text-[10px] text-slate-400 font-semibold">Direction Artistique Invo Haute Couture</p>
                 </div>
               </div>
+              <span id="creative-format-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                Prêt à composer
+              </span>
+            </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Audience Cible</label>
-                <input type="text" id="visual-ad-audience" value="Entrepreneurs, Dirigeants PME et Commerçants Afrique Francophone" class="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0062ff] rounded-xl p-2.5 text-xs font-medium text-slate-800 focus:outline-none">
-              </div>
-
-              <div class="pt-2">
-                <button type="button" onclick="generateVisualAd()" id="btn-generate-visual-ad" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0062ff] via-indigo-600 to-purple-600 hover:from-blue-600 hover:to-indigo-700 active:scale-98 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition cursor-pointer">
-                  <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
-                  <span>Générer l'Affiche Publicitaire HD (Multi-Moteurs)</span>
-                </button>
+            <!-- Zone de Rendu Dynamique Unique -->
+            <div id="creative-render-container" class="min-h-[340px] flex items-center justify-center bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl p-6">
+              <div class="text-center space-y-3 max-w-sm">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50 text-[#0062ff] flex items-center justify-center mx-auto mb-2 border border-blue-100 shadow-2xs">
+                  <i data-lucide="wand-2" class="w-6 h-6 text-[#0062ff]"></i>
+                </div>
+                <h4 class="text-sm font-bold text-slate-800">Votre création apparaîtra ici</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Sélectionnez un format ci-dessus et cliquez sur <strong>« Générer avec la Brand Bible »</strong> pour produire instantanément votre carrousel PDF, votre vidéo Reel 9:16 ou votre affiche HD.
+                </p>
               </div>
             </div>
 
-            <!-- Colonne Preview Actif (5 colonnes) -->
-            <div class="lg:col-span-5 bg-slate-50/80 border border-slate-200 rounded-2xl p-4 flex flex-col justify-between min-h-[300px]">
-              <div class="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Rendu en Direct</span>
-                <span id="visual-ad-badge-status" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">En attente</span>
+            <!-- Footer Action : Enregistrer au Calendrier -->
+            <div id="creative-save-actions" class="hidden pt-3.5 border-t border-slate-100 flex items-center justify-between">
+              <div class="text-xs text-slate-600">
+                Mot-clé Social Selling : <strong id="creative-trigger-keyword-display" class="text-[#0062ff] font-mono">SYSTÈME</strong>
               </div>
-              
-              <div id="visual-ad-preview-container" class="my-auto py-6 flex flex-col items-center justify-center text-center">
-                <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center shadow-xs mb-3">
-                  <i data-lucide="image" class="w-8 h-8 text-slate-300"></i>
-                </div>
-                <p class="text-xs font-bold text-slate-700">Aucun visuel publicitaire généré</p>
-                <p class="text-[11px] text-slate-400 max-w-xs mt-1">Configurez votre sujet et cliquez sur Générer pour créer une affiche commerciale haute définition.</p>
-              </div>
-
-              <div id="visual-ad-actions-container" class="hidden pt-3 border-t border-slate-200/60 flex items-center justify-between">
-                <span id="visual-ad-headline-preview" class="text-xs font-extrabold text-slate-800 truncate max-w-[200px]">Titre</span>
-                <a id="visual-ad-download-btn" href="#" target="_blank" download class="px-3 py-1.5 rounded-xl bg-[#0062ff] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs hover:bg-blue-600 transition">
-                  <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                  <span>Télécharger HD</span>
-                </a>
-              </div>
+              <button onclick="saveCurrentCreativeToCalendar()" class="px-4 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="calendar-plus" class="w-3.5 h-3.5"></i>
+                <span>Planifier au Calendrier Éditorial</span>
+              </button>
             </div>
-
           </div>
 
-          <!-- Galerie des Affiches Créées -->
-          <div class="pt-4 border-t border-slate-100 space-y-3">
+          <!-- 5. Galerie Récente Épurée -->
+          <div class="pt-2 border-t border-slate-100 space-y-3 relative z-10">
             <div class="flex items-center justify-between">
               <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight flex items-center gap-1.5">
                 <i data-lucide="gallery-thumbnails" class="w-4 h-4 text-[#0062ff]"></i>
-                <span>Galerie des Affiches Publicitaires Générées</span>
+                <span>Galerie des Créations Récemment Générées</span>
               </h4>
               <span id="visual-gallery-count" class="text-[11px] font-bold text-slate-400">0 créations</span>
             </div>

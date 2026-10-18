@@ -7656,10 +7656,57 @@ async function loadCreativeCalendar() {
   }
 }
 
+function selectCreativeFormat(format) {
+  const input = document.getElementById("creative-format-type");
+  if (input) input.value = format;
+
+  const cardMap = {
+    "CAROUSEL_PDF": "card-format-carousel-pdf",
+    "VIDEO_REEL": "card-format-video-reel",
+    "VISUAL_AD": "card-format-visual-ad",
+    "PACK_OMNICHANNEL": "card-format-pack-360"
+  };
+
+  const allCards = ["card-format-carousel-pdf", "card-format-video-reel", "card-format-visual-ad", "card-format-pack-360"];
+  allCards.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === cardMap[format]) {
+      el.className = "p-4 rounded-2xl border-2 border-[#0062ff] bg-blue-50/40 ring-2 ring-[#0062ff]/20 shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:shadow-md";
+    } else {
+      el.className = "p-4 rounded-2xl border border-slate-200 bg-white shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-md";
+    }
+  });
+
+  const btnText = document.getElementById("btn-generate-creative-text");
+  if (btnText) {
+    if (format === "CAROUSEL_PDF") {
+      btnText.textContent = "Générer le Carrousel PDF LinkedIn (1080x1350 pt)";
+    } else if (format === "VIDEO_REEL") {
+      btnText.textContent = "Générer la Vidéo Reel 9:16 + Voix-off ElevenLabs";
+    } else if (format === "VISUAL_AD") {
+      btnText.textContent = "Générer l'Affiche Publicitaire HD (Multi-Moteurs)";
+    } else if (format === "PACK_OMNICHANNEL") {
+      btnText.textContent = "Générer le Pack Omnicanal 360°";
+    }
+  }
+
+  const badgeEl = document.getElementById("creative-format-badge");
+  if (badgeEl) {
+    const badgeNames = {
+      "CAROUSEL_PDF": "CARROUSEL PDF LINKEDIN",
+      "VIDEO_REEL": "VIDÉO REEL 9:16",
+      "VISUAL_AD": "AFFICHE PUBLICITAIRE HD",
+      "PACK_OMNICHANNEL": "PACK OMNICANAL 360°"
+    };
+    badgeEl.textContent = badgeNames[format] || format;
+  }
+}
+
 async function triggerGenerateCreative() {
-  const format = document.getElementById("creative-format-type").value;
-  const channel = document.getElementById("creative-channel").value;
-  const topic = document.getElementById("creative-topic").value.trim() || "Automatiser ses relances clients";
+  const format = document.getElementById("creative-format-type")?.value || "CAROUSEL_PDF";
+  const channel = document.getElementById("creative-channel")?.value || "LINKEDIN";
+  const topic = document.getElementById("creative-topic")?.value.trim() || "Automatiser ses relances clients";
   const btn = document.getElementById("btn-generate-creative");
   const container = document.getElementById("creative-render-container");
   const saveActions = document.getElementById("creative-save-actions");
@@ -7675,10 +7722,19 @@ async function triggerGenerateCreative() {
 
   if (format === "CAROUSEL_PDF") {
     endpoint = "/api/creative/generate-carousel-pdf";
-    reqBody = { topic: topic, channel: channel, num_slides: 6 };
+    reqBody = { topic: topic, channel: channel, target_audience: "Dirigeants, PME & Prestataires B2B", num_slides: 6 };
   } else if (format === "VIDEO_REEL") {
     endpoint = "/api/creative/generate-video-reel";
-    reqBody = { topic: topic, duration_seconds: 35, voice_style: "charismatic_consultant" };
+    reqBody = { topic: topic, target_audience: "Dirigeants, PME & Prestataires B2B", duration_seconds: 35, voice_style: "charismatic_consultant" };
+  } else if (format === "VISUAL_AD") {
+    endpoint = "/api/creative/generate-visual";
+    reqBody = {
+      topic: topic,
+      format_type: document.getElementById("visual-ad-ratio")?.value || "1:1",
+      style_preset: document.getElementById("visual-ad-style")?.value || "saas_workspace",
+      target_audience: "Dirigeants, PME & Prestataires B2B",
+      engine: document.getElementById("visual-ad-engine")?.value || "minimax"
+    };
   } else if (format === "PACK_OMNICHANNEL") {
     endpoint = "/api/creative/generate-omnichannel";
     reqBody = { topic: topic, audience: "Entrepreneurs, Prestataires & PME" };
@@ -7696,33 +7752,42 @@ async function triggerGenerateCreative() {
     });
     const data = await res.json();
 
-    if (data.success && (data.result || data.pack)) {
-      if (format === "PACK_OMNICHANNEL") {
+    const payload = data.result || data.pack || (data.image_url ? data : null) || (data.success ? data : null);
+    const isSuccess = data.success === true || (payload && (payload.slides || payload.video_url || payload.voiceover_url || payload.image_url || payload.scenes));
+
+    if (isSuccess && payload) {
+      if (format === "PACK_OMNICHANNEL" && data.pack) {
         currentCreativeResult = {
           title: `Pack 360° : ${data.pack.topic}`,
           channel: "OMNICHANNEL",
           format: "PACK_OMNICHANNEL",
-          trigger_keyword: data.pack.carousel.trigger_keyword || "SYSTÈME",
+          trigger_keyword: data.pack.carousel?.trigger_keyword || "SYSTÈME",
           pack: data.pack
         };
-        document.getElementById("creative-preview-title").textContent = currentCreativeResult.title;
-        document.getElementById("creative-format-badge").textContent = "PACK OMNICANAL 360°";
+        const titleEl = document.getElementById("creative-preview-title");
+        if (titleEl) titleEl.textContent = currentCreativeResult.title;
+        const badgeEl = document.getElementById("creative-format-badge");
+        if (badgeEl) badgeEl.textContent = "PACK OMNICANAL 360°";
         renderOmnichannelPreview(data.pack);
       } else {
-        currentCreativeResult = data.result;
-        document.getElementById("creative-preview-title").textContent = data.result.title || data.result.topic || "Création Dave Sagbo";
-        document.getElementById("creative-format-badge").textContent = data.result.format || format;
+        currentCreativeResult = payload;
+        const titleEl = document.getElementById("creative-preview-title");
+        if (titleEl) titleEl.textContent = payload.title || payload.topic || "Création Dave Sagbo";
+        const badgeEl = document.getElementById("creative-format-badge");
+        if (badgeEl) badgeEl.textContent = payload.format || payload.format_type || format;
 
         if (format === "CAROUSEL_PDF") {
-          renderCarouselPdfPreview(data.result);
+          renderCarouselPdfPreview(payload);
         } else if (format === "VIDEO_REEL") {
-          renderVideoReelPreview(data.result);
+          renderVideoReelPreview(payload);
+        } else if (format === "VISUAL_AD" || payload.image_url) {
+          renderVisualAdShowcase(payload);
         } else if (format === "CAROUSEL") {
-          renderCarouselPreview(data.result);
+          renderCarouselPreview(payload);
         } else if (format === "MOTION_VIDEO") {
-          renderMotionPreview(data.result);
+          renderMotionPreview(payload);
         } else {
-          renderAuthorityPostPreview(data.result);
+          renderAuthorityPostPreview(payload);
         }
       }
 
@@ -7740,7 +7805,7 @@ async function triggerGenerateCreative() {
     alert("Erreur réseau : " + e.message);
   } finally {
     btn.disabled = false;
-    btn.innerHTML = `<i data-lucide="wand-2" class="w-4 h-4"></i> <span>Générer avec la Brand Bible</span>`;
+    btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i> <span>Générer avec la Brand Bible</span>`;
     if (window.lucide) lucide.createIcons();
   }
 }
@@ -7840,6 +7905,93 @@ function renderCarouselPdfPreview(result) {
         <p class="text-purple-800 leading-relaxed">
           Pour publier ce carrousel sur LinkedIn : créez un post, cliquez sur l'icône <strong>« Document »</strong> (et non photo), puis sélectionnez le fichier PDF téléchargé. LinkedIn affichera un carrousel interactif multi-pages avec swipe horizontal.
         </p>
+      </div>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+// =========================================================================
+// RENDU AFFICHE PUBLICITAIRE HD MULTI-MOTEURS (MINIMAX / FLUX / GEMINI)
+// =========================================================================
+function renderVisualAdShowcase(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const imageUrl = result.image_url || result.s3url || "";
+  const title = result.title || result.topic || "Affiche Publicitaire HD";
+  const engine = (result.engine || result.model || "MiniMax").toUpperCase();
+  const formatType = result.format_type || "1:1";
+  const stylePreset = result.style_preset || "SaaS Minimaliste";
+  const promptUsed = result.prompt_used || "";
+
+  container.innerHTML = `
+    <div class="w-full space-y-5">
+      <!-- Barre d'en-tête & Téléchargements -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-5 rounded-3xl border border-slate-800 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+            <span class="text-sm font-black text-white">${escapeHtml(title)}</span>
+            <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">${escapeHtml(engine)}</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">Format ${escapeHtml(formatType)} &bull; Ambiance : ${escapeHtml(stylePreset)} &bull; Direction Brand Bible</p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+          ${imageUrl ? `
+            <a href="${imageUrl}" download="affiche_${Date.now()}.png" target="_blank" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-[#0062ff] to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-blue-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Télécharger l'Image HD</span>
+            </a>
+            <a href="${imageUrl}" target="_blank" class="px-3.5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5 transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span>Ouvrir en Plein Écran</span>
+            </a>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Affichage de l'Affiche Visuelle -->
+      <div class="flex flex-col lg:flex-row gap-6 items-start">
+        <div class="w-full lg:w-3/5 flex flex-col items-center">
+          <div class="relative w-full max-w-lg rounded-3xl overflow-hidden bg-slate-950 border-4 border-slate-800 shadow-2xl group">
+            ${imageUrl ? `
+              <img src="${imageUrl}" alt="${escapeHtml(title)}" class="w-full h-auto object-cover select-none">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-6 flex flex-col justify-end">
+                <span class="text-white text-xs font-bold">${escapeHtml(title)}</span>
+                <span class="text-amber-300 text-[10px] font-mono">DAVE SAGBO STUDIO</span>
+              </div>
+            ` : `
+              <div class="p-12 text-center text-slate-400 text-xs">Visuel non disponible</div>
+            `}
+          </div>
+        </div>
+
+        <!-- Détails de Direction Artistique & Prompt -->
+        <div class="w-full lg:w-2/5 space-y-4">
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-4 h-4 text-[#0062ff]"></i> Direction Artistique & Prompt
+            </h4>
+            <div class="p-3 bg-slate-900 text-slate-200 rounded-xl font-mono text-[11px] leading-relaxed select-all max-h-48 overflow-y-auto">
+              ${escapeHtml(promptUsed || 'Prompt enrichi selon la Brand Bible')}
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 font-semibold">
+              <span>Moteur : <strong>${escapeHtml(engine)}</strong></span>
+              <span>Ratio : <strong>${escapeHtml(formatType)}</strong></span>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+            <h4 class="text-xs font-black text-amber-900 flex items-center gap-1.5">
+              <i data-lucide="share-2" class="w-4 h-4 text-amber-600"></i> Mode de Diffusion Recommandé
+            </h4>
+            <p class="text-[11px] text-amber-950 leading-relaxed">
+              Ce visuel haute fidélité est optimisé pour les campagnes publicitaires <strong>Meta Ads (Instagram & Facebook)</strong>, <strong>LinkedIn Sponsored Content</strong> ou vos publications organiques en tant qu'affiche de rupture de scroll.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   `;

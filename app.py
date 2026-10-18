@@ -1306,7 +1306,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             target_audience=target_audience,
             engine=engine
         )
-        self.send_json_response(res)
+        if isinstance(res, dict) and res.get("success"):
+            self.send_json_response({"success": True, "result": res})
+        else:
+            self.send_json_response(res)
 
     def handle_api_get_voice_profiles(self):
         active = voice_engine.get_active_voice()
@@ -2453,7 +2456,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             from modules.carousel_composer import get_carousel_composer
             res = get_carousel_composer().generate_carousel_package(topic, channel=channel, target_audience=target_audience)
             log_activity("STUDIO_CREATIF", f"Génération Carrousel PDF LinkedIn : {topic}", "Dave Sagbo", channel, "SUCCESS", res.get("pdf_url", ""))
-            self.send_json_response(res)
+            self.send_json_response({"success": True, "result": res})
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)
 
@@ -2471,7 +2474,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             from modules.video_motion_producer import get_video_producer
             res = get_video_producer().generate_video_package(topic, target_audience=target_audience)
             log_activity("STUDIO_CREATIF", f"Génération Reel 9:16 & Voix-Off : {topic}", "Dave Sagbo", "TIKTOK/REEL", "SUCCESS", res.get("voiceover_url", ""))
-            self.send_json_response(res)
+            self.send_json_response({"success": True, "result": res})
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)}, status=500)
 
