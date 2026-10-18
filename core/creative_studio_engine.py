@@ -83,36 +83,64 @@ class CreativeStudioEngine:
         topic: str,
         format_type: str = "1:1",
         style_preset: str = "saas_workspace",
-        target_audience: str = "Entrepreneurs et PME"
+        target_audience: str = "Entrepreneurs et PME",
+        engine: str = "minimax"
     ) -> Dict[str, Any]:
         """
-        Génère un visuel publicitaire complet via Composio GEMINI_GENERATE_IMAGE.
+        Génère un visuel publicitaire complet via Composio (MiniMax Image-01, BFL FLUX.1 ou Gemini).
         Télécharge le fichier et l'enregistre dans SQLite.
         """
         if not topic or len(topic.strip()) < 3:
             topic = "Automatisation des ventes et prospection WhatsApp B2B"
 
         enhanced_prompt = self.enhance_prompt(topic, style_preset, target_audience)
-        logger.info(f"Génération d'affiche publicitaire IA : format={format_type}, style={style_preset}")
+        logger.info(f"Génération d'affiche publicitaire IA ({engine}) : format={format_type}, style={style_preset}")
 
         composio_aspect = "1:1" if format_type in ("1:1", "SQUARE") else ("9:16" if format_type in ("9:16", "VERTICAL", "STORY") else "16:9")
 
         try:
-            res = call_composio_tool("GEMINI_GENERATE_IMAGE", {
-                "prompt": enhanced_prompt,
-                "aspect_ratio": composio_aspect,
-                "image_size": "1K"
-            }, timeout=60)
-
             s3url = None
-            if res and isinstance(res, dict):
-                if "image" in res and isinstance(res["image"], dict):
-                    s3url = res["image"].get("s3url") or res["image"].get("url")
-                elif "s3url" in res:
-                    s3url = res["s3url"]
-                elif "data" in res and isinstance(res["data"], dict):
-                    img_data = res["data"].get("image") or {}
-                    s3url = img_data.get("s3url") or img_data.get("url")
+            used_model = engine
+
+            if engine == "minimax":
+                # MiniMax Image-01 (Haute Définition B2B)
+                res = call_composio_tool("MINIMAX_GENERATE_IMAGE", {
+                    "model": "image-01",
+                    "prompt": enhanced_prompt,
+                    "aspect_ratio": composio_aspect
+                }, timeout=50)
+                if res and isinstance(res, dict):
+                    urls = res.get("image_urls") or []
+                    if urls:
+                        s3url = urls[0]
+                used_model = "minimax-image-01"
+
+            elif engine == "flux":
+                # Black Forest Labs FLUX.1
+                res = call_composio_tool("BFL_GENERATE_OR_EDIT_IMAGE", {
+                    "prompt": enhanced_prompt,
+                    "aspect_ratio": composio_aspect
+                }, timeout=50)
+                if res and isinstance(res, dict):
+                    s3url = res.get("s3url") or res.get("url") or res.get("image_url")
+                used_model = "bfl-flux-1"
+
+            # Fallback ou choix Gemini
+            if not s3url:
+                res = call_composio_tool("GEMINI_GENERATE_IMAGE", {
+                    "prompt": enhanced_prompt,
+                    "aspect_ratio": composio_aspect,
+                    "image_size": "1K"
+                }, timeout=60)
+                if res and isinstance(res, dict):
+                    if "image" in res and isinstance(res["image"], dict):
+                        s3url = res["image"].get("s3url") or res["image"].get("url")
+                    elif "s3url" in res:
+                        s3url = res["s3url"]
+                    elif "data" in res and isinstance(res["data"], dict):
+                        img_data = res["data"].get("image") or {}
+                        s3url = img_data.get("s3url") or img_data.get("url")
+                used_model = "gemini-3.1-flash-lite-image"
 
             if not s3url:
                 logger.warning(f"Retour Composio Image inattendu : {res}")
@@ -129,7 +157,7 @@ class CreativeStudioEngine:
                     f.write(resp.read())
 
             local_url = f"/static/img/creatives/{filename}"
-            title = f"Affiche Studio : {topic[:50]}"
+            title = f"Affiche Studio ({engine.upper()}) : {topic[:50]}"
 
             # Enregistrement en base de données
             asset_id = save_creative_asset(
@@ -143,7 +171,8 @@ class CreativeStudioEngine:
                 metadata={
                     "aspect_ratio": composio_aspect,
                     "target_audience": target_audience,
-                    "model": "gemini-3.1-flash-lite-image"
+                    "model": used_model,
+                    "engine": engine
                 }
             )
 
@@ -159,7 +188,9 @@ class CreativeStudioEngine:
                 "format_type": format_type,
                 "style_preset": style_preset,
                 "prompt_used": enhanced_prompt,
-                "message": "Visuel publicitaire haute définition généré avec succès !"
+                "engine": engine,
+                "model": used_model,
+                "message": f"Visuel publicitaire haute définition généré avec succès via {engine.upper()} !"
             }
 
         except Exception as e:

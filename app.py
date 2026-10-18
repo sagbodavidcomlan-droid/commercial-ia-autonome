@@ -471,8 +471,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_audience_publish_facebook(body)
         elif path == "/api/creative/generate-carousel":
             self.handle_api_generate_carousel(body)
+        elif path == "/api/creative/generate-carousel-pdf":
+            self.handle_api_generate_carousel_pdf(body)
         elif path == "/api/creative/generate-motion":
             self.handle_api_generate_motion(body)
+        elif path == "/api/creative/generate-video-reel":
+            self.handle_api_generate_video_reel(body)
+        elif path == "/api/creative/generate-voiceover":
+            self.handle_api_generate_voiceover(body)
         elif path == "/api/creative/generate-post":
             self.handle_api_generate_authority_post(body)
         elif path == "/api/creative/generate-omnichannel":
@@ -1291,12 +1297,14 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         format_type = body.get("format_type", "1:1")
         style_preset = body.get("style_preset", "saas_workspace")
         target_audience = body.get("target_audience", "Entrepreneurs et PME")
+        engine = body.get("engine", "minimax")
 
         res = visual_creative_engine.generate_advertising_visual(
             topic=topic,
             format_type=format_type,
             style_preset=style_preset,
-            target_audience=target_audience
+            target_audience=target_audience,
+            engine=engine
         )
         self.send_json_response(res)
 
@@ -2437,12 +2445,45 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         log_activity("STUDIO_CREATIF", f"Génération carrousel graphique : {topic}", "Dave Sagbo", channel, "SUCCESS", f"{res['slides_count']} slides générées")
         self.send_json_response({"success": True, "result": res})
 
+    def handle_api_generate_carousel_pdf(self, body):
+        try:
+            topic = (body or {}).get("topic", "Automatiser ses Ventes B2B")
+            channel = (body or {}).get("channel", "LINKEDIN")
+            target_audience = (body or {}).get("target_audience", "Dirigeants, PME & Prestataires B2B")
+            from modules.carousel_composer import get_carousel_composer
+            res = get_carousel_composer().generate_carousel_package(topic, channel=channel, target_audience=target_audience)
+            log_activity("STUDIO_CREATIF", f"Génération Carrousel PDF LinkedIn : {topic}", "Dave Sagbo", channel, "SUCCESS", res.get("pdf_url", ""))
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
     def handle_api_generate_motion(self, body):
         topic = (body or {}).get("topic", "Objection trop cher")
         channel = (body or {}).get("channel", "TIKTOK")
         res = creative_studio_engine.generate_motion_video_script(topic, channel=channel)
         log_activity("STUDIO_CREATIF", f"Génération storyboard motion design : {topic}", "Dave Sagbo", channel, "SUCCESS", f"{len(res['scenes'])} scènes")
         self.send_json_response({"success": True, "result": res})
+
+    def handle_api_generate_video_reel(self, body):
+        try:
+            topic = (body or {}).get("topic", "Arrêtez de prospecter manuellement")
+            target_audience = (body or {}).get("target_audience", "Dirigeants, PME & Prestataires B2B")
+            from modules.video_motion_producer import get_video_producer
+            res = get_video_producer().generate_video_package(topic, target_audience=target_audience)
+            log_activity("STUDIO_CREATIF", f"Génération Reel 9:16 & Voix-Off : {topic}", "Dave Sagbo", "TIKTOK/REEL", "SUCCESS", res.get("voiceover_url", ""))
+            self.send_json_response(res)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
+
+    def handle_api_generate_voiceover(self, body):
+        try:
+            text = (body or {}).get("text", "")
+            voice_id = (body or {}).get("voice_id")
+            from modules.video_motion_producer import get_video_producer
+            voice_url = get_video_producer().synthesize_voiceover(text, voice_id=voice_id) if text else None
+            self.send_json_response({"success": bool(voice_url), "voiceover_url": voice_url})
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)}, status=500)
 
     def handle_api_generate_authority_post(self, body):
         topic = (body or {}).get("topic", "Méthode DUR")

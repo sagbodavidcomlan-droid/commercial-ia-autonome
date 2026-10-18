@@ -4409,8 +4409,10 @@
             <div>
               <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Format Cible</label>
               <select id="creative-format-type" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 focus:outline-none focus:border-[#0062ff]">
+                <option value="CAROUSEL_PDF" selected>📑 Carrousel PDF LinkedIn (5-8 Slides + Document PDF)</option>
+                <option value="VIDEO_REEL">🎥 Vidéo Reel 9:16 + Voix-Off ElevenLabs (MP4/MP3)</option>
                 <option value="PACK_OMNICHANNEL">🌟 Pack Omnicanal 360°</option>
-                <option value="CAROUSEL">Carrousel Graphique (8 slides)</option>
+                <option value="CAROUSEL">Carrousel Graphique (8 slides SVG)</option>
                 <option value="MOTION_VIDEO">Storyboard Motion (30-45s)</option>
                 <option value="AUTHORITY_POST">Post d'Autorité & Storytelling</option>
               </select>
@@ -4487,7 +4489,7 @@
               <div>
                 <h3 class="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
                   <span>Générateur d'Affiches Publicitaires HD & Visuels de Vente</span>
-                  <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200/80">Gemini Image Pro</span>
+                  <span class="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-[#0062ff] border border-blue-200/80">MiniMax & FLUX & Gemini Multi-Moteurs</span>
                 </h3>
                 <p class="text-xs text-slate-400 font-medium">Créez des visuels publicitaires professionnels percutants pour vos campagnes WhatsApp, Meta Ads et LinkedIn.</p>
               </div>
@@ -4512,22 +4514,30 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Moteur d'IA Visuelle</label>
+                  <select id="visual-ad-engine" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
+                    <option value="minimax" selected>⚡ MiniMax Image-01 (Rapide)</option>
+                    <option value="flux">🎨 BFL FLUX.1 (Détails)</option>
+                    <option value="gemini">✨ Gemini Pro Image</option>
+                  </select>
+                </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Style Visuel & Ambiance</label>
                   <select id="visual-ad-style" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
-                    <option value="saas_workspace">💻 SaaS Workspace (Minimaliste, Mac, Glassmorphism)</option>
-                    <option value="mobile_money_sales">📱 Mobile Money & Ventes (Commerçant, Succès, Afrique)</option>
-                    <option value="retail_commerce">🛍️ Retail & Commerce Moderne (Élégant, Produits, Pro)</option>
-                    <option value="authority_founder">👔 Leader & Fondateur d'Autorité (Studio B2B, Confiance)</option>
+                    <option value="saas_workspace">💻 SaaS Workspace</option>
+                    <option value="mobile_money_sales">📱 Mobile Money & Ventes</option>
+                    <option value="retail_commerce">🛍️ Retail & Commerce</option>
+                    <option value="authority_founder">👔 Leader & Fondateur</option>
                   </select>
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-700 uppercase tracking-tight mb-1.5">Format & Ratio</label>
                   <select id="visual-ad-ratio" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-[#0062ff] focus:outline-none">
-                    <option value="1:1">⏹️ Carré 1:1 (Feed WhatsApp, Instagram, LinkedIn)</option>
-                    <option value="9:16">📱 Vertical 9:16 (Statut WhatsApp, Reels, TikTok)</option>
-                    <option value="16:9">🖥️ Paysage 16:9 (Bannière Web, YouTube, Facebook)</option>
+                    <option value="1:1">⏹️ Carré 1:1 (WhatsApp, Insta)</option>
+                    <option value="9:16">📱 Vertical 9:16 (Statut, Reels)</option>
+                    <option value="16:9">🖥️ Paysage 16:9 (Web, YouTube)</option>
                   </select>
                 </div>
               </div>
@@ -4540,7 +4550,7 @@
               <div class="pt-2">
                 <button type="button" onclick="generateVisualAd()" id="btn-generate-visual-ad" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#0062ff] via-indigo-600 to-purple-600 hover:from-blue-600 hover:to-indigo-700 active:scale-98 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition cursor-pointer">
                   <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
-                  <span>Générer l'Affiche Publicitaire HD (Gemini AI)</span>
+                  <span>Générer l'Affiche Publicitaire HD (Multi-Moteurs)</span>
                 </button>
               </div>
             </div>

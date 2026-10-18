@@ -7673,7 +7673,13 @@ async function triggerGenerateCreative() {
   let endpoint = "/api/creative/generate-carousel";
   let reqBody = { topic: topic, channel: channel };
 
-  if (format === "PACK_OMNICHANNEL") {
+  if (format === "CAROUSEL_PDF") {
+    endpoint = "/api/creative/generate-carousel-pdf";
+    reqBody = { topic: topic, channel: channel, num_slides: 6 };
+  } else if (format === "VIDEO_REEL") {
+    endpoint = "/api/creative/generate-video-reel";
+    reqBody = { topic: topic, duration_seconds: 35, voice_style: "charismatic_consultant" };
+  } else if (format === "PACK_OMNICHANNEL") {
     endpoint = "/api/creative/generate-omnichannel";
     reqBody = { topic: topic, audience: "Entrepreneurs, Prestataires & PME" };
   } else if (format === "MOTION_VIDEO") {
@@ -7704,10 +7710,14 @@ async function triggerGenerateCreative() {
         renderOmnichannelPreview(data.pack);
       } else {
         currentCreativeResult = data.result;
-        document.getElementById("creative-preview-title").textContent = data.result.title;
-        document.getElementById("creative-format-badge").textContent = data.result.format;
+        document.getElementById("creative-preview-title").textContent = data.result.title || data.result.topic || "Création Dave Sagbo";
+        document.getElementById("creative-format-badge").textContent = data.result.format || format;
 
-        if (format === "CAROUSEL") {
+        if (format === "CAROUSEL_PDF") {
+          renderCarouselPdfPreview(data.result);
+        } else if (format === "VIDEO_REEL") {
+          renderVideoReelPreview(data.result);
+        } else if (format === "CAROUSEL") {
           renderCarouselPreview(data.result);
         } else if (format === "MOTION_VIDEO") {
           renderMotionPreview(data.result);
@@ -7750,6 +7760,235 @@ function getSlideSvgUrl(slide, slideIndex, totalSlides) {
     total: totalSlides
   });
   return `/api/creative/slide-svg?${query.toString()}`;
+}
+
+// =========================================================================
+// RENDU CARROUSEL MULTI-PAGES PDF LINKEDIN (1080x1350 PT & BRAND BIBLE)
+// =========================================================================
+function renderCarouselPdfPreview(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const slides = result.slides || [];
+  const totalSlides = result.total_slides || slides.length;
+  const pdfUrl = result.pdf_url || "#";
+  const pdfFilename = result.pdf_filename || "carrousel_linkedin.pdf";
+
+  const slidesCardsHtml = slides.map((s, idx) => {
+    const isDark = (s.theme === "DARK" || idx === 0 || idx === totalSlides - 1);
+    const bgClass = isDark ? "bg-[#0A1128] text-white" : "bg-white text-slate-900 border border-slate-200";
+    const badgeColor = isDark ? "bg-amber-400 text-slate-950 font-black" : "bg-[#0062ff] text-white font-black";
+    const bulletsHtml = (s.bullet_points && s.bullet_points.length > 0)
+      ? `<ul class="space-y-1.5 my-3 text-left">
+          ${s.bullet_points.map(bp => `<li class="flex items-start gap-1.5 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}"><span class="text-amber-400 font-bold">✓</span> <span>${escapeHtml(bp)}</span></li>`).join("")}
+        </ul>`
+      : "";
+
+    return `
+      <div class="rounded-2xl overflow-hidden shadow-md flex flex-col justify-between p-5 min-h-[360px] ${bgClass} transition-all duration-300 hover:scale-[1.02] border ${isDark ? 'border-slate-800' : 'border-slate-200'}">
+        <div class="flex items-center justify-between pb-3 border-b ${isDark ? 'border-slate-800' : 'border-slate-100'}">
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider ${badgeColor}">${escapeHtml(s.badge || 'SLIDE')}</span>
+          <span class="text-[10px] font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}">${idx + 1} / ${totalSlides}</span>
+        </div>
+
+        <div class="my-auto py-3">
+          <h4 class="text-base font-black leading-tight ${isDark ? 'text-white' : 'text-slate-950'}">${escapeHtml(s.title || '')}</h4>
+          ${s.subtitle ? `<p class="text-xs font-semibold mt-1.5 ${isDark ? 'text-amber-300' : 'text-[#0062FF]'}">${escapeHtml(s.subtitle)}</p>` : ''}
+          ${bulletsHtml}
+          ${s.cta_hint ? `<div class="mt-3 p-2 rounded-xl text-center text-[10px] font-black tracking-wide ${isDark ? 'bg-blue-950/80 text-amber-300 border border-blue-900' : 'bg-blue-50 text-blue-900 border border-blue-100'}">👉 ${escapeHtml(s.cta_hint)}</div>` : ''}
+        </div>
+
+        <div class="pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'} flex items-center justify-between text-[9px] font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}">
+          <span>DAVE SAGBO &bull; BRAND BIBLE</span>
+          <span class="font-mono">1080x1350 PT</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  const slidesGptBtn = result.slidesgpt_deck && result.slidesgpt_deck.deck_url
+    ? `<a href="${result.slidesgpt_deck.deck_url}" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs flex items-center gap-1.5 transition"><i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-400"></i> <span>Présentation SlidesGPT</span></a>`
+    : "";
+
+  container.innerHTML = `
+    <div class="w-full space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-3xl border border-slate-800 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-sm font-black text-white">Carrousel Multi-Pages LinkedIn (Format PDF 4:5 Natif)</span>
+            <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">ReportLab HD</span>
+          </div>
+          <p class="text-xs text-slate-300 font-medium">${totalSlides} Diapositives vectorielles créées selon la Brand Bible (#0A1128, #F39C12, #0062FF).</p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <a href="${pdfUrl}" download="${pdfFilename}" target="_blank" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-purple-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Télécharger le Document PDF LinkedIn</span>
+          </a>
+          ${slidesGptBtn}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        ${slidesCardsHtml}
+      </div>
+
+      <div class="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-xs space-y-1 text-purple-950">
+        <strong class="font-extrabold flex items-center gap-1.5"><i data-lucide="lightbulb" class="w-4 h-4 text-purple-600"></i> Mode d'Emploi LinkedIn Document :</strong>
+        <p class="text-purple-800 leading-relaxed">
+          Pour publier ce carrousel sur LinkedIn : créez un post, cliquez sur l'icône <strong>« Document »</strong> (et non photo), puis sélectionnez le fichier PDF téléchargé. LinkedIn affichera un carrousel interactif multi-pages avec swipe horizontal.
+        </p>
+      </div>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
+}
+
+// =========================================================================
+// RENDU VIDÉO REEL 9:16 + VOIX-OFF ELEVENLABS + MINIMAX KEYFRAME
+// =========================================================================
+function renderVideoReelPreview(result) {
+  const container = document.getElementById("creative-render-container");
+  if (!container) return;
+
+  const script = result.script || {};
+  const hook = script.hook || {};
+  const value = script.value || {};
+  const cta = script.cta || {};
+  const voiceoverUrl = result.voiceover_url || "";
+  const voiceoverFilename = result.voiceover_filename || "voiceover_elevenlabs.mp3";
+  const keyframeUrl = result.keyframe_url || "";
+  const keyframeFilename = result.keyframe_filename || "keyframe_9_16.jpeg";
+
+  container.innerHTML = `
+    <div class="w-full space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-md">
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <span class="text-xs font-black">Vidéo Reel 9:16 & Voix-Off Multimodale (TikTok / Reels / Shorts)</span>
+            <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">ElevenLabs Audio</span>
+            <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">MiniMax Keyframe</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Durée : ${result.duration_seconds || 35}s &bull; Mot-clé : <strong class="text-amber-400 font-mono">${escapeHtml(result.trigger_keyword || 'CLOSING')}</strong></p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          ${voiceoverUrl ? `
+            <a href="${voiceoverUrl}" download="${voiceoverFilename}" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="volume-2" class="w-3.5 h-3.5"></i> Télécharger Voix-Off MP3
+            </a>
+          ` : ''}
+          ${keyframeUrl ? `
+            <a href="${keyframeUrl}" download="${keyframeFilename}" target="_blank" class="px-3.5 py-2 rounded-xl bg-[#0062ff] hover:bg-blue-600 text-white font-black text-xs flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="image" class="w-3.5 h-3.5"></i> Télécharger Affiche Clé 9:16
+            </a>
+          ` : ''}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Écran Smartphone 9:16 Stylisé avec Keyframe MiniMax & Player Audio -->
+        <div class="lg:col-span-5 flex flex-col items-center">
+          <div class="relative w-full max-w-[290px] aspect-[9/16] bg-slate-950 rounded-3xl border-4 border-slate-800 shadow-2xl overflow-hidden flex flex-col justify-between p-5 select-none" style="${keyframeUrl ? `background-image: url('${keyframeUrl}'); background-size: cover; background-position: center;` : ''}">
+            
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/70 pointer-events-none"></div>
+
+            <div class="relative z-10 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0062FF] to-[#E5A93C] text-white font-black text-xs flex items-center justify-center shadow">DS</div>
+                <div>
+                  <div class="text-[11px] font-black text-white tracking-wide">DAVE SAGBO</div>
+                  <div class="text-[8px] text-slate-300 uppercase tracking-widest font-bold">Systèmes B2B</div>
+                </div>
+              </div>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-600/90 text-white uppercase tracking-wider shadow">
+                REEL 9:16
+              </span>
+            </div>
+
+            <div class="relative z-10 my-auto text-center space-y-3 px-1">
+              <div class="text-[9px] font-bold uppercase tracking-wider text-amber-300 bg-black/60 backdrop-blur-xs border border-amber-400/40 py-1 px-3 rounded-full inline-block">
+                ⚡ Accroche Virale
+              </div>
+              <h3 class="text-base sm:text-lg font-black text-white leading-snug drop-shadow-md">
+                « ${escapeHtml(hook.voiceover || result.topic || '')} »
+              </h3>
+            </div>
+
+            <div class="relative z-10 space-y-2.5">
+              ${voiceoverUrl ? `
+                <div class="bg-black/75 backdrop-blur-md border border-slate-700/80 rounded-2xl p-2.5 shadow-xl">
+                  <div class="flex items-center justify-between text-[10px] text-emerald-400 font-bold mb-1">
+                    <span class="flex items-center gap-1"><i data-lucide="mic" class="w-3 h-3"></i> Voix-Off ElevenLabs (Français)</span>
+                    <span class="font-mono">${result.duration_seconds || 35}s</span>
+                  </div>
+                  <audio controls class="w-full h-8 rounded-lg" src="${voiceoverUrl}"></audio>
+                </div>
+              ` : ''}
+
+              <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-2 text-center shadow">
+                <span class="text-[9px] text-slate-300 block">Commentez sous la vidéo :</span>
+                <span class="text-xs font-black text-[#E5A93C] tracking-wider font-mono">"${escapeHtml(result.trigger_keyword || 'CLOSING')}"</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Colonne Découpage Script & Prompts Génération Image -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
+            <h4 class="text-xs font-black text-slate-900 uppercase tracking-wide">Scénario & Voix-Off Chronométrée</h4>
+            <span class="text-[11px] text-slate-500">Format 3-Temps Hormozi</span>
+          </div>
+
+          <!-- Étape 1 : Hook -->
+          <div class="p-3.5 rounded-2xl border border-rose-200 bg-rose-50/50 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-rose-900">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-rose-500"></span> 1. Accroche Hook (00:00 - 00:05)</span>
+              <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-rose-200/80 text-rose-800">5s</span>
+            </div>
+            <p class="text-xs text-slate-800 font-medium">🗣️ <strong>Voix-off :</strong> « ${escapeHtml(hook.voiceover || '')} »</p>
+            ${hook.visual_prompt ? `<p class="text-[11px] text-slate-600 bg-white/70 p-2 rounded-xl border border-rose-100">🎬 <strong>Prompt Visuel Clé :</strong> ${escapeHtml(hook.visual_prompt)}</p>` : ''}
+          </div>
+
+          <!-- Étape 2 : Value & Diagnostic -->
+          <div class="p-3.5 rounded-2xl border border-blue-200 bg-blue-50/50 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-blue-900">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 2. Valeur & Problème Fondamental (00:05 - 00:25)</span>
+              <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-blue-200/80 text-blue-800">20s</span>
+            </div>
+            <p class="text-xs text-slate-800 font-medium">🗣️ <strong>Voix-off :</strong> « ${escapeHtml(value.voiceover || '')} »</p>
+            ${value.visual_prompt ? `<p class="text-[11px] text-slate-600 bg-white/70 p-2 rounded-xl border border-blue-100">🎬 <strong>Prompt Visuel Clé :</strong> ${escapeHtml(value.visual_prompt)}</p>` : ''}
+          </div>
+
+          <!-- Étape 3 : CTA -->
+          <div class="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/50 space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-amber-900">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> 3. Appel à l'Action & Clôture (00:25 - 00:35)</span>
+              <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-200/80 text-amber-800">10s</span>
+            </div>
+            <p class="text-xs text-slate-800 font-medium">🗣️ <strong>Voix-off :</strong> « ${escapeHtml(cta.voiceover || '')} »</p>
+          </div>
+
+          <!-- Description Social Media -->
+          ${result.caption ? `
+            <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1.5 text-slate-700">
+              <strong class="text-slate-900 block font-bold">Légende & Hashtags pour TikTok / Instagram Reels :</strong>
+              <p class="whitespace-pre-line text-slate-600 font-normal text-[11px] leading-relaxed">${escapeHtml(result.caption)}</p>
+            </div>
+          ` : ''}
+
+        </div>
+
+      </div>
+    </div>
+  `;
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderCarouselPreview(result) {
@@ -8107,6 +8346,47 @@ function downloadAllSlidesSvg() {
 // EXPORT CARROUSEL MULTI-PAGES EN DOCUMENT PDF (LINKEDIN CAROUSEL PRO)
 // ------------------------------------------------------------------------------
 async function downloadCarouselAsPdf() {
+  if (currentCreativeResult && currentCreativeResult.pdf_url) {
+    const a = document.createElement("a");
+    a.href = currentCreativeResult.pdf_url;
+    a.download = currentCreativeResult.pdf_filename || "carrousel_linkedin.pdf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Téléchargement du PDF LinkedIn démarré !", "success");
+    return;
+  }
+
+  // Si on a un carrousel existant sans PDF direct, tenter la génération server-side ReportLab
+  if (currentCreativeResult && (currentCreativeResult.topic || currentCreativeResult.title)) {
+    try {
+      showToast("Génération du document PDF LinkedIn (ReportLab HD)...", "info");
+      const resp = await fetch("/api/creative/generate-carousel-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: currentCreativeResult.topic || currentCreativeResult.title,
+          num_slides: (currentCreativeResult.slides && currentCreativeResult.slides.length) || 6
+        })
+      });
+      const dataPdf = await resp.json();
+      if (dataPdf.success && dataPdf.result && dataPdf.result.pdf_url) {
+        currentCreativeResult.pdf_url = dataPdf.result.pdf_url;
+        currentCreativeResult.pdf_filename = dataPdf.result.pdf_filename;
+        const a = document.createElement("a");
+        a.href = dataPdf.result.pdf_url;
+        a.download = dataPdf.result.pdf_filename || "carrousel_linkedin.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast("Carrousel complet exporté en PDF haute qualité !", "success");
+        return;
+      }
+    } catch (e) {
+      console.warn("Fallback vers rendu client jsPDF :", e);
+    }
+  }
+
   let slides = [];
   if (currentCreativeResult && currentCreativeResult.slides) {
     slides = currentCreativeResult.slides;
@@ -9665,6 +9945,7 @@ async function generateVisualAd() {
   const topicInput = document.getElementById("visual-ad-topic");
   const ratioSelect = document.getElementById("visual-ad-ratio");
   const styleSelect = document.getElementById("visual-ad-style");
+  const engineSelect = document.getElementById("visual-ad-engine");
   const audienceInput = document.getElementById("visual-ad-audience");
   const btn = document.getElementById("btn-generate-visual-ad");
   const previewContainer = document.getElementById("visual-ad-preview-container");
@@ -9676,17 +9957,18 @@ async function generateVisualAd() {
   const topic = topicInput && topicInput.value.trim() ? topicInput.value.trim() : "Offre Spéciale Automatisation WhatsApp & Closing IA";
   const ratio = ratioSelect ? ratioSelect.value : "1:1";
   const style = styleSelect ? styleSelect.value : "saas_workspace";
+  const engine = engineSelect ? engineSelect.value : "minimax";
   const audience = audienceInput ? audienceInput.value : "Entrepreneurs et PME";
 
   // Mise à jour de l'UI pendant la génération
   const origBtnHtml = btn ? btn.innerHTML : "";
   if (btn) {
-    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Composition Haute Définition IA en cours...</span>`;
+    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Composition Haute Définition (${engine.toUpperCase()}) en cours...</span>`;
     btn.disabled = true;
   }
   if (badgeStatus) {
     badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 animate-pulse";
-    badgeStatus.textContent = "Génération IA...";
+    badgeStatus.textContent = "Génération " + engine.toUpperCase() + "...";
   }
   if (previewContainer) {
     previewContainer.innerHTML = `
@@ -9695,7 +9977,7 @@ async function generateVisualAd() {
           <i data-lucide="sparkles" class="w-6 h-6 text-[#0062ff]"></i>
         </div>
         <p class="text-xs font-bold text-slate-800">Conception de l'affiche publicitaire HD...</p>
-        <p class="text-[11px] text-slate-500 max-w-xs text-center">Gemini Image Pro & Composio génèrent le visuel photoréaliste et les éléments de conversion.</p>
+        <p class="text-[11px] text-slate-500 max-w-xs text-center">Moteur ${escapeHtml(engine.toUpperCase())} & Composio génèrent le visuel photoréaliste et les éléments de conversion.</p>
       </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -9709,7 +9991,8 @@ async function generateVisualAd() {
         topic: topic,
         format_type: ratio,
         style_preset: style,
-        target_audience: audience
+        target_audience: audience,
+        engine: engine
       })
     });
     const data = await res.json();
@@ -9719,7 +10002,7 @@ async function generateVisualAd() {
 
       if (badgeStatus) {
         badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700";
-        badgeStatus.textContent = "✓ HD Prête";
+        badgeStatus.textContent = "✓ HD Prête (" + (data.engine || engine).toUpperCase() + ")";
       }
 
       if (previewContainer) {
@@ -9728,7 +10011,7 @@ async function generateVisualAd() {
           <div class="relative group rounded-2xl overflow-hidden border border-slate-200/80 shadow-md">
             <img src="${escapeHtml(data.image_url)}" alt="${escapeHtml(data.headline || topic)}" class="${aspectClass} object-cover w-full transition-transform duration-500 group-hover:scale-105" />
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4 text-left">
-              <span class="text-[10px] font-black uppercase text-amber-300 tracking-wider">Format ${escapeHtml(ratio)} • ${escapeHtml(style)}</span>
+              <span class="text-[10px] font-black uppercase text-amber-300 tracking-wider">Format ${escapeHtml(ratio)} • Moteur ${escapeHtml((data.engine || engine).toUpperCase())}</span>
               <h4 class="text-xs sm:text-sm font-black text-white leading-tight mt-0.5">${escapeHtml(data.headline || topic)}</h4>
               <p class="text-[10px] text-slate-200 line-clamp-1 mt-0.5">${escapeHtml(data.subline || "")}</p>
             </div>
