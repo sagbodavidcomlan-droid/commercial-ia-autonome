@@ -242,33 +242,42 @@ app.post('/send', async (req, res) => {
     if (connectionStatus !== 'CONNECTED' || !sock) return res.status(503).json({ success: false, error: 'Non connecté' });
 
     try {
-        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        let cleanPhone = phone.replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('01') && cleanPhone.length === 10) {
+            cleanPhone = '229' + cleanPhone;
+        }
+
         let targetJid = `${cleanPhone}@s.whatsapp.net`;
 
         // Résolution automatique du JID exact sur WhatsApp (support Bénin 10 chiffres / 8 chiffres)
-        try {
-            if (typeof sock.onWhatsApp === 'function') {
-                const checks = await sock.onWhatsApp(cleanPhone);
-                if (checks && checks.length > 0 && checks[0].exists) {
-                    targetJid = checks[0].jid;
-                } else if (cleanPhone.startsWith('22901') && cleanPhone.length === 13) {
-                    const oldPhone = '229' + cleanPhone.slice(5);
-                    const oldChecks = await sock.onWhatsApp(oldPhone);
-                    if (oldChecks && oldChecks.length > 0 && oldChecks[0].exists) {
-                        targetJid = oldChecks[0].jid;
+        if (cleanPhone.startsWith('22901') && cleanPhone.length === 13) {
+            const oldPhone = '229' + cleanPhone.slice(5);
+            try {
+                if (typeof sock.onWhatsApp === 'function') {
+                    const checks = await sock.onWhatsApp(cleanPhone);
+                    if (checks && checks.length > 0 && checks[0].exists) {
+                        targetJid = checks[0].jid;
+                    } else {
+                        const oldChecks = await sock.onWhatsApp(oldPhone);
+                        if (oldChecks && oldChecks.length > 0 && oldChecks[0].exists) {
+                            targetJid = oldChecks[0].jid;
+                        } else {
+                            targetJid = `${oldPhone}@s.whatsapp.net`;
+                        }
                     }
                 }
+            } catch (checkErr) {
+                console.warn('Vérification onWhatsApp ignorée:', checkErr.message);
+                targetJid = `${oldPhone}@s.whatsapp.net`;
             }
-        } catch (checkErr) {
-            console.warn('Vérification onWhatsApp ignorée:', checkErr.message);
         }
 
         console.log(`📤 [WhatsApp Bridge] Envoi du message à ${targetJid}: "${text.substring(0, 50)}..."`);
         const result = await sock.sendMessage(targetJid, { text });
-        res.json({ success: true, messageId: result.key.id, targetJid });
+        res.json({ success: true, messageId: result?.key?.id || 'SENT', targetJid });
     } catch (sendErr) {
         console.error('Erreur envoi WhatsApp:', sendErr);
-        res.status(500).json({ success: false, error: sendErr.message });
+        res.status(500).json({ success: false, error: sendErr.message || String(sendErr) });
     }
 });
 

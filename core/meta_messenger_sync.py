@@ -358,25 +358,40 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
 
     # 1. Priorité absolue : Passerelle WhatsApp locale (Baileys) si connectée avec votre téléphone
     bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
+    is_bridge_connected = False
     try:
         req_st = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
         with urllib.request.urlopen(req_st, timeout=2) as resp_st:
             st_data = json.loads(resp_st.read().decode("utf-8"))
             if st_data.get("status") == "CONNECTED":
-                send_payload = json.dumps({"phone": recipient_phone, "text": text}).encode("utf-8")
-                req_send = urllib.request.Request(
-                    f"{bridge_url}/send",
-                    data=send_payload,
-                    headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"}
-                )
-                with urllib.request.urlopen(req_send, timeout=10) as resp_send:
-                    send_res = json.loads(resp_send.read().decode("utf-8"))
-                    if send_res.get("success"):
-                        return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": send_res.get("messageId"), "gateway": "BAILEYS_QR", "targetJid": send_res.get("targetJid")}
-                    else:
-                        logger.warning(f"Échec envoi Baileys: {send_res.get('error')}")
-    except Exception as e_bridge:
-        logger.debug(f"Passerelle Baileys non disponible: {e_bridge}")
+                is_bridge_connected = True
+    except Exception:
+        pass
+
+    if is_bridge_connected:
+        try:
+            send_payload = json.dumps({"phone": recipient_phone, "text": text}).encode("utf-8")
+            req_send = urllib.request.Request(
+                f"{bridge_url}/send",
+                data=send_payload,
+                headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"}
+            )
+            with urllib.request.urlopen(req_send, timeout=15) as resp_send:
+                send_res = json.loads(resp_send.read().decode("utf-8"))
+                if send_res.get("success"):
+                    return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": send_res.get("messageId"), "gateway": "BAILEYS_QR", "targetJid": send_res.get("targetJid")}
+                else:
+                    return {"success": False, "status": "ERREUR_ENVOI_WHATSAPP", "error": send_res.get("error", "Échec d'envoi")}
+        except urllib.error.HTTPError as http_err:
+            err_body = http_err.read().decode("utf-8", errors="ignore")
+            logger.error(f"Erreur HTTP Baileys bridge: {http_err.code} - {err_body}")
+            try:
+                err_json = json.loads(err_body)
+                return {"success": False, "status": "ERREUR_ENVOI_WHATSAPP", "error": err_json.get("error", err_body)}
+            except Exception:
+                return {"success": False, "status": "ERREUR_ENVOI_WHATSAPP", "error": err_body or str(http_err)}
+        except Exception as e_send:
+            return {"success": False, "status": "ERREUR_ENVOI_WHATSAPP", "error": str(e_send)}
 
     # 2. Fallback : Brevo WhatsApp officiel si configuré et actif
     try:

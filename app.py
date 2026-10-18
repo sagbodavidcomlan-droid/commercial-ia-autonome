@@ -1626,8 +1626,30 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         if not phone:
             self.send_json_response({"success": False, "error": "Numéro de téléphone requis."}, status=400)
             return
-        res = send_whatsapp_cloud_message(recipient_phone=phone, text=text)
-        self.send_json_response(res)
+
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
+        try:
+            payload = json.dumps({"phone": phone, "text": text}).encode("utf-8")
+            req = urllib.request.Request(
+                f"{bridge_url}/send",
+                data=payload,
+                headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                self.send_json_response(data)
+                return
+        except urllib.error.HTTPError as he:
+            err_body = he.read().decode("utf-8", errors="ignore")
+            try:
+                err_json = json.loads(err_body)
+                self.send_json_response(err_json, status=he.code)
+            except Exception:
+                self.send_json_response({"success": False, "error": err_body or str(he)}, status=he.code)
+            return
+        except Exception as e:
+            res = send_whatsapp_cloud_message(recipient_phone=phone, text=text)
+            self.send_json_response(res)
 
     def handle_api_get_domains(self):
         profiles_dir = os.path.join(BASE_DIR, "config", "domain_profiles")
