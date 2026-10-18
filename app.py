@@ -345,8 +345,11 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         if path == "/api/connections/test-facebook":
             self.handle_api_test_facebook(body)
             return
-        elif path == "/api/whatsapp/logout":
+        elif path in ("/api/whatsapp/logout", "/api/whatsapp/reset"):
             self.handle_api_whatsapp_logout()
+            return
+        elif path == "/api/whatsapp/pair-code":
+            self.handle_api_whatsapp_pair_code(body)
             return
         elif path == "/api/goals":
             self.handle_api_update_goals(body)
@@ -1595,6 +1598,20 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         try:
             req = urllib.request.Request(f"{bridge_url}/logout", data=b"{}", headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                self.send_json_response(data)
+        except Exception as e:
+            self.send_json_response({"success": False, "error": str(e)})
+
+    def handle_api_whatsapp_pair_code(self, body):
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
+        try:
+            req = urllib.request.Request(
+                f"{bridge_url}/request-pairing-code",
+                data=json.dumps(body or {}).encode("utf-8"),
+                headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 self.send_json_response(data)
         except Exception as e:

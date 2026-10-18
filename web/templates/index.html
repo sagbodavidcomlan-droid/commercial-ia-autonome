@@ -5745,14 +5745,15 @@
         </button>
       </div>
 
-      <div class="text-xs text-slate-300 space-y-1">
-        <p>1. Ouvrez <strong>WhatsApp</strong> sur votre téléphone (<span class="text-emerald-400 font-mono">+229 01 94 93 34 58</span>)</p>
-        <p>2. Allez dans <strong>Paramètres</strong> > <strong>Appareils connectés</strong> > <strong>Associer un appareil</strong></p>
+      <div class="text-xs text-slate-300 space-y-1.5 bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
+        <p class="font-semibold text-white">Instructions pour connecter votre WhatsApp :</p>
+        <p>1. Ouvrez <strong>WhatsApp</strong> sur votre téléphone</p>
+        <p>2. Allez dans <strong>Paramètres</strong> (ou <strong>⋮</strong> en haut à droite) &gt; <strong>Appareils connectés</strong> &gt; <strong>Connecter un appareil</strong></p>
         <p>3. Pointez votre appareil vers l'écran pour scanner ce QR Code</p>
       </div>
 
       <!-- Zone d'affichage du QR Code -->
-      <div class="bg-white p-4 rounded-xl flex items-center justify-center min-h-[260px] mx-auto w-[260px] border-4 border-emerald-500/30 relative">
+      <div class="bg-white p-4 rounded-xl flex items-center justify-center min-h-[260px] mx-auto w-[260px] border-4 border-emerald-500/30 relative shadow-inner">
         <div id="wa-qr-loading" class="text-slate-600 text-xs font-semibold flex flex-col items-center gap-2">
           <div class="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
           Chargement du QR Code...
@@ -5767,20 +5768,39 @@
         </div>
       </div>
 
-      <!-- Code d'association alternatif sans scan -->
-      <div id="wa-pairing-code-box" class="p-2.5 rounded-xl bg-slate-800/90 border border-slate-700 hidden text-center">
-        <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Ou associez par code (sans scanner) :</span>
-        <span id="wa-pairing-code-value" class="text-lg font-mono font-black text-emerald-400 tracking-widest select-all"></span>
-        <span class="text-[10px] text-slate-400 block mt-0.5">WhatsApp &gt; Appareils connectés &gt; Associer avec un numéro</span>
+      <!-- Code d'association alternatif à la demande -->
+      <div id="wa-pairing-code-box" class="p-3 rounded-xl bg-slate-800/90 border border-slate-700 hidden text-center space-y-1">
+        <span class="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Code d'association WhatsApp :</span>
+        <span id="wa-pairing-code-value" class="text-2xl font-mono font-black text-emerald-400 tracking-widest select-all"></span>
+        <span class="text-[10px] text-slate-400 block">WhatsApp &gt; Appareils connectés &gt; Associer avec un numéro de téléphone</span>
       </div>
 
-      <div id="wa-qr-status-text" class="text-xs text-slate-400 font-mono">
+      <!-- Option pour demander un code par numéro -->
+      <div class="p-2.5 rounded-xl bg-slate-800/50 border border-slate-700/60 text-xs">
+        <details class="group cursor-pointer">
+          <summary class="text-slate-400 hover:text-white font-medium flex items-center justify-between select-none">
+            <span>Ou associer avec un code à 8 chiffres (sans scanner)</span>
+            <span class="text-[10px] text-emerald-400 group-open:rotate-180 transition-transform">▼</span>
+          </summary>
+          <div class="mt-2.5 pt-2 border-t border-slate-700 space-y-2">
+            <p class="text-[11px] text-slate-400">Entrez votre numéro avec indicatif pays (ex: 2290194933458) :</p>
+            <div class="flex gap-2">
+              <input type="text" id="wa-custom-pairing-phone" value="2290194933458" placeholder="Ex: 2290194933458" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none">
+              <button type="button" onclick="requestWhatsAppPairingCode()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+                Générer code
+              </button>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div id="wa-qr-status-text" class="text-xs text-slate-400 font-mono text-center">
         En attente de scan...
       </div>
 
-      <div class="flex justify-between items-center pt-2">
-        <button type="button" onclick="refreshWhatsAppQr()" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Actualiser QR Code
+      <div class="flex justify-between items-center pt-2 gap-2">
+        <button type="button" onclick="resetWhatsAppSession()" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold py-1 px-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Régénérer QR Code
         </button>
         <button type="button" onclick="disconnectWhatsApp()" id="btn-wa-logout" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-semibold hidden">
           <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Déconnecter

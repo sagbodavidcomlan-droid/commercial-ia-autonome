@@ -46,19 +46,23 @@ let currentPairingCode = null;
 let connectionStatus = 'DISCONNECTED'; // DISCONNECTED, SCAN_QR, CONNECTED
 let connectedNumber = null;
 
-async function startWhatsApp(pairingPhone = '2290194933458') {
+async function startWhatsApp(pairingPhone = null) {
     if (!makeWASocket) {
         await loadBaileys();
     }
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
 
+    const browserSignature = (Browsers && typeof Browsers.ubuntu === 'function')
+        ? Browsers.ubuntu('Chrome')
+        : ['Ubuntu', 'Chrome', '22.04.4'];
+
     sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
         auth: state,
-        browser: ['Chrome (Linux)', 'Chrome', '122.0.6261.111'],
+        browser: browserSignature,
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         defaultQueryTimeoutMs: 60000,
@@ -67,7 +71,7 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // Demander le Pairing Code officiel WhatsApp si non encore enregistré
+    // Demander le Pairing Code uniquement si explicitement demandé par l'utilisateur
     if (!sock.authState.creds.registered && pairingPhone) {
         setTimeout(async () => {
             try {
@@ -80,7 +84,7 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
             } catch (err) {
                 console.error('Erreur demande Pairing Code:', err.message);
             }
-        }, 4000);
+        }, 3000);
     }
 
     sock.ev.on('connection.update', async (update) => {
@@ -108,8 +112,13 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
             connectedNumber = null;
             console.log(`❌ [WhatsApp Bridge] Déconnecté (Code: ${statusCode})`);
 
-            if (statusCode === DisconnectReason.loggedOut || statusCode === 401) {
-                console.log(`🧹 [WhatsApp Bridge] Session expirée / déconnectée (401). Nettoyage de la session et redémarrage pour nouveau QR...`);
+            // Si déconnecté avant association complète, ou suite à déconnexion/rejet :
+            // Nettoyage immédiat du cache pour repartir sur un QR Code 100% propre
+            const isUnregistered = !sock?.authState?.creds?.registered;
+            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+
+            if (isUnregistered || isLoggedOut) {
+                console.log(`🧹 [WhatsApp Bridge] Session non enregistrée ou révoquée. Réinitialisation des clés et redémarrage propre...`);
                 try {
                     if (fs.existsSync(AUTH_DIR)) {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
@@ -117,9 +126,9 @@ async function startWhatsApp(pairingPhone = '2290194933458') {
                 } catch (cleanErr) {
                     console.error('Erreur nettoyage auth_info:', cleanErr);
                 }
-                setTimeout(() => startWhatsApp(pairingPhone), 1500);
+                setTimeout(() => startWhatsApp(null), 1500);
             } else {
-                setTimeout(() => startWhatsApp(pairingPhone), 3000);
+                setTimeout(() => startWhatsApp(null), 3000);
             }
         } else if (connection === 'open') {
             connectionStatus = 'CONNECTED';
@@ -242,16 +251,62 @@ app.post('/send', async (req, res) => {
     }
 });
 
-app.post('/logout', (req, res) => {
+app.post(['/logout', '/reset'], (req, res) => {
     try {
+        if (sock) {
+            try { sock.end(); } catch (e) {}
+            sock = null;
+        }
         if (fs.existsSync(AUTH_DIR)) {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
         }
         connectionStatus = 'DISCONNECTED';
         connectedNumber = null;
-        sock = null;
-        res.json({ success: true, message: 'Session déconnectée' });
-        setTimeout(() => startWhatsApp('2290194933458'), 1000);
+        currentPairingCode = null;
+        currentQrCodeDataUrl = null;
+        res.json({ success: true, message: 'Session WhatsApp réinitialisée avec succès.' });
+        setTimeout(() => startWhatsApp(null), 1000);
+    } catch (e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/request-pairing-code', async (req, res) => {
+    const { phone } = req.body;
+    if (!phone) {
+        return res.status(400).json({ success: false, error: 'Numéro de téléphone requis (ex: 229XXXXXXXX)' });
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 8) {
+        return res.status(400).json({ success: false, error: 'Numéro de téléphone invalide' });
+    }
+
+    try {
+        if (sock) {
+            try { sock.end(); } catch (e) {}
+            sock = null;
+        }
+        if (fs.existsSync(AUTH_DIR)) {
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+        }
+        connectionStatus = 'DISCONNECTED';
+        currentQrCodeDataUrl = null;
+        currentPairingCode = null;
+
+        await startWhatsApp(cleanPhone);
+
+        // Attendre brièvement la génération du code
+        let attempts = 0;
+        while (!currentPairingCode && attempts < 12) {
+            await new Promise(r => setTimeout(r, 500));
+            attempts++;
+        }
+
+        if (currentPairingCode) {
+            res.json({ success: true, pairingCode: currentPairingCode });
+        } else {
+            res.json({ success: true, message: 'Code en cours de génération, veuillez actualiser dans 2 secondes' });
+        }
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }
@@ -259,5 +314,5 @@ app.post('/logout', (req, res) => {
 
 app.listen(PORT, HOST, () => {
     console.log(`🚀 [WhatsApp Bridge] Écoute strictement sur ${HOST}:${PORT}`);
-    startWhatsApp('2290194933458');
+    startWhatsApp(null); // Mode QR Code pur par défaut !
 });

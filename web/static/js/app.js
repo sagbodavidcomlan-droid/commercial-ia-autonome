@@ -4826,6 +4826,55 @@ async function pollWhatsAppQrStatus() {
   } catch (e) {}
 }
 
+async function resetWhatsAppSession() {
+  const statusText = document.getElementById("wa-qr-status-text");
+  const loading = document.getElementById("wa-qr-loading");
+  const img = document.getElementById("wa-qr-image");
+  const pairingBox = document.getElementById("wa-pairing-code-box");
+  if (pairingBox) pairingBox.classList.add("hidden");
+  if (loading) loading.classList.remove("hidden");
+  if (img) img.classList.add("hidden");
+  if (statusText) statusText.innerText = "Génération d'un nouveau QR Code sécurisé...";
+
+  try {
+    await fetch("/api/whatsapp/reset", { method: "POST" });
+    setTimeout(refreshWhatsAppQr, 1200);
+  } catch (e) {
+    if (statusText) statusText.innerText = "Erreur lors de la réinitialisation.";
+  }
+}
+
+async function requestWhatsAppPairingCode() {
+  const phoneInput = document.getElementById("wa-custom-pairing-phone");
+  const phone = phoneInput ? phoneInput.value.trim() : "";
+  if (!phone) {
+    alert("Veuillez saisir votre numéro au format international (ex: 229XXXXXXXX).");
+    return;
+  }
+  const statusText = document.getElementById("wa-qr-status-text");
+  if (statusText) statusText.innerText = "Génération du code officiel WhatsApp...";
+
+  try {
+    const res = await fetch("/api/whatsapp/pair-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    if (data.pairingCode) {
+      const pairingBox = document.getElementById("wa-pairing-code-box");
+      const pairingVal = document.getElementById("wa-pairing-code-value");
+      if (pairingVal) pairingVal.innerText = data.pairingCode;
+      if (pairingBox) pairingBox.classList.remove("hidden");
+      if (statusText) statusText.innerText = "Saisissez ce code dans WhatsApp > Appareils connectés > Associer avec un numéro.";
+    } else {
+      alert(data.error || data.message || "Génération en cours, vérifiez dans quelques secondes.");
+    }
+  } catch (e) {
+    alert("Erreur de communication avec le serveur.");
+  }
+}
+
 async function disconnectWhatsApp() {
   if (!confirm("Voulez-vous vraiment déconnecter votre WhatsApp de l'agent IA ?")) return;
   try {
