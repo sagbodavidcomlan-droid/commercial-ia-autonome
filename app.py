@@ -11,6 +11,8 @@ import sys
 import json
 import sqlite3
 import mimetypes
+import urllib.request
+import urllib.error
 from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from datetime import datetime
@@ -1560,11 +1562,13 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 data = json.loads(resp.read().decode("utf-8"))
                 self.send_json_response(data)
         except Exception as e:
+            daemon_st = whatsapp_bridge_daemon.get_status()
             self.send_json_response({
                 "connected": False,
                 "status": "OFFLINE",
-                "error": f"Passerelle WhatsApp locale non joignable : {str(e)}",
-                "message": "Veuillez démarrer la passerelle WhatsApp sur le port 3001."
+                "error": str(e),
+                "daemon": daemon_st,
+                "message": f"Passerelle WhatsApp : {daemon_st.get('status_message', 'Démarrage en cours...')}"
             })
 
     def handle_api_whatsapp_bridge_status(self):
@@ -1573,13 +1577,17 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             req = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
             with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
+                data["daemon"] = whatsapp_bridge_daemon.get_status()
                 self.send_json_response(data)
         except Exception as e:
+            daemon_st = whatsapp_bridge_daemon.get_status()
             self.send_json_response({
                 "status": "OFFLINE",
                 "error": str(e),
+                "daemon": daemon_st,
                 "number": None,
-                "hasQr": False
+                "hasQr": False,
+                "message": daemon_st.get("status_message", "Démarrage en cours...")
             })
 
     def handle_api_whatsapp_logout(self):
