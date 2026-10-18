@@ -301,68 +301,17 @@ class CarouselComposer:
         target_audience: str = "Dirigeants, PME & Prestataires B2B"
     ) -> Dict[str, Any]:
         """
-        Orchestre la création complète : script, intégration cloud SlidesGPT si disponible,
-        rendu PDF LinkedIn natif 1080x1350 et enregistrement CRM.
+        Orchestre la création complète avec l'Agency Graphic Engine (style Aksara) :
+        rendu graphique haute couture, masquage de photos réelles, compilation PDF LinkedIn
+        et déclinaison 4:5 / 9:16.
         """
-        ts = int(time.time())
-        slides = self.generate_carousel_content(topic, channel=channel, target_audience=target_audience)
-        
-        pdf_filename = f"carousel_linkedin_{ts}.pdf"
-        pdf_path = self.build_pdf_document(slides, topic, pdf_filename)
-        pdf_url = f"/static/generated_carousels/{pdf_filename}"
-
-        # Optionnel : Appel Composio SlidesGPT pour obtenir un deck interactif
-        cloud_deck = None
-        try:
-            cloud_slides_payload = []
-            for s in slides[:4]:
-                cloud_slides_payload.append({
-                    "title": s["title"],
-                    "layout": "title_and_two_to_four_columns_with_icons" if s["points"] else "title_and_subtitle",
-                    "subtitle": s.get("subtitle", ""),
-                    "body": [{"point": pt[:25], "description": pt, "icon": "check", "value": 80} for pt in s.get("points", [])[:3]]
-                })
-            cloud_res = call_composio_tool("SLIDESGPT_MCP_CREATE_SLIDES", {
-                "presentation_id": "",
-                "theme_id": "copenhagen-dark",
-                "slides": cloud_slides_payload
-            }, timeout=25)
-            if cloud_res and isinstance(cloud_res, dict):
-                cloud_deck = {
-                    "presentation_view_url": cloud_res.get("presentation_view_url"),
-                    "deck_id": cloud_res.get("deck_id"),
-                    "slide_images": [sl.get("image_url") for sl in cloud_res.get("slides", []) if sl.get("image_url")]
-                }
-        except Exception as e_cloud:
-            logger.warning(f"SlidesGPT cloud call note: {e_cloud}")
-
-        title = f"Carrousel LinkedIn : {topic[:50]}"
-        asset_id = save_creative_asset(
-            title=title,
+        from modules.agency_graphic_engine import get_agency_engine
+        return get_agency_engine().generate_carousel_suite(
             topic=topic,
-            image_url=pdf_url,
-            format_type="CAROUSEL_PDF",
-            style_preset="brand_bible_navy_gold",
-            prompt_used=f"Carousel 6 slides for {topic}",
-            metadata={
-                "pdf_url": pdf_url,
-                "slides_count": len(slides),
-                "channel": channel,
-                "cloud_deck": cloud_deck
-            }
+            channel=channel,
+            target_audience=target_audience,
+            num_slides=6
         )
-
-        return {
-            "success": True,
-            "asset_id": asset_id,
-            "title": title,
-            "topic": topic,
-            "pdf_url": pdf_url,
-            "slides_count": len(slides),
-            "slides": slides,
-            "cloud_deck": cloud_deck,
-            "message": "Carrousel PDF haute résolution prêt pour LinkedIn !"
-        }
 
 
 _carousel_composer = None

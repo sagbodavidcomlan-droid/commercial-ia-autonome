@@ -262,6 +262,21 @@ class VideoMotionProducer:
             f"theme: '{topic}'"
         )
         cover_image_url = self.generate_keyframe_visual(cover_prompt)
+        if not cover_image_url:
+            try:
+                from modules.agency_graphic_engine import get_agency_engine
+                engine = get_agency_engine()
+                hero_img = engine.render_archetype_1_hero({
+                    "badge": "REEL 9:16 VIRAL",
+                    "title": topic,
+                    "subtitle": f"Système d'Acquisition pour {target_audience}"
+                }, w=1080, h=1920, scale=2)
+                fn_cover = f"agency_reel_cover_{ts}.png"
+                path_cover = self.storage_dir / fn_cover
+                hero_img.save(path_cover, "PNG", quality=95)
+                cover_image_url = f"/static/generated_videos/{fn_cover}"
+            except Exception as e_cov:
+                logger.warning(f"Erreur fallback cover agence 9:16 : {e_cov}")
 
         # 3. Génération du clip vidéo cinématique animé MP4 (Veo 3.1 / Luma Ray 3.2)
         video_clip_prompt = (

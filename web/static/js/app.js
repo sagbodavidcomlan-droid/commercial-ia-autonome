@@ -7827,8 +7827,17 @@ function getSlideSvgUrl(slide, slideIndex, totalSlides) {
   return `/api/creative/slide-svg?${query.toString()}`;
 }
 
+let currentCarouselViewFormat = "4x5";
+
+function switchCarouselViewFormat(format) {
+  currentCarouselViewFormat = format;
+  if (currentCreativeResult) {
+    renderCarouselPdfPreview(currentCreativeResult);
+  }
+}
+
 // =========================================================================
-// RENDU CARROUSEL MULTI-PAGES PDF LINKEDIN (1080x1350 PT & BRAND BIBLE)
+// RENDU CARROUSEL MULTI-PAGES PDF LINKEDIN & STORIES (DESIGN PRO AKSARA)
 // =========================================================================
 function renderCarouselPdfPreview(result) {
   const container = document.getElementById("creative-render-container");
@@ -7837,73 +7846,114 @@ function renderCarouselPdfPreview(result) {
   const slides = result.slides || [];
   const totalSlides = result.total_slides || slides.length;
   const pdfUrl = result.pdf_url || "#";
-  const pdfFilename = result.pdf_filename || "carrousel_linkedin.pdf";
+  const pdfFilename = result.pdf_filename || "carrousel_agency_linkedin.pdf";
+  const is916 = (currentCarouselViewFormat === "9x16");
 
   const slidesCardsHtml = slides.map((s, idx) => {
+    const imgUrl = is916 ? (s.image_url_9_16 || s.image_url_4_5) : (s.image_url_4_5 || s.image_url);
+    const aspectClass = is916 ? "aspect-[9/16]" : "aspect-[4/5]";
+    
+    if (imgUrl) {
+      return `
+        <div class="rounded-2xl border border-slate-200 bg-slate-950 shadow-sm overflow-hidden flex flex-col justify-between group hover:border-[#0062ff] hover:shadow-xl transition-all duration-300">
+          <div class="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-[11px] font-bold text-white">
+            <span class="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-black uppercase">
+              ${escapeHtml(s.badge || 'SLIDE ' + (idx + 1))}
+            </span>
+            <span class="font-mono text-slate-400 text-[10px] font-bold">${idx + 1} / ${totalSlides}</span>
+          </div>
+
+          <div class="relative w-full ${aspectClass} overflow-hidden bg-slate-900 flex items-center justify-center cursor-pointer select-none group" onclick="window.open('${imgUrl}', '_blank')">
+            <img src="${imgUrl}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-102" alt="Slide ${idx + 1}">
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span class="px-3 py-1.5 rounded-xl bg-white text-slate-900 font-extrabold text-xs shadow-lg flex items-center gap-1.5">
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-[#0062ff]"></i> Agrandir HD
+              </span>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between gap-1">
+            <span class="text-[10px] font-mono text-slate-400 font-bold">${is916 ? '1080x1920 (9:16)' : '1080x1350 (4:5)'}</span>
+            <a href="${imgUrl}" download="slide_${idx+1}_${is916 ? '9x16' : '4x5'}.png" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-black text-[10px] flex items-center gap-1 transition">
+              <i data-lucide="download" class="w-3 h-3"></i> PNG HD
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
     const isDark = (s.theme === "DARK" || idx === 0 || idx === totalSlides - 1);
     const bgClass = isDark ? "bg-[#0A1128] text-white" : "bg-white text-slate-900 border border-slate-200";
     const badgeColor = isDark ? "bg-amber-400 text-slate-950 font-black" : "bg-[#0062ff] text-white font-black";
-    const bulletsHtml = (s.bullet_points && s.bullet_points.length > 0)
-      ? `<ul class="space-y-1.5 my-3 text-left">
-          ${s.bullet_points.map(bp => `<li class="flex items-start gap-1.5 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}"><span class="text-amber-400 font-bold">✓</span> <span>${escapeHtml(bp)}</span></li>`).join("")}
-        </ul>`
-      : "";
-
     return `
-      <div class="rounded-2xl overflow-hidden shadow-md flex flex-col justify-between p-5 min-h-[360px] ${bgClass} transition-all duration-300 hover:scale-[1.02] border ${isDark ? 'border-slate-800' : 'border-slate-200'}">
+      <div class="rounded-2xl overflow-hidden shadow-md flex flex-col justify-between p-5 min-h-[360px] ${bgClass} border ${isDark ? 'border-slate-800' : 'border-slate-200'}">
         <div class="flex items-center justify-between pb-3 border-b ${isDark ? 'border-slate-800' : 'border-slate-100'}">
           <span class="px-2.5 py-0.5 rounded-full text-[10px] uppercase tracking-wider ${badgeColor}">${escapeHtml(s.badge || 'SLIDE')}</span>
           <span class="text-[10px] font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}">${idx + 1} / ${totalSlides}</span>
         </div>
-
         <div class="my-auto py-3">
           <h4 class="text-base font-black leading-tight ${isDark ? 'text-white' : 'text-slate-950'}">${escapeHtml(s.title || '')}</h4>
           ${s.subtitle ? `<p class="text-xs font-semibold mt-1.5 ${isDark ? 'text-amber-300' : 'text-[#0062FF]'}">${escapeHtml(s.subtitle)}</p>` : ''}
-          ${bulletsHtml}
-          ${s.cta_hint ? `<div class="mt-3 p-2 rounded-xl text-center text-[10px] font-black tracking-wide ${isDark ? 'bg-blue-950/80 text-amber-300 border border-blue-900' : 'bg-blue-50 text-blue-900 border border-blue-100'}">👉 ${escapeHtml(s.cta_hint)}</div>` : ''}
         </div>
-
-        <div class="pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'} flex items-center justify-between text-[9px] font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}">
-          <span>DAVE SAGBO &bull; BRAND BIBLE</span>
-          <span class="font-mono">1080x1350 PT</span>
+        <div class="pt-3 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'} text-[9px] font-bold ${isDark ? 'text-slate-400' : 'text-slate-500'}">
+          DAVE SAGBO BRAND BIBLE
         </div>
       </div>
     `;
   }).join("");
 
-  const slidesGptBtn = result.slidesgpt_deck && result.slidesgpt_deck.deck_url
-    ? `<a href="${result.slidesgpt_deck.deck_url}" target="_blank" class="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white font-black text-xs flex items-center gap-1.5 transition"><i data-lucide="external-link" class="w-3.5 h-3.5 text-blue-400"></i> <span>Présentation SlidesGPT</span></a>`
-    : "";
-
   container.innerHTML = `
     <div class="w-full space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 rounded-3xl border border-slate-800 shadow-xl">
+      <!-- Barre d'en-tête Pro & Téléchargements -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-950 via-[#002b80] to-slate-950 text-white p-5 rounded-3xl border border-blue-900/60 shadow-xl">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span class="text-sm font-black text-white">Carrousel Multi-Pages LinkedIn (Format PDF 4:5 Natif)</span>
-            <span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold">ReportLab HD</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span class="text-sm font-black text-white">Carrousel Agence & Stories B2B (Design Aksara Pro)</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">Photos & Découpes 1080p</span>
           </div>
-          <p class="text-xs text-slate-300 font-medium">${totalSlides} Diapositives vectorielles créées selon la Brand Bible (#0A1128, #F39C12, #0062FF).</p>
+          <p class="text-xs text-slate-300 font-medium">${totalSlides} Diapositives haute fidélité avec photographies réelles détourées et charte de prestige.</p>
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap">
-          <a href="${pdfUrl}" download="${pdfFilename}" target="_blank" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-purple-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
-            <i data-lucide="download" class="w-4 h-4"></i>
+          <a href="${pdfUrl}" download="${pdfFilename}" target="_blank" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/30 transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
             <span>Télécharger le Document PDF LinkedIn</span>
           </a>
-          ${slidesGptBtn}
         </div>
       </div>
 
+      <!-- Sélecteur d'Affichage 4:5 vs 9:16 -->
+      <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-2xl shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-black text-slate-700 uppercase tracking-tight">Format Actif :</span>
+          <div class="inline-flex rounded-xl p-1 bg-slate-100 border border-slate-200">
+            <button type="button" onclick="switchCarouselViewFormat('4x5')" class="px-3 py-1.5 rounded-lg text-xs font-black transition ${!is916 ? 'bg-white text-[#0062ff] shadow-xs' : 'text-slate-600 hover:text-slate-900'}">
+              📄 Carrousel LinkedIn (Ratio 4:5)
+            </button>
+            <button type="button" onclick="switchCarouselViewFormat('9x16')" class="px-3 py-1.5 rounded-lg text-xs font-black transition ${is916 ? 'bg-white text-[#0062ff] shadow-xs' : 'text-slate-600 hover:text-slate-900'}">
+              📱 Stories & Reels (Ratio 9:16)
+            </button>
+          </div>
+        </div>
+
+        <span class="text-[11px] font-bold text-slate-500 hidden sm:inline">
+          Résolution : <strong class="text-slate-800 font-mono">${is916 ? '1080 x 1920 px' : '1080 x 1350 px'}</strong>
+        </span>
+      </div>
+
+      <!-- Grille des diapositives -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         ${slidesCardsHtml}
       </div>
 
-      <div class="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-xs space-y-1 text-purple-950">
-        <strong class="font-extrabold flex items-center gap-1.5"><i data-lucide="lightbulb" class="w-4 h-4 text-purple-600"></i> Mode d'Emploi LinkedIn Document :</strong>
-        <p class="text-purple-800 leading-relaxed">
-          Pour publier ce carrousel sur LinkedIn : créez un post, cliquez sur l'icône <strong>« Document »</strong> (et non photo), puis sélectionnez le fichier PDF téléchargé. LinkedIn affichera un carrousel interactif multi-pages avec swipe horizontal.
+      <!-- Guide d'utilisation LinkedIn -->
+      <div class="p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-xs space-y-1.5 text-blue-950">
+        <strong class="font-extrabold flex items-center gap-1.5 text-[#0062ff]">
+          <i data-lucide="check-circle" class="w-4 h-4"></i> Pour publier ce carrousel sur LinkedIn :
+        </strong>
+        <p class="text-blue-900 leading-relaxed">
+          Cliquez sur <strong>« Télécharger le Document PDF LinkedIn »</strong> ci-dessus. Sur LinkedIn, créez un nouveau post, cliquez sur l'icône <strong>« Ajouter un document »</strong> (et non image), puis téléversez ce fichier PDF. LinkedIn générera automatiquement un carrousel immersif interactif avec swipe horizontal plein écran !
         </p>
       </div>
     </div>
