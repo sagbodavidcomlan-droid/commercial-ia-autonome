@@ -157,6 +157,12 @@ class WhatsAppBridgeDaemon:
             logger.warning(f"Fichier {SERVER_JS} introuvable.")
             return
 
+        # Préparation de l'environnement avec Node.js dans le PATH
+        env = os.environ.copy()
+        node_dir = str(Path(node_bin).parent)
+        env["PATH"] = f"{node_dir}:{env.get('PATH', '')}"
+        env["npm_config_cache"] = "/tmp/.npm-cache"
+
         # S'assurer que les modules node_modules sont installés
         baileys_dir = BRIDGE_DIR / "node_modules" / "@whiskeysockets" / "baileys"
         if not baileys_dir.exists():
@@ -164,30 +170,32 @@ class WhatsAppBridgeDaemon:
             self.status_message = "Installation des dépendances WhatsApp (Baileys)..."
             npm_cli = PORTABLE_NODE_DIR / "lib" / "node_modules" / "npm" / "bin" / "npm-cli.js"
             if npm_cli.exists():
-                npm_cmd = [node_bin, str(npm_cli), "install", "--production"]
+                npm_cmd = [node_bin, str(npm_cli), "install", "--production", "--no-audit", "--no-fund"]
             elif shutil.which("npm"):
-                npm_cmd = [shutil.which("npm"), "install", "--production"]
+                npm_cmd = [shutil.which("npm"), "install", "--production", "--no-audit", "--no-fund"]
             else:
-                npm_cmd = [node_bin, str(Path(node_bin).parent / "npm"), "install", "--production"]
+                npm_cmd = [node_bin, str(Path(node_bin).parent / "npm"), "install", "--production", "--no-audit", "--no-fund"]
 
             try:
                 logger.info(f"Exécution de : {' '.join(npm_cmd)}")
-                res = subprocess.run(npm_cmd, cwd=str(BRIDGE_DIR), timeout=120, capture_output=True, text=True)
-                if res.returncode == 0:
+                res = subprocess.run(npm_cmd, cwd=str(BRIDGE_DIR), env=env, timeout=180, capture_output=True, text=True)
+                if res.returncode == 0 and baileys_dir.exists():
                     logger.info("Dépendances Baileys installées avec succès.")
+                    self.status_message = "Dépendances WhatsApp installées avec succès."
                 else:
-                    logger.error(f"Échec npm install (code {res.returncode}): {res.stderr}")
-                    self.status_message = f"Erreur npm: {res.stderr[:100]}"
+                    err_msg = res.stderr or res.stdout or f"code {res.returncode}"
+                    logger.error(f"Échec npm install: {err_msg}")
+                    self.status_message = f"Erreur npm: {err_msg.strip()[:140]}"
             except Exception as npm_err:
                 logger.error(f"Erreur npm install: {npm_err}")
                 self.status_message = f"Erreur npm install: {npm_err}"
 
+        if not baileys_dir.exists():
+            logger.warning("Baileys n'a pas pu être installé. En attente...")
+            return
+
         logger.info(f"Node.js actif : {node_bin}. Surveillance de la passerelle WhatsApp sur le port {self.port}...")
         self.status_message = "Passerelle en cours d'exécution."
-
-        env = os.environ.copy()
-        node_dir = str(Path(node_bin).parent)
-        env["PATH"] = f"{node_dir}:{env.get('PATH', '')}"
 
         while self.running:
             if not self.is_bridge_reachable():
