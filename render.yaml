@@ -3,7 +3,7 @@ services:
     name: commercial-ia-autonome
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt && (cd whatsapp_bridge && npm install)
+    buildCommand: pip install -r requirements.txt && (command -v npm >/dev/null 2>&1 && (cd whatsapp_bridge && npm install) || true)
     startCommand: python3 app.py
     autoDeploy: true
     envVars:

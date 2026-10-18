@@ -162,13 +162,25 @@ class WhatsAppBridgeDaemon:
         if not baileys_dir.exists():
             logger.info("Installation des dépendances npm pour whatsapp_bridge...")
             self.status_message = "Installation des dépendances WhatsApp (Baileys)..."
-            npm_bin = shutil.which("npm") or str(Path(node_bin).parent / "npm")
-            if npm_bin and os.path.exists(npm_bin):
-                try:
-                    subprocess.run([npm_bin, "install", "--production"], cwd=str(BRIDGE_DIR), timeout=90, check=True)
+            npm_cli = PORTABLE_NODE_DIR / "lib" / "node_modules" / "npm" / "bin" / "npm-cli.js"
+            if npm_cli.exists():
+                npm_cmd = [node_bin, str(npm_cli), "install", "--production"]
+            elif shutil.which("npm"):
+                npm_cmd = [shutil.which("npm"), "install", "--production"]
+            else:
+                npm_cmd = [node_bin, str(Path(node_bin).parent / "npm"), "install", "--production"]
+
+            try:
+                logger.info(f"Exécution de : {' '.join(npm_cmd)}")
+                res = subprocess.run(npm_cmd, cwd=str(BRIDGE_DIR), timeout=120, capture_output=True, text=True)
+                if res.returncode == 0:
                     logger.info("Dépendances Baileys installées avec succès.")
-                except Exception as npm_err:
-                    logger.error(f"Erreur npm install: {npm_err}")
+                else:
+                    logger.error(f"Échec npm install (code {res.returncode}): {res.stderr}")
+                    self.status_message = f"Erreur npm: {res.stderr[:100]}"
+            except Exception as npm_err:
+                logger.error(f"Erreur npm install: {npm_err}")
+                self.status_message = f"Erreur npm install: {npm_err}"
 
         logger.info(f"Node.js actif : {node_bin}. Surveillance de la passerelle WhatsApp sur le port {self.port}...")
         self.status_message = "Passerelle en cours d'exécution."
@@ -199,8 +211,13 @@ class WhatsAppBridgeDaemon:
                             self.status_message = "Passerelle WhatsApp active et joignable."
                             break
                         if self.process.poll() is not None:
-                            logger.warning(f"Le processus WhatsApp Bridge s'est arrêté (Code: {self.process.returncode})")
-                            self.status_message = f"Arrêt inattendu (code {self.process.returncode})"
+                            err_out = ""
+                            try:
+                                err_out = self.process.stdout.read()
+                            except Exception:
+                                pass
+                            logger.warning(f"Le processus WhatsApp Bridge s'est arrêté (Code: {self.process.returncode}): {err_out}")
+                            self.status_message = f"Arrêt (code {self.process.returncode}): {err_out.strip()[:180]}"
                             break
 
                 except Exception as e:
