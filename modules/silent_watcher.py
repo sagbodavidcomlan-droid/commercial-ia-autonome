@@ -810,13 +810,19 @@ Réponds UNIQUEMENT en JSON :
             c = conn.cursor()
 
             c.execute("""
-                SELECT id, occurrence_count, bug_code
+                SELECT id, occurrence_count, bug_code, status
                 FROM watcher_bugs
-                WHERE agent_name = ? AND title = ? AND status != 'fixed'
+                WHERE agent_name = ? AND title = ?
             """, (agent, title))
             existing = c.fetchone()
 
             if existing:
+                b_status = existing["status"] if isinstance(existing, dict) else existing[3]
+                if b_status in ('fixed', 'resolved', 'wont_fix'):
+                    # Le bug a déjà été résolu : ne pas le recréer en boucle
+                    if self.db is None:
+                        conn.close()
+                    return
                 bug_id = existing["id"] if isinstance(existing, dict) else existing[0]
                 c.execute("""
                     UPDATE watcher_bugs
@@ -870,12 +876,57 @@ Réponds UNIQUEMENT en JSON :
             logger.warning(f"Erreur _track_bug: {e}")
 
     def _generate_fix_suggestion(self, observation: Dict[str, Any]) -> str:
-        """Utilise Gemini pour suggérer comment corriger le bug détecté."""
-        key = self._get_gemini_key()
-        if not key:
-            return "Vérifier la logique conditionnelle et les filtres dans le module correspondant."
+        """Suggère la correction technique précise pour le bug détecté (expert ciblé + fallback Gemini)."""
+        b_type = str(observation.get('type') or '').lower()
+        title = str(observation.get('title') or '').lower()
+        detail = str(observation.get('detail') or '').lower()
+        combined = f"{b_type} {title} {detail}"
 
-        prompt = f"""
+        # 1. Règles expertes déterministes et ultra-précises
+        if any(w in combined for w in ['amnesia', 'amnésie', 'returning', 'réintroduit', 'inconnu']):
+            return (
+                "modules/ai_sales_agent.py : forcer is_returning_lead=True et appeler build_returning_lead_response() "
+                "sans ré-identification froide (RÈGLE 33). Consulter core/database_store.py pour la déduplication omnicanale."
+            )
+        if any(w in combined for w in ['coordonnées', 'coordonnee', 'coordinates', 'telephone', 'email', 'numéro']):
+            return (
+                "modules/ai_sales_agent.py & core/database_store.py : appliquer les RÈGLES 34 & 35. "
+                "Extraire immédiatement les coordonnées par regex et synchroniser crm_leads via update_lead_coordinates()."
+            )
+        if any(w in combined for w in ['paiement', 'payer', 'règlement', 'closing', 'signal_achat', 'signal d\'achat', 'capture']):
+            return (
+                "modules/ai_sales_agent.py : activer l'étape 0.44 paiement (RÈGLE 35) pour réclamer email + WhatsApp "
+                "avec motif de vérification, fournir le lien officiel et exiger la capture d'écran du paiement."
+            )
+        if any(w in combined for w in ['meet', 'rdv', 'visio', 'rendez-vous', 'calendrier']):
+            return (
+                "modules/meeting_scheduler.py : vérifier l'intégration Composio Google Calendar / Meet "
+                "ou enregistrer la réservation dans la table meetings via add_meeting()."
+            )
+        if any(w in combined for w in ['loop', 'boucle', 'répétition', 'duplicate', 'identique']):
+            return (
+                "modules/communication_guard.py : calibrer la règle near_duplicate et vérifier last_agent_message "
+                "pour forcer une relance avec angle différent."
+            )
+        if any(w in combined for w in ['prix', 'tarif', 'divulgation', 'coût']):
+            return (
+                "modules/ai_sales_agent.py : appliquer la RÈGLE 20. Ancrer la valeur, le diagnostic et le ROI "
+                "avant toute annonce de prix pour maximiser la conversion."
+            )
+        if any(w in combined for w in ['secteur', 'incohérence', 'hors-sujet', 'hors sujet']):
+            return (
+                "modules/conversation_scanner.py & modules/communication_guard.py : calibrer la détection sectorielle "
+                "dans le prompt du scanner et la règle wrong_sector du guard."
+            )
+        if any(w in combined for w in ['empathie', 'écoute', 'frustration', 'délai', 'attente']):
+            return (
+                "modules/ai_sales_agent.py : renforcer le ton empathique à l'étape 0.1 et répondre directement "
+                "aux objections ou interrogations du prospect avant toute relance."
+            )
+
+        key = self._get_gemini_key()
+        if key:
+            prompt = f"""
 Tu es un expert Flask/Python/Gemini.
 Un agent IA commercial présente ce bug :
 
@@ -884,28 +935,31 @@ Type : {observation.get('type')}
 Titre : {observation.get('title')}
 Détail : {observation.get('detail')}
 
-En 3-4 lignes, donne la correction technique la plus probable et la plus directe.
-Sois précis : nom de fichier, nom de fonction, type de correction à apporter.
+En 2-3 phrases concrètes, indique le fichier, la fonction et le fix technique à appliquer.
 """
-        try:
-            import urllib.request
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
-            }
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"}
-            )
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-        except Exception:
-            pass
+            try:
+                import urllib.request
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"temperature": 0.1, "maxOutputTokens": 200}
+                }
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}
+                )
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    cand = data.get("candidates", [{}])[0]
+                    parts = cand.get("content", {}).get("parts", [])
+                    txt = "".join([p.get("text", "") for p in parts if isinstance(p, dict)]).strip()
+                    if txt:
+                        return txt
+            except Exception:
+                pass
 
-        return "Investigation manuelle requise sur la fonction concernée."
+        return "Vérifier le routage conditionnel dans modules/ai_sales_agent.py et les critères bloquants dans modules/communication_guard.py."
 
     # =========================================================================
     # MODULE 4 : GÉNÉRATION DES RAPPORTS
@@ -1043,8 +1097,25 @@ Sois précis : nom de fichier, nom de fonction, type de correction à apporter.
             WHERE scored_at BETWEEN ? AND ?
         """, (period_start, period_end))
         m_row = c.fetchone()
+        raw_leads_actifs = (m_row["leads_actifs"] if isinstance(m_row, dict) else m_row[0]) or 0
+        if raw_leads_actifs == 0:
+            try:
+                c.execute("SELECT COUNT(DISTINCT lead_id) FROM crm_lead_messages WHERE timestamp BETWEEN ? AND ?", (period_start, period_end))
+                r_lm = c.fetchone()
+                raw_leads_actifs = (r_lm[0] if r_lm else 0)
+                if raw_leads_actifs == 0:
+                    c.execute("SELECT COUNT(DISTINCT lead_id) FROM crm_lead_messages")
+                    r_all = c.fetchone()
+                    raw_leads_actifs = (r_all[0] if r_all else 0)
+                    if raw_leads_actifs == 0:
+                        c.execute("SELECT COUNT(*) FROM crm_leads")
+                        r_cl = c.fetchone()
+                        raw_leads_actifs = (r_cl[0] if r_cl else 0)
+            except Exception:
+                pass
+
         metrics = {
-            "leads_actifs": (m_row["leads_actifs"] if isinstance(m_row, dict) else m_row[0]) or 0,
+            "leads_actifs": raw_leads_actifs,
             "score_moyen": (m_row["score_moyen"] if isinstance(m_row, dict) else m_row[1]) or 8.0,
             "signaux_achat": (m_row["signaux_achat"] if isinstance(m_row, dict) else m_row[2]) or 0,
             "conversions": (m_row["conversions"] if isinstance(m_row, dict) else m_row[3]) or 0,

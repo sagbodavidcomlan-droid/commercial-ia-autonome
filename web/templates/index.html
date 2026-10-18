@@ -780,20 +780,20 @@
               </div>
 
               <div class="mt-4 space-y-2">
-                <span class="text-[10px] uppercase font-bold text-[#0062ff] tracking-wider block">PROCHAINE SESSION CLÉ</span>
-                <h4 class="text-base font-black text-slate-900 leading-snug">Démo Solution Commerciale</h4>
-                <p class="text-xs text-slate-500 font-medium">Cabinet Kaba & Co &bull; Closing Offre Entreprise</p>
+                <span id="dash-rdv-tag" class="text-[10px] uppercase font-bold text-[#0062ff] tracking-wider block">PROCHAINE SESSION CLÉ</span>
+                <h4 id="dash-rdv-title" class="text-base font-black text-slate-900 leading-snug">Démo Solution Commerciale</h4>
+                <p id="dash-rdv-contact" class="text-xs text-slate-500 font-medium">Cabinet Kaba & Co &bull; Closing Offre Entreprise</p>
                 <div class="flex items-center gap-1.5 text-xs text-slate-400 font-semibold pt-1">
                   <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
-                  <span>Aujourd'hui : 14h00 - 15h30</span>
+                  <span id="dash-rdv-time">Aujourd'hui : 14h00 - 15h30</span>
                 </div>
               </div>
             </div>
 
             <div class="space-y-2">
-              <button onclick="showTab('agenda')" class="w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
-                <i data-lucide="video" class="w-4 h-4"></i>
-                <span>Rejoindre la Session</span>
+              <button id="dash-rdv-join-btn" onclick="joinUpcomingSession()" class="w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer">
+                <i id="dash-rdv-btn-icon" data-lucide="video" class="w-4 h-4"></i>
+                <span id="dash-rdv-btn-text">Rejoindre la Session</span>
               </button>
               <button onclick="showTab('agenda')" class="w-full py-2 text-center text-xs text-slate-500 hover:text-slate-800 font-bold transition">
                 Consulter le calendrier complet &rarr;
@@ -6059,7 +6059,7 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Application Logic (Versionnée anti-cache) -->
-  <script src="/static/js/app.js?v=27.0"></script>
+  <script src="/static/js/app.js?v=28.0"></script>
   <!-- PWA Service Worker Registration -->
   <script>
     if ('serviceWorker' in navigator) {

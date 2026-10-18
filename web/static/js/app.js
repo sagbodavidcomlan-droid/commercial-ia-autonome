@@ -549,10 +549,70 @@ async function loadDashboardData() {
       renderFinnovaInvoices(window.finnovaTransactions);
     }
 
+    // Rendu Prochain Rendez-vous / Session Clé
+    if (data.upcoming_meeting) {
+      renderUpcomingMeetingCard(data.upcoming_meeting);
+    }
+
     // Rendu des Graphiques
     renderCharts(data);
   } catch (err) {
     console.error("Erreur de chargement du dashboard :", err);
+  }
+}
+
+// --- GESTION DYNAMIQUE DE LA CARTE RAPPELS & RDV (PROCHAIN CRÉNEAU / MEET) ---
+window.upcomingMeetingUrl = "";
+
+function renderUpcomingMeetingCard(upcoming) {
+  const tagEl = document.getElementById("dash-rdv-tag");
+  const titleEl = document.getElementById("dash-rdv-title");
+  const contactEl = document.getElementById("dash-rdv-contact");
+  const timeEl = document.getElementById("dash-rdv-time");
+  const btnEl = document.getElementById("dash-rdv-join-btn");
+  const btnTextEl = document.getElementById("dash-rdv-btn-text");
+
+  if (!titleEl) return;
+
+  if (upcoming && upcoming.has_meeting) {
+    if (tagEl) tagEl.textContent = "PROCHAINE SESSION CLÉ";
+    titleEl.textContent = upcoming.title || "Démo Solution Commerciale";
+    if (contactEl) contactEl.textContent = upcoming.contact || "Cabinet Kaba & Co • Closing Offre Entreprise";
+    if (timeEl) timeEl.textContent = `${upcoming.date_display} : ${upcoming.time_display}`;
+
+    window.upcomingMeetingUrl = upcoming.meet_link || "";
+
+    if (btnEl && btnTextEl) {
+      if (upcoming.meet_link && upcoming.meet_link.startsWith("http")) {
+        btnTextEl.textContent = "Rejoindre la Session Google Meet";
+        btnEl.className = "w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 transition cursor-pointer";
+      } else {
+        btnTextEl.textContent = "Rejoindre la Session";
+        btnEl.className = "w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer";
+      }
+      btnEl.setAttribute("onclick", "joinUpcomingSession()");
+    }
+  } else {
+    if (tagEl) tagEl.textContent = "PLANIFICATION DISPONIBLE";
+    titleEl.textContent = "Aucun RDV imminent";
+    if (contactEl) contactEl.textContent = "Les créneaux sont automatiquement proposés aux prospects qualifiés";
+    if (timeEl) timeEl.textContent = "Créneaux ouverts cette semaine";
+    window.upcomingMeetingUrl = "";
+    if (btnEl && btnTextEl) {
+      btnTextEl.textContent = "+ Planifier un Rendez-vous";
+      btnEl.className = "w-full py-3 rounded-2xl bg-[#0062ff] hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transition cursor-pointer";
+      btnEl.setAttribute("onclick", "openAddCalendarEventModal()");
+    }
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function joinUpcomingSession() {
+  if (window.upcomingMeetingUrl && window.upcomingMeetingUrl.startsWith("http")) {
+    window.open(window.upcomingMeetingUrl, "_blank");
+  } else {
+    openAddCalendarEventModal();
   }
 }
 

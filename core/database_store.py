@@ -3050,6 +3050,102 @@ def get_meetings_for_lead(lead_id: int) -> List[Dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def get_next_upcoming_meeting() -> Dict[str, Any]:
+    """
+    Récupère le prochain rendez-vous / session clé planifiée :
+    1. D'abord dans la table 'meetings' (RDVs officiels avec lien Google Meet).
+    2. Sinon dans 'agenda_tasks' (événements calendrier avec meeting_link ou type rdv_client).
+    """
+    try:
+        conn = get_connection()
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("""
+            SELECT m.*, l.nom_complet as lead_name, l.prenom as lead_prenom, l.nom as lead_nom,
+                   l.secteur_activite as lead_sector, l.entreprise as lead_company, l.poste as lead_poste
+            FROM meetings m
+            LEFT JOIN crm_leads l ON l.id = m.lead_id
+            WHERE m.status IN ('scheduled', 'planifie', 'confirme')
+            ORDER BY m.id DESC
+            LIMIT 1
+        """)
+        row = c.fetchone()
+        if row:
+            data = dict(row)
+            contact = data.get("lead_name") or f"{data.get('lead_prenom') or ''} {data.get('lead_nom') or ''}".strip()
+            if not contact and data.get("attendees_json"):
+                try:
+                    att = json.loads(data["attendees_json"])
+                    if att and isinstance(att, list) and len(att) > 0:
+                        contact = str(att[0]).split("@")[0].replace(".", " ").title()
+                except Exception:
+                    pass
+            if not contact:
+                contact = "Cabinet Kaba & Co"
+
+            company_or_sector = data.get("lead_company") or data.get("lead_sector") or data.get("lead_poste") or "Closing Offre Entreprise"
+            conn.close()
+            return {
+                "id": data.get("id"),
+                "has_meeting": True,
+                "title": data.get("subject") or "Démo Solution Commerciale",
+                "contact": f"{contact} • {company_or_sector}",
+                "date_display": data.get("date_meeting") or "Aujourd'hui",
+                "time_display": data.get("time_meeting") or "14h00 - 15h30",
+                "meet_link": data.get("meet_link") or "",
+                "status": data.get("status") or "scheduled"
+            }
+
+        # Fallback sur agenda_tasks
+        c.execute("""
+            SELECT id, task_title as subject, contact_name as lead_name,
+                   task_description as lead_company, task_date as date_meeting,
+                   time_slot as time_meeting, meeting_link as meet_link, status
+            FROM agenda_tasks
+            WHERE (event_type IN ('rdv_client', 'closing') OR (meeting_link IS NOT NULL AND meeting_link != ''))
+              AND status != 'termine'
+            ORDER BY id DESC
+            LIMIT 1
+        """)
+        row_t = c.fetchone()
+        conn.close()
+        if row_t:
+            data_t = dict(row_t)
+            contact = data_t.get("lead_name") or "Cabinet Kaba & Co"
+            company = data_t.get("lead_company") or "Closing Offre Entreprise"
+            return {
+                "id": data_t.get("id"),
+                "has_meeting": True,
+                "title": data_t.get("subject") or "Démo Solution Commerciale",
+                "contact": f"{contact} • {company}",
+                "date_display": data_t.get("date_meeting") or "Aujourd'hui",
+                "time_display": data_t.get("time_meeting") or "14h00 - 15h30",
+                "meet_link": data_t.get("meet_link") or "",
+                "status": data_t.get("status") or "planifie"
+            }
+
+        return {
+            "has_meeting": False,
+            "title": "Aucun Rendez-vous Imminent",
+            "contact": "Agenda synchronisé & disponible pour démo",
+            "date_display": "Créneaux ouverts",
+            "time_display": "Cette semaine",
+            "meet_link": "",
+            "status": "idle"
+        }
+    except Exception as e:
+        logger.warning(f"Erreur get_next_upcoming_meeting: {e}")
+        return {
+            "has_meeting": False,
+            "title": "Aucun Rendez-vous Imminent",
+            "contact": "Agenda synchronisé & disponible pour démo",
+            "date_display": "Créneaux ouverts",
+            "time_display": "Cette semaine",
+            "meet_link": "",
+            "status": "idle"
+        }
+
+
 # =========================================================================
 # GESTION DES CONTACTS LIÉS (TIERS / ASSOCIÉS) & ANTI-REPROSPECTION
 # =========================================================================

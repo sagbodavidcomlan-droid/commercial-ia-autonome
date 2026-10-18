@@ -20,7 +20,7 @@ from typing import Optional, Dict, Any, List
 from core.database_store import (
     init_db, get_connection, log_activity, get_activity_logs, clear_activity_logs,
     generate_weekly_kpi_report, build_closer_context, clear_crm_data, archive_before_delete,
-    get_crm_stats
+    get_crm_stats, get_next_upcoming_meeting
 )
 from core.director_engine import DirectorEngine
 from core.scheduler_agenda import AgendaScheduler
@@ -611,7 +611,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 "TikTok & Insta": 10
             },
             "recent_transactions": recent_txs,
-            "recent_activities": recent_activities
+            "recent_activities": recent_activities,
+            "upcoming_meeting": get_next_upcoming_meeting()
         }
         self.send_json_response(res)
 
