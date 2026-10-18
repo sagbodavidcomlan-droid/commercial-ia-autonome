@@ -60,6 +60,7 @@ from modules.crm_mirror_sync import get_crm_mirror
 from core.telephony_engine import telephony_engine
 from core.market_intelligence_engine import market_intelligence_engine
 from core.database_store import get_competitors_intel, get_market_trend_reports
+from core.brevo_engine import BrevoEngine, get_brevo_credentials
 import jinja2
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -375,6 +376,8 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             self.handle_api_save_settings(body)
         elif path == "/api/settings/test-ai":
             self.handle_api_test_ai(body)
+        elif path == "/api/settings/test-brevo-whatsapp":
+            self.handle_api_test_brevo_whatsapp(body)
         elif path == "/api/crm/hubspot/test":
             self.handle_api_hubspot_test(body)
         elif path == "/api/crm/hubspot/sync-all":
@@ -1354,7 +1357,10 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "gemini_key": settings_dict.get("gemini_key", os.getenv("GEMINI_API_KEY", "")),
             "hubspot_token": settings_dict.get("hubspot_token", os.getenv("HUBSPOT_ACCESS_TOKEN", "")),
             "hubspot_portal_id": settings_dict.get("hubspot_portal_id", os.getenv("HUBSPOT_PORTAL_ID", "")),
-            "crm_webhook_url": settings_dict.get("crm_webhook_url", os.getenv("CRM_WEBHOOK_URL", ""))
+            "crm_webhook_url": settings_dict.get("crm_webhook_url", os.getenv("CRM_WEBHOOK_URL", "")),
+            "brevo_api_key": settings_dict.get("brevo_api_key", os.getenv("BREVO_API_KEY", "")),
+            "brevo_whatsapp_sender": settings_dict.get("brevo_whatsapp_sender", os.getenv("BREVO_WHATSAPP_SENDER", "")),
+            "brevo_whatsapp_active": settings_dict.get("brevo_whatsapp_active", os.getenv("BREVO_WHATSAPP_ACTIVE", "false")),
         }
         self.send_json_response(defaults)
 
@@ -1474,6 +1480,12 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             "linkedin": {
                 "configured": bool(s_dict.get("linkedin_token")),
                 "status": "NON_CONFIGURE" if not s_dict.get("linkedin_token") else "PRET"
+            },
+            "brevo": {
+                "configured": bool(s_dict.get("brevo_api_key")),
+                "active": s_dict.get("brevo_whatsapp_active", "0") in ("1", "true", "True"),
+                "sender_number": s_dict.get("brevo_whatsapp_sender", ""),
+                "status": "ACTIF" if (s_dict.get("brevo_api_key") and s_dict.get("brevo_whatsapp_active", "0") in ("1", "true", "True")) else ("PRET" if s_dict.get("brevo_api_key") else "NON_CONFIGURE")
             }
         }
         self.send_json_response(res)
@@ -1482,6 +1494,59 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         token_to_test = body.get("meta_token")
         status = verify_meta_token(token_to_test)
         self.send_json_response(status)
+
+    def handle_api_test_brevo_whatsapp(self, body):
+        api_key = body.get("brevo_api_key", "").strip()
+        sender = body.get("brevo_whatsapp_sender", "").strip()
+        target_phone = body.get("target_phone", "").strip()
+
+        creds = get_brevo_credentials()
+        if not api_key:
+            api_key = creds.get("api_key", "")
+        if not sender:
+            sender = creds.get("sender_number", "")
+        if not target_phone:
+            conn = get_connection()
+            c = conn.cursor()
+            c.execute("SELECT setting_value FROM system_settings WHERE setting_key = 'admin_phone'")
+            r = c.fetchone()
+            conn.close()
+            if r:
+                target_phone = r["setting_value"] if isinstance(r, dict) or hasattr(r, "keys") else r[0]
+            if not target_phone:
+                target_phone = "+2290194933458"
+
+        if not api_key:
+            self.send_json_response({"success": False, "message": "Veuillez renseigner votre clé API Brevo (v3 - xkeysib-...)."})
+            return
+
+        engine = BrevoEngine(api_key=api_key, sender_number=sender)
+        acc = engine.verify_account()
+        if not acc.get("valid"):
+            self.send_json_response({
+                "success": False,
+                "message": f"Clé Brevo invalide ou inaccessible : {acc.get('error', 'Erreur inconnue')}"
+            })
+            return
+
+        test_msg = f"🤖 Test Commercial IA - Brevo WhatsApp : Connexion validée avec succès sur le compte {acc.get('email')} !"
+        send_res = engine.send_whatsapp_message(target_phone, test_msg)
+
+        if send_res.get("success"):
+            self.send_json_response({
+                "success": True,
+                "account": acc,
+                "delivery": send_res,
+                "message": f"Succès ! Compte Brevo validé ({acc.get('email')}, plan {acc.get('plan')}). Message test WhatsApp envoyé à {target_phone}."
+            })
+        else:
+            # Même si le template WhatsApp n'est pas encore approuvé côté Brevo, la clé est confirmée valide
+            self.send_json_response({
+                "success": True,
+                "account": acc,
+                "delivery": send_res,
+                "message": f"Compte Brevo vérifié avec succès ({acc.get('email')}, plan {acc.get('plan')}) ! Note passerelle WhatsApp : {send_res.get('error', send_res.get('status'))}"
+            })
 
     def handle_api_whatsapp_qr(self):
         bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")

@@ -4418,6 +4418,11 @@ async function loadSettings() {
     if (document.getElementById("setting-hubspot-token")) document.getElementById("setting-hubspot-token").value = s.hubspot_token || "";
     if (document.getElementById("setting-hubspot-portal-id")) document.getElementById("setting-hubspot-portal-id").value = s.hubspot_portal_id || "";
     if (document.getElementById("setting-crm-webhook-url")) document.getElementById("setting-crm-webhook-url").value = s.crm_webhook_url || "";
+    if (document.getElementById("setting-brevo-api-key")) document.getElementById("setting-brevo-api-key").value = s.brevo_api_key || "";
+    if (document.getElementById("setting-brevo-whatsapp-sender")) document.getElementById("setting-brevo-whatsapp-sender").value = s.brevo_whatsapp_sender || "";
+    if (document.getElementById("setting-brevo-whatsapp-active")) {
+      document.getElementById("setting-brevo-whatsapp-active").checked = (s.brevo_whatsapp_active === true || s.brevo_whatsapp_active === "true" || s.brevo_whatsapp_active === "1");
+    }
 
     // Diagnostic automatique de santé des connexions
     await checkConnectionsHealth();
@@ -4476,6 +4481,21 @@ async function checkConnectionsHealth() {
       } else {
         waBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700";
         waBadge.innerText = "Non configuré";
+      }
+    }
+
+    // Badge Brevo Messaging
+    const brevoBadge = document.getElementById("brevo-status-badge");
+    if (brevoBadge && data.brevo) {
+      if (data.brevo.active) {
+        brevoBadge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 border border-emerald-500/30";
+        brevoBadge.innerText = "WhatsApp Brevo Actif";
+      } else if (data.brevo.configured) {
+        brevoBadge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 border border-amber-500/30";
+        brevoBadge.innerText = "Clé présente (inactif)";
+      } else {
+        brevoBadge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200";
+        brevoBadge.innerText = "Non configuré";
       }
     }
   } catch (err) {
@@ -4555,7 +4575,10 @@ async function saveSettings(e) {
     crm_webhook_url: document.getElementById("setting-crm-webhook-url")?.value || "",
     discord_webhook_url: document.getElementById("setting-discord-webhook")?.value || "",
     slack_webhook_url: document.getElementById("setting-slack-webhook")?.value || "",
-    sheets_id: document.getElementById("setting-sheets-id")?.value || ""
+    sheets_id: document.getElementById("setting-sheets-id")?.value || "",
+    brevo_api_key: document.getElementById("setting-brevo-api-key")?.value || "",
+    brevo_whatsapp_sender: document.getElementById("setting-brevo-whatsapp-sender")?.value || "",
+    brevo_whatsapp_active: document.getElementById("setting-brevo-whatsapp-active")?.checked ? "true" : "false"
   };
 
   try {
@@ -4569,6 +4592,66 @@ async function saveSettings(e) {
     await checkConnectionsHealth();
   } catch (err) {
     showToast("Erreur lors de l'enregistrement des paramètres.", "error");
+  }
+}
+
+async function testBrevoWhatsApp() {
+  const apiKey = document.getElementById("setting-brevo-api-key")?.value?.trim() || "";
+  const sender = document.getElementById("setting-brevo-whatsapp-sender")?.value?.trim() || "";
+  const targetPhone = document.getElementById("setting-admin-phone")?.value?.trim() || "+2290194933458";
+  const badge = document.getElementById("brevo-status-badge");
+  const feedback = document.getElementById("brevo-connection-feedback");
+
+  if (!apiKey) {
+    showToast("Veuillez renseigner votre clé API Brevo (v3 - xkeysib-...) avant de tester.", "warning");
+    return;
+  }
+
+  if (badge) {
+    badge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-700 border border-indigo-500/30 animate-pulse";
+    badge.innerText = "Vérification...";
+  }
+
+  try {
+    showToast("Vérification du compte Brevo et test WhatsApp en cours...", "info");
+    const res = await fetch("/api/settings/test-brevo-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        brevo_api_key: apiKey,
+        brevo_whatsapp_sender: sender,
+        target_phone: targetPhone
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      if (badge) {
+        badge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 border border-emerald-500/30";
+        badge.innerText = "Brevo Validé";
+      }
+      if (feedback) {
+        feedback.className = "text-[11px] p-2.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 block";
+        feedback.innerHTML = `<strong>Compte Brevo Connecté :</strong> ${data.account?.email || ''} (Plan: ${data.account?.plan || 'Actif'})<br><span class="text-[10px] text-emerald-700">${data.message}</span>`;
+      }
+      showToast(data.message, "success");
+    } else {
+      if (badge) {
+        badge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-700 border border-rose-500/30";
+        badge.innerText = "Échec Brevo";
+      }
+      if (feedback) {
+        feedback.className = "text-[11px] p-2.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 block";
+        feedback.innerHTML = `<strong>Erreur Brevo :</strong> ${data.message}`;
+      }
+      showToast(data.message, "error");
+    }
+  } catch (err) {
+    if (badge) {
+      badge.className = "px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-700";
+      badge.innerText = "Erreur Réseau";
+    }
+    showToast("Erreur lors du test Brevo : " + err.message, "error");
   }
 }
 

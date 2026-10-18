@@ -428,18 +428,23 @@ class OmnichannelMessenger:
                 meta["meta_warning"] = error_detail
 
         elif channel_upper == "WHATSAPP":
+            from core.brevo_engine import get_brevo_credentials
+            b_creds = get_brevo_credentials()
             creds = get_stored_meta_credentials()
-            if creds.get("whatsapp_token") and creds.get("whatsapp_phone_number_id") and lead_phone != "N/A":
+            has_creds = b_creds.get("is_active") or (creds.get("whatsapp_token") and creds.get("whatsapp_phone_number_id"))
+
+            if has_creds and lead_phone != "N/A":
                 api_result = send_whatsapp_cloud_message(recipient_phone=lead_phone, text=message)
                 if api_result.get("success"):
                     delivery_status = "DELIVERED"
                     meta["whatsapp_msg_id"] = api_result.get("message_id")
+                    meta["gateway"] = api_result.get("gateway", "WHATSAPP")
                 else:
                     delivery_status = "ECHEC_WHATSAPP"
                     error_detail = api_result.get("error")
             else:
                 delivery_status = "EN_ATTENTE_CONNEXION_WHATSAPP"
-                error_detail = "Compte WhatsApp Cloud API non configuré ou numéro manquant."
+                error_detail = "Compte WhatsApp non configuré (activez Brevo WhatsApp ou Meta Cloud API)."
             if error_detail:
                 meta["whatsapp_warning"] = error_detail
 
@@ -450,7 +455,24 @@ class OmnichannelMessenger:
 
         elif channel_upper == "EMAIL":
             meta["sender_email"] = "commercial@davesagbo.com"
-            delivery_status = "PRET_POUR_ENVOI_EMAIL"
+            # Tentative d'envoi réel via Brevo Email si email présent
+            if email and "@" in email:
+                try:
+                    from core.brevo_engine import get_brevo_engine, get_brevo_credentials
+                    if get_brevo_credentials().get("api_key"):
+                        brv_mail = get_brevo_engine().send_transactional_email(
+                            to_email=email,
+                            subject="Échange d'accélération commerciale — Dave Sagbo",
+                            html_content=f"<p>{message.replace(chr(10), '<br>')}</p>",
+                            to_name=lead_name
+                        )
+                        if brv_mail.get("success"):
+                            delivery_status = "DELIVERED"
+                            meta["brevo_email_id"] = brv_mail.get("message_id")
+                except Exception as e_m:
+                    logger.debug(f"Brevo email dispatch note: {e_m}")
+            if delivery_status != "DELIVERED":
+                delivery_status = "PRET_POUR_ENVOI_EMAIL"
 
         # 3. Consignation dans la base de messages
         msg_id = log_lead_message(

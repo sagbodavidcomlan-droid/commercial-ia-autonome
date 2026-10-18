@@ -3434,6 +3434,57 @@
                     </div>
                   </div>
 
+                  <!-- Brevo (Sendinblue) Enterprise : WhatsApp API, Email & SMS -->
+                  <div class="p-5 rounded-2xl bg-indigo-50/50 border border-indigo-200/80 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-xs">
+                          B
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <h4 class="font-black text-slate-900 text-sm">Brevo (Sendinblue) Enterprise Messaging</h4>
+                            <span class="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700">Officiel API v3</span>
+                          </div>
+                          <p class="text-[11px] text-slate-500">Passerelle officielle WhatsApp Cloud, Emails transactionnels de closing & SMS.</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span id="brevo-status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white text-slate-600 border border-slate-200">
+                          Non configuré
+                        </span>
+                        <button type="button" onclick="testBrevoWhatsApp()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-2xs transition">
+                          <i data-lucide="send" class="w-3.5 h-3.5"></i> Tester WhatsApp Brevo
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label class="block text-slate-700 font-bold mb-1 text-[11px]">Clé API Brevo (v3 - xkeysib-...)</label>
+                        <input type="password" id="setting-brevo-api-key" placeholder="xkeysib-xxxxxxxxxxxxxxxxxxxxxxxx" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-indigo-500">
+                        <span class="text-[10px] text-slate-400 block mt-1">Disponible dans Brevo &gt; Paramètres &gt; Clés API.</span>
+                      </div>
+                      <div>
+                        <label class="block text-slate-700 font-bold mb-1 text-[11px]">Numéro WhatsApp Expéditeur Brevo</label>
+                        <input type="text" id="setting-brevo-whatsapp-sender" placeholder="Ex: 2290194933458" class="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-mono text-xs focus:outline-none focus:border-indigo-500">
+                        <span class="text-[10px] text-slate-400 block mt-1">Numéro rattaché à votre compte WhatsApp Business Brevo.</span>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-indigo-200/50">
+                      <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="setting-brevo-whatsapp-active" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                        <span class="text-xs font-bold text-slate-800">Activer Brevo comme passerelle WhatsApp principale</span>
+                      </label>
+                      <a href="https://connect.composio.dev/link/lk_D8VFQZG9Aa_M" target="_blank" rel="noopener" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                        <i data-lucide="external-link" class="w-3 h-3"></i> Authentifier Brevo via Composio
+                      </a>
+                    </div>
+
+                    <div id="brevo-connection-feedback" class="text-[11px] p-2.5 rounded-xl hidden"></div>
+                  </div>
+
                   <!-- Meta Facebook Page & Messenger -->
                   <div class="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 space-y-3">
                     <div class="flex items-center justify-between">

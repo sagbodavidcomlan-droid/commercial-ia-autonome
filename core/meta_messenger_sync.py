@@ -356,7 +356,20 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
     if not recipient_phone:
         return {"success": False, "status": "PHONE_MANQUANT", "error": "Numéro de téléphone manquant"}
 
-    # 1. Tentative d'envoi via la passerelle WhatsApp QR Code (Baileys) si disponible
+    # 1. Tentative d'envoi via Brevo WhatsApp officiel si configuré et actif
+    try:
+        from core.brevo_engine import get_brevo_engine, get_brevo_credentials
+        b_creds = get_brevo_credentials()
+        if b_creds.get("is_active"):
+            brevo_res = get_brevo_engine().send_whatsapp_message(recipient_phone=recipient_phone, text=text)
+            if brevo_res.get("success"):
+                return brevo_res
+            else:
+                logger.warning(f"Échec Brevo WhatsApp : {brevo_res.get('error')}, passage aux fallbacks...")
+    except Exception as e_brv:
+        logger.debug(f"Brevo WhatsApp exception ignorée : {e_brv}")
+
+    # 2. Tentative d'envoi via la passerelle WhatsApp QR Code (Baileys) si disponible
     bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
     try:
         req_st = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
