@@ -47,7 +47,7 @@ class WhatsAppBridgeDaemon:
         self.running = False
         self.thread = None
         self.port = int(os.getenv("WHATSAPP_BRIDGE_PORT", "3001"))
-        self.bridge_url = f"http://localhost:{self.port}"
+        self.bridge_url = f"http://127.0.0.1:{self.port}"
         self.cached_node_path = None
         self.status_message = "Initialisation..."
 
@@ -162,8 +162,9 @@ class WhatsAppBridgeDaemon:
         node_dir = str(Path(node_bin).parent)
         env["PATH"] = f"{node_dir}:{env.get('PATH', '')}"
         env["npm_config_cache"] = "/tmp/.npm-cache"
-        env["PORT"] = "3001"
-        env["WHATSAPP_BRIDGE_PORT"] = "3001"
+        env.pop("PORT", None)
+        env["PORT"] = str(self.port)
+        env["WHATSAPP_BRIDGE_PORT"] = str(self.port)
 
         # S'assurer que les modules node_modules sont installés
         baileys_dir = BRIDGE_DIR / "node_modules" / "@whiskeysockets" / "baileys"

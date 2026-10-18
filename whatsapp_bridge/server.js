@@ -26,9 +26,19 @@ const fs = require('fs');
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.WHATSAPP_BRIDGE_PORT || 3001;
+const PORT = parseInt(process.env.WHATSAPP_BRIDGE_PORT || '3001', 10);
+const HOST = '127.0.0.1';
 const AI_WEBHOOK_URL = process.env.AI_WEBHOOK_URL || 'https://commercial-ia-autonome.onrender.com/webhook/whatsapp';
 const AUTH_DIR = path.join(__dirname, 'auth_info_baileys');
+
+app.get('/', (req, res) => {
+    res.json({
+        service: "WhatsApp Bridge Daemon (Internal)",
+        status: connectionStatus,
+        connectedNumber: connectedNumber,
+        hasQr: !!currentQrCodeDataUrl
+    });
+});
 
 let sock = null;
 let currentQrCodeDataUrl = null;
@@ -247,7 +257,7 @@ app.post('/logout', (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 [WhatsApp Bridge] Écoute sur le port ${PORT}`);
+app.listen(PORT, HOST, () => {
+    console.log(`🚀 [WhatsApp Bridge] Écoute strictement sur ${HOST}:${PORT}`);
     startWhatsApp('2290194933458');
 });

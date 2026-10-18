@@ -370,7 +370,7 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
         logger.debug(f"Brevo WhatsApp exception ignorée : {e_brv}")
 
     # 2. Tentative d'envoi via la passerelle WhatsApp QR Code (Baileys) si disponible
-    bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+    bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
     try:
         req_st = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
         with urllib.request.urlopen(req_st, timeout=2) as resp_st:

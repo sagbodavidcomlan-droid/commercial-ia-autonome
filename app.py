@@ -1555,7 +1555,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             })
 
     def handle_api_whatsapp_qr(self):
-        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
         try:
             req = urllib.request.Request(f"{bridge_url}/qr", headers={"User-Agent": "Sales-Agent/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:
@@ -1572,7 +1572,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             })
 
     def handle_api_whatsapp_bridge_status(self):
-        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
         try:
             req = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
             with urllib.request.urlopen(req, timeout=4) as resp:
@@ -1591,7 +1591,7 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
             })
 
     def handle_api_whatsapp_logout(self):
-        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://localhost:3001")
+        bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
         try:
             req = urllib.request.Request(f"{bridge_url}/logout", data=b"{}", headers={"Content-Type": "application/json", "User-Agent": "Sales-Agent/1.0"})
             with urllib.request.urlopen(req, timeout=5) as resp:
