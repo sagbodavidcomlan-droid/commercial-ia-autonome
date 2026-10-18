@@ -11,11 +11,16 @@ Gère l'encaissement omnicanal (Mobile Money & Cartes Bancaires) et la livraison
 Auteur : Unité Commerciale IA
 """
 
+import os
+import re
 import time
 import json
 import uuid
+import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger("PaymentHub")
 
 from core.database_store import get_connection
 from modules.config_loader import get_active_config
@@ -39,7 +44,9 @@ class PaymentHub:
         """
         active_cfg = get_active_config()
         offre = active_cfg.get("offre", {})
-        default_price = float(offre.get("prix", 25000))
+        raw_price = str(offre.get("prix", "25000"))
+        digits_only = re.sub(r'[^\d.]', '', raw_price)
+        default_price = float(digits_only) if digits_only else 25000.0
         amount = custom_amount if custom_amount is not None else default_price
         product_name = offre.get("nom_produit", "Pack Commercial Pro")
 
@@ -53,7 +60,18 @@ class PaymentHub:
         lead_phone = lead[1] if lead else "+22900000000"
         tx_id = f"TX-{int(time.time())}-{uuid.uuid4().hex[:6].upper()}"
 
-        checkout_url = f"https://checkout.sales-platform.local/pay/{gateway}/{tx_id}?amount={int(amount)}&lead_id={lead_id}"
+        official_payment_link = (
+            offre.get("lien_paiement_ou_rdv")
+            or offre.get("lien_paiement")
+            or os.getenv("PAYMENT_URL")
+            or ""
+        ).strip()
+
+        if official_payment_link and "sales-platform.local" not in official_payment_link:
+            sep = "&" if "?" in official_payment_link else "?"
+            checkout_url = f"{official_payment_link}{sep}lead_id={lead_id}&tx={tx_id}"
+        else:
+            checkout_url = f"https://checkout.sales-platform.local/pay/{gateway}/{tx_id}?amount={int(amount)}&lead_id={lead_id}"
 
         return {
             "success": True,
@@ -106,14 +124,15 @@ class PaymentHub:
         # 3. Créer ou mettre à jour la fiche Client (crm_customers)
         cursor.execute("""
         INSERT INTO crm_customers (
-            nom_client, telephone, email, produit_achete, montant_total_depense, statut_client, date_conversion
-        ) VALUES (?, ?, ?, ?, ?, 'Actif', datetime('now'))
+            nom_complet, whatsapp, email, produit_achete, montant_paye, mode_paiement, date_achat, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """, (
             lead_name,
             lead_phone,
             payload.get("email", f"{lead_name.lower().replace(' ', '.')}@client.local"),
-            payload.get("product_name", "Offre Pro"),
-            amount
+            payload.get("product_name", "Pack Digital"),
+            amount,
+            gateway
         ))
         customer_id = cursor.lastrowid
 
@@ -146,6 +165,28 @@ class PaymentHub:
                 f"Notre service client reste joignable à tout moment !"
             )
         }
+
+        # 6. Alerte Dirigeant instantanée (WhatsApp, Discord, Slack, Email)
+        try:
+            from modules.realtime_notifier import get_notifier
+            get_notifier().notify_payment_received({
+                "lead_id": lead_id,
+                "lead_name": lead_name,
+                "lead_phone": lead_phone,
+                "amount": amount,
+                "gateway": gateway,
+                "product_name": payload.get("product_name", "Pack Digital"),
+                "transaction_id": tx_id
+            })
+        except Exception as e_notif:
+            pass
+
+        # 7. Sauvegarde miroir externe (Google Sheets / Snapshot)
+        try:
+            from modules.crm_mirror_sync import get_crm_mirror
+            get_crm_mirror().sync_to_google_sheets()
+        except Exception as e_sync:
+            pass
 
         return {
             "success": True,

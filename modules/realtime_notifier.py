@@ -26,20 +26,23 @@ logger = logging.getLogger("RealtimeNotifier")
 
 # Configuration par défaut
 DEFAULT_ADMIN_PHONE = os.getenv("ADMIN_WHATSAPP_PHONE", "+2290194933458")
+DEFAULT_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "sagbodavidcomlan@gmail.com")
 DEFAULT_DISCORD_WEBHOOK = os.getenv("DISCORD_ALERT_WEBHOOK", "")
 DEFAULT_SLACK_WEBHOOK = os.getenv("SLACK_ALERT_WEBHOOK", "")
 
 
 class RealtimeNotifier:
-    """Gestionnaire d'alertes instantanées omnicanales avec priorité WhatsApp."""
+    """Gestionnaire d'alertes instantanées omnicanales avec priorité WhatsApp & Email."""
 
     def __init__(
         self,
         admin_phone: Optional[str] = None,
+        admin_email: Optional[str] = None,
         discord_webhook: Optional[str] = None,
         slack_webhook: Optional[str] = None
     ):
         self.admin_phone = admin_phone or DEFAULT_ADMIN_PHONE
+        self.admin_email = admin_email or DEFAULT_ADMIN_EMAIL
         self.discord_webhook = discord_webhook or DEFAULT_DISCORD_WEBHOOK
         self.slack_webhook = slack_webhook or DEFAULT_SLACK_WEBHOOK
 
@@ -133,6 +136,88 @@ class RealtimeNotifier:
             logger.warning(f"Erreur d'envoi Slack Webhook: {e}")
             return False
 
+    def send_email_alert(self, subject: str, body: str) -> bool:
+        """Envoie un email prioritaire à Dave via Composio Gmail ou SMTP."""
+        admin_email = self.admin_email or os.getenv("ADMIN_EMAIL", "sagbodavidcomlan@gmail.com")
+        # 1. Tentative Composio Gmail
+        try:
+            from modules.composio_client import call_composio_tool
+            res = call_composio_tool("GMAIL_SEND_EMAIL", {
+                "recipient_email": admin_email,
+                "subject": subject,
+                "body": body
+            })
+            if res:
+                logger.info(f"Alerte email envoyée via Composio Gmail à {admin_email}")
+                return True
+        except Exception as e_comp:
+            logger.debug(f"Composio Gmail note: {e_comp}")
+
+        # 2. Fallback SMTP
+        smtp_host = os.getenv("SMTP_HOST")
+        smtp_user = os.getenv("SMTP_USER")
+        smtp_pass = os.getenv("SMTP_PASS")
+        smtp_port = int(os.getenv("SMTP_PORT", 587))
+        if smtp_host and smtp_user and smtp_pass:
+            try:
+                import smtplib
+                from email.mime.text import MIMEText
+                msg = MIMEText(body, "plain", "utf-8")
+                msg["From"] = f"Alerte Système IA <{smtp_user}>"
+                msg["To"] = admin_email
+                msg["Subject"] = subject
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=8)
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, admin_email, msg.as_string())
+                server.quit()
+                return True
+            except Exception as e_smtp:
+                logger.debug(f"Fallback SMTP note: {e_smtp}")
+        return False
+
+    def notify_payment_received(self, payment_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Alerte Dave dès qu'un paiement réel est validé avec succès."""
+        lead_id = payment_data.get("lead_id", "--")
+        nom = payment_data.get("lead_name") or payment_data.get("nom_client") or "Client"
+        tel = payment_data.get("lead_phone") or "Non renseigné"
+        amount = payment_data.get("amount", 0)
+        gateway = payment_data.get("gateway", "Mobile Money / Carte")
+        product = payment_data.get("product_name", "Pack Digital")
+        tx_id = payment_data.get("transaction_id", "--")
+
+        wa_text = (
+            f"🎉 *NOUVEL ENCAISSEMENT VALIDÉ !*\n\n"
+            f"💰 *Montant :* {int(amount):,} FCFA\n"
+            f"👤 *Client :* {nom} (Lead #{lead_id})\n"
+            f"📞 *Téléphone :* {tel}\n"
+            f"💳 *Passerelle :* {gateway}\n"
+            f"📦 *Produit :* {product}\n"
+            f"🔖 *Réf Transaction :* {tx_id}\n\n"
+            f"Le client a été automatiquement converti et ses accès numériques ont été livrés."
+        )
+        wa_res = self.send_whatsapp_alert(wa_text)
+
+        title = f"🎉 ENCAISSEMENT : +{int(amount):,} FCFA ({nom})"
+        description = f"Le paiement de **{nom}** pour **{product}** a été confirmé avec succès."
+        fields = [
+            {"name": "💰 Montant", "value": f"**{int(amount):,} FCFA**", "inline": True},
+            {"name": "💳 Passerelle", "value": str(gateway), "inline": True},
+            {"name": "🔖 Transaction", "value": str(tx_id), "inline": True},
+            {"name": "👤 Client", "value": f"{nom} ({tel})", "inline": False}
+        ]
+        discord_sent = self.send_discord_alert(title, description, color=0x10b981, fields=fields)
+        slack_sent = self.send_slack_alert(f"🎉 *PAIEMENT VALIDÉ* : +{int(amount):,} FCFA par {nom}")
+        email_sent = self.send_email_alert(f"🎉 Nouveau paiement reçu : +{int(amount):,} FCFA - {nom}", wa_text)
+
+        return {
+            "success": True,
+            "whatsapp_sent": wa_res.get("success", False),
+            "discord_sent": discord_sent,
+            "slack_sent": slack_sent,
+            "email_sent": email_sent
+        }
+
     def notify_hot_lead(self, lead_data: Dict[str, Any], trigger_reason: str = "Score DUR élevé") -> Dict[str, Any]:
         """Alerte Dave dès qu'un prospect chaud est prêt pour le closing (WhatsApp Prioritaire)."""
         lead_id = lead_data.get("id", "--")
@@ -212,13 +297,15 @@ class RealtimeNotifier:
         ]
         discord_sent = self.send_discord_alert(title, description, color=0x10b981, fields=fields)
         slack_sent = self.send_slack_alert(f"📅 *NOUVEAU RDV CLOSING* avec {nom} - Lien Google Meet : {meet_link}")
+        email_sent = self.send_email_alert(f"📅 Nouveau RDV Google Meet avec {nom} ({time_slot})", wa_text)
 
         return {
             "success": True,
             "whatsapp_sent": wa_res.get("success", False),
             "whatsapp_status": wa_res.get("status"),
             "discord_sent": discord_sent,
-            "slack_sent": slack_sent
+            "slack_sent": slack_sent,
+            "email_sent": email_sent
         }
 
     def notify_watcher_anomaly(self, anomaly_type: str, details: str, severity: str = "warning") -> Dict[str, Any]:
@@ -226,16 +313,18 @@ class RealtimeNotifier:
         is_crit = severity == "critical"
         prefix = "🚨 ALERTE CRITIQUE" if is_crit else "⚠️ AVERTISSEMENT SUPERVISION"
 
-        # WhatsApp envoyé pour les anomalies critiques
+        # WhatsApp & Email envoyé pour les anomalies critiques
         wa_res = {"success": False}
+        email_sent = False
+        wa_text = (
+            f"{prefix} *SilentWatcher*\n\n"
+            f"⚙️ *Type :* {anomaly_type}\n"
+            f"📝 *Détails :* {details[:300]}\n\n"
+            f"👉 Consulter le Centre de Commandement : https://commercial-ia-autonome.onrender.com/#evaluations"
+        )
         if is_crit:
-            wa_text = (
-                f"{prefix} *SilentWatcher*\n\n"
-                f"⚙️ *Type :* {anomaly_type}\n"
-                f"📝 *Détails :* {details[:300]}\n\n"
-                f"👉 Consulter le Centre de Commandement : https://commercial-ia-autonome.onrender.com/#evaluations"
-            )
             wa_res = self.send_whatsapp_alert(wa_text)
+            email_sent = self.send_email_alert(f"🚨 Alerte Critique SilentWatcher: {anomaly_type}", wa_text)
 
         # Discord & Slack
         color = 0xef4444 if is_crit else 0xf59e0b
@@ -254,7 +343,8 @@ class RealtimeNotifier:
             "whatsapp_sent": wa_res.get("success", False),
             "whatsapp_status": wa_res.get("status"),
             "discord_sent": discord_sent,
-            "slack_sent": slack_sent
+            "slack_sent": slack_sent,
+            "email_sent": email_sent
         }
 
 

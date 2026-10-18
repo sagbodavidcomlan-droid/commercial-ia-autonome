@@ -89,11 +89,11 @@ class ComposioEnricher:
                 "score": 10
             }
 
-        # 2. Vérification MX DNS du domaine
+        # 2. Vérification DNS de l'existence du domaine
         mx_found = False
         try:
-            addr_info = socket.getaddrinfo(domain, 80)
-            if addr_info and len(addr_info) > 0:
+            ip = socket.gethostbyname(domain)
+            if ip:
                 mx_found = True
         except Exception:
             mx_found = False
@@ -191,6 +191,30 @@ class ComposioEnricher:
                     lead_data["entreprise"] = comp["company_name"]
                     c.execute("UPDATE crm_leads SET entreprise = ? WHERE id = ?", (comp["company_name"], lead_id))
                     enrichment_results["updates"].append(f"Entreprise renseignée : {comp['company_name']}")
+
+        # 1.bis Enrichissement Firmographique Apollo B2B via Composio
+        target_company = lead_data.get("entreprise")
+        if target_company and len(target_company.strip()) >= 2:
+            try:
+                from modules.composio_intelligence import ComposioIntelligence
+                ci = ComposioIntelligence()
+                apollo_data = ci.search_apollo_organization(target_company.strip())
+                if apollo_data and apollo_data.get("success"):
+                    enrichment_results["apollo_b2b"] = apollo_data
+                    updates_sql = []
+                    params_sql = []
+                    if apollo_data.get("industry") and not lead_data.get("secteur_activite"):
+                        updates_sql.append("secteur_activite = ?")
+                        params_sql.append(apollo_data["industry"])
+                    if apollo_data.get("location") and not lead_data.get("ville"):
+                        updates_sql.append("ville = ?")
+                        params_sql.append(apollo_data["location"])
+                    if updates_sql:
+                        params_sql.append(lead_id)
+                        c.execute(f"UPDATE crm_leads SET {', '.join(updates_sql)} WHERE id = ?", tuple(params_sql))
+                        enrichment_results["updates"].append(f"Apollo: {apollo_data.get('industry')} - {apollo_data.get('location')}")
+            except Exception as e_ap:
+                logger.debug(f"Composio Apollo note: {e_ap}")
 
         # 2. Enrichissement Telco Mobile Money
         if phone:

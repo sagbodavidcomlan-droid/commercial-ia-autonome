@@ -2328,6 +2328,11 @@ def update_lead_coordinates(lead_id: int, **coords) -> bool:
             c.execute(f"UPDATE crm_leads SET {', '.join(upd_fields)} WHERE id = ?", tuple(upd_params))
             conn.commit()
             logger.info(f"update_lead_coordinates: Lead #{lead_id} enrichi avec succès.")
+            try:
+                from modules.crm_mirror_sync import get_crm_mirror
+                get_crm_mirror().sync_to_google_sheets()
+            except Exception:
+                pass
         conn.close()
         return True
     except Exception as e:

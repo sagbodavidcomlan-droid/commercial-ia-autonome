@@ -93,33 +93,62 @@ class CrmMirrorSync:
                 str(l.get("updated_at") or l.get("date_creation") or "")
             ])
 
-        # Si spreadsheet_id fourni, appel Composio
+        # Recherche du spreadsheet_id automatique si non fourni
+        if not spreadsheet_id:
+            spreadsheet_id = os.getenv("SPREADSHEET_ID") or os.getenv("GOOGLE_SHEET_ID")
+            if not spreadsheet_id:
+                try:
+                    conn_s = self._get_db()
+                    cur_s = conn_s.cursor()
+                    cur_s.execute("SELECT setting_value FROM system_settings WHERE setting_key IN ('spreadsheet_id', 'google_sheet_id') AND setting_value != '' LIMIT 1")
+                    row_s = cur_s.fetchone()
+                    if row_s:
+                        spreadsheet_id = row_s[0] if not isinstance(row_s, dict) and not hasattr(row_s, "keys") else row_s["setting_value"]
+                    if self.db is None:
+                        conn_s.close()
+                except Exception:
+                    pass
+
+        # Si spreadsheet_id trouvé, appel Composio Google Sheets
         if spreadsheet_id:
-            res = call_composio_tool("GOOGLESHEETS_UPSERT_ROWS", {
-                "spreadsheet_id": spreadsheet_id,
-                "sheet_name": sheet_name,
-                "values": [headers] + rows
-            })
-            if res:
-                return {
-                    "success": True,
-                    "count": len(rows),
+            try:
+                res = call_composio_tool("GOOGLESHEETS_UPSERT_ROWS", {
                     "spreadsheet_id": spreadsheet_id,
-                    "message": f"{len(rows)} leads synchronisés avec Google Sheets."
-                }
+                    "sheet_name": sheet_name,
+                    "values": [headers] + rows
+                })
+                if res:
+                    logger.info(f"CrmMirrorSync: {len(rows)} leads synchronisés avec succès vers Google Sheets ({spreadsheet_id})")
+                    return {
+                        "success": True,
+                        "count": len(rows),
+                        "spreadsheet_id": spreadsheet_id,
+                        "message": f"{len(rows)} leads synchronisés avec Google Sheets."
+                    }
+            except Exception as e_sheet:
+                logger.warning(f"CrmMirrorSync note Google Sheets Composio: {e_sheet}")
 
         # Sauvegarde miroir locale persistée (CSV & JSON) en tant que backup instantané
         backup_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "backups")
         os.makedirs(backup_dir, exist_ok=True)
-        backup_file = os.path.join(backup_dir, f"crm_mirror_{datetime.now().strftime('%Y%m%d')}.json")
-        with open(backup_file, "w", encoding="utf-8") as f:
+        backup_file_json = os.path.join(backup_dir, f"crm_mirror_{datetime.now().strftime('%Y%m%d')}.json")
+        backup_file_csv = os.path.join(backup_dir, "crm_mirror_latest.csv")
+
+        with open(backup_file_json, "w", encoding="utf-8") as f:
             json.dump(leads, f, ensure_ascii=False, indent=2)
+
+        import csv
+        with open(backup_file_csv, "w", encoding="utf-8", newline="") as f_csv:
+            writer = csv.writer(f_csv)
+            writer.writerow(headers)
+            writer.writerows(rows)
 
         return {
             "success": True,
             "count": len(rows),
-            "local_backup": backup_file,
-            "message": f"{len(rows)} prospects qualifiés préparés et exportés dans le miroir de données."
+            "local_backup": backup_file_json,
+            "csv_backup": backup_file_csv,
+            "message": f"{len(rows)} prospects qualifiés sauvegardés dans le miroir de données (JSON & CSV)."
         }
 
 

@@ -125,6 +125,19 @@ class MeetingScheduler:
         # ÉTAPE 4 : Logger dans agent_activity_logs
         self._log_meeting_creation(lead_id, meeting_id, email_results, meeting_data["meet_link"])
 
+        # ÉTAPE 5 : Notification omnicanale immédiate pour Dave (WhatsApp, Discord, Slack, Email)
+        try:
+            from modules.realtime_notifier import get_notifier
+            get_notifier().notify_meeting_booked({
+                "contact_name": attendees[0] if attendees else f"Lead #{lead_id}",
+                "contact_email": attendees[0] if attendees else "Non renseigné",
+                "meeting_link": meeting_data["meet_link"],
+                "scheduled_at": f"{date_str} à {time_str}",
+                "summary": subject
+            })
+        except Exception as e_notif:
+            logger.warning(f"Note alerte RDV booked: {e_notif}")
+
         return {
             "meeting_id": meeting_id,
             "meet_link": meeting_data["meet_link"],
@@ -134,6 +147,40 @@ class MeetingScheduler:
             "date": date_str,
             "time": time_str,
             "attendees": attendees
+        }
+
+    def check_calendar_availability(self, date_str: str, time_str: str, duration_minutes: int = 45) -> Dict[str, Any]:
+        """
+        Vérifie la disponibilité réelle de Dave dans Google Calendar via Composio.
+        Empêche toute double réservation ou collision d'agenda.
+        """
+        parsed_dt = self.parse_meeting_datetime(date_str, time_str)
+        t_start = parsed_dt.strftime("%Y-%m-%dT%H:%M:00Z")
+        t_end = (parsed_dt + timedelta(minutes=duration_minutes)).strftime("%Y-%m-%dT%H:%M:00Z")
+
+        try:
+            res = call_composio_tool("GOOGLECALENDAR_FIND_EVENT", {
+                "calendar_id": "primary",
+                "timeMin": t_start,
+                "timeMax": t_end
+            })
+            if res and isinstance(res, dict):
+                items = res.get("items") or res.get("data", {}).get("items") or []
+                if len(items) > 0:
+                    conflicting_title = items[0].get("summary", "Événement existant")
+                    return {
+                        "available": False,
+                        "conflict": conflicting_title,
+                        "requested_slot": f"{date_str} à {time_str}",
+                        "message": f"Créneau occupé : '{conflicting_title}'. Proposer un autre créneau."
+                    }
+        except Exception as e:
+            logger.warning(f"Note vérification disponibilité Google Calendar: {e}")
+
+        return {
+            "available": True,
+            "requested_slot": f"{date_str} à {time_str}",
+            "message": "Créneau libre et disponible."
         }
 
     def parse_meeting_datetime(self, date_str: str, time_str: str) -> datetime:
@@ -372,7 +419,21 @@ class MeetingScheduler:
         return results
 
     def _dispatch_email(self, to_email: str, subject: str, body: str) -> bool:
-        """Envoie l'email via SMTP s'il est configuré dans l'environnement."""
+        """Envoie l'email via Composio Gmail ou fallback SMTP."""
+        # 1. Tentative Composio Gmail
+        try:
+            res = call_composio_tool("GMAIL_SEND_EMAIL", {
+                "recipient_email": to_email,
+                "subject": subject,
+                "body": body
+            })
+            if res:
+                logger.info(f"MeetingScheduler: Invitation email envoyée via Composio Gmail à {to_email}")
+                return True
+        except Exception as e_comp:
+            logger.debug(f"Composio Gmail note: {e_comp}")
+
+        # 2. Fallback SMTP s'il est configuré dans l'environnement
         smtp_host = os.getenv("SMTP_HOST")
         smtp_user = os.getenv("SMTP_USER")
         smtp_pass = os.getenv("SMTP_PASS")
