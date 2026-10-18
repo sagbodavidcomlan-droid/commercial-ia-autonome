@@ -356,20 +356,7 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
     if not recipient_phone:
         return {"success": False, "status": "PHONE_MANQUANT", "error": "Numéro de téléphone manquant"}
 
-    # 1. Tentative d'envoi via Brevo WhatsApp officiel si configuré et actif
-    try:
-        from core.brevo_engine import get_brevo_engine, get_brevo_credentials
-        b_creds = get_brevo_credentials()
-        if b_creds.get("is_active"):
-            brevo_res = get_brevo_engine().send_whatsapp_message(recipient_phone=recipient_phone, text=text)
-            if brevo_res.get("success"):
-                return brevo_res
-            else:
-                logger.warning(f"Échec Brevo WhatsApp : {brevo_res.get('error')}, passage aux fallbacks...")
-    except Exception as e_brv:
-        logger.debug(f"Brevo WhatsApp exception ignorée : {e_brv}")
-
-    # 2. Tentative d'envoi via la passerelle WhatsApp QR Code (Baileys) si disponible
+    # 1. Priorité absolue : Passerelle WhatsApp locale (Baileys) si connectée avec votre téléphone
     bridge_url = os.getenv("WHATSAPP_BRIDGE_URL", "http://127.0.0.1:3001")
     try:
         req_st = urllib.request.Request(f"{bridge_url}/status", headers={"User-Agent": "Sales-Agent/1.0"})
@@ -385,9 +372,24 @@ def send_whatsapp_cloud_message(recipient_phone: str, text: str, token: Optional
                 with urllib.request.urlopen(req_send, timeout=10) as resp_send:
                     send_res = json.loads(resp_send.read().decode("utf-8"))
                     if send_res.get("success"):
-                        return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": send_res.get("messageId"), "gateway": "BAILEYS_QR"}
-    except Exception:
-        pass
+                        return {"success": True, "status": "ENVOYE_WHATSAPP", "message_id": send_res.get("messageId"), "gateway": "BAILEYS_QR", "targetJid": send_res.get("targetJid")}
+                    else:
+                        logger.warning(f"Échec envoi Baileys: {send_res.get('error')}")
+    except Exception as e_bridge:
+        logger.debug(f"Passerelle Baileys non disponible: {e_bridge}")
+
+    # 2. Fallback : Brevo WhatsApp officiel si configuré et actif
+    try:
+        from core.brevo_engine import get_brevo_engine, get_brevo_credentials
+        b_creds = get_brevo_credentials()
+        if b_creds.get("is_active"):
+            brevo_res = get_brevo_engine().send_whatsapp_message(recipient_phone=recipient_phone, text=text)
+            if brevo_res.get("success"):
+                return brevo_res
+            else:
+                logger.warning(f"Échec Brevo WhatsApp : {brevo_res.get('error')}, passage aux fallbacks...")
+    except Exception as e_brv:
+        logger.debug(f"Brevo WhatsApp exception ignorée : {e_brv}")
 
     # 2. Sinon, envoi via l'API Meta Cloud officielle
     creds = get_stored_meta_credentials()

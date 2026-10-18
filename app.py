@@ -351,6 +351,9 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
         elif path == "/api/whatsapp/pair-code":
             self.handle_api_whatsapp_pair_code(body)
             return
+        elif path == "/api/whatsapp/send":
+            self.handle_api_whatsapp_send(body)
+            return
         elif path == "/api/goals":
             self.handle_api_update_goals(body)
         elif path == "/api/reports/generate":
@@ -1616,6 +1619,15 @@ class SalesPlatformHandler(SimpleHTTPRequestHandler):
                 self.send_json_response(data)
         except Exception as e:
             self.send_json_response({"success": False, "error": str(e)})
+
+    def handle_api_whatsapp_send(self, body):
+        phone = body.get("phone") or body.get("recipient_phone")
+        text = body.get("text") or body.get("message", "Bonjour ! Ceci est un message test de l'Agent Commercial IA.")
+        if not phone:
+            self.send_json_response({"success": False, "error": "Numéro de téléphone requis."}, status=400)
+            return
+        res = send_whatsapp_cloud_message(recipient_phone=phone, text=text)
+        self.send_json_response(res)
 
     def handle_api_get_domains(self):
         profiles_dir = os.path.join(BASE_DIR, "config", "domain_profiles")

@@ -109,16 +109,14 @@ async function startWhatsApp(pairingPhone = null) {
             connectionStatus = 'DISCONNECTED';
             currentPairingCode = null;
             currentQrCodeDataUrl = null;
-            connectedNumber = null;
             console.log(`❌ [WhatsApp Bridge] Déconnecté (Code: ${statusCode})`);
 
-            // Si déconnecté avant association complète, ou suite à déconnexion/rejet :
-            // Nettoyage immédiat du cache pour repartir sur un QR Code 100% propre
-            const isUnregistered = !sock?.authState?.creds?.registered;
-            const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+            // NE JAMAIS supprimer AUTH_DIR sauf si 401 ou loggedOut explicite !
+            // Le code 515 (restartRequired) ou 428 est normal après un scan de QR Code réussi.
+            const isExplicitLogout = statusCode === DisconnectReason.loggedOut || statusCode === 401;
 
-            if (isUnregistered || isLoggedOut) {
-                console.log(`🧹 [WhatsApp Bridge] Session non enregistrée ou révoquée. Réinitialisation des clés et redémarrage propre...`);
+            if (isExplicitLogout) {
+                console.log(`🧹 [WhatsApp Bridge] Session WhatsApp déconnectée/expirée (401). Nettoyage de la session...`);
                 try {
                     if (fs.existsSync(AUTH_DIR)) {
                         fs.rmSync(AUTH_DIR, { recursive: true, force: true });
@@ -126,9 +124,11 @@ async function startWhatsApp(pairingPhone = null) {
                 } catch (cleanErr) {
                     console.error('Erreur nettoyage auth_info:', cleanErr);
                 }
+                connectedNumber = null;
                 setTimeout(() => startWhatsApp(null), 1500);
             } else {
-                setTimeout(() => startWhatsApp(null), 3000);
+                console.log(`🔄 [WhatsApp Bridge] Reconnexion automatique (Code: ${statusCode || 'inconnu'})...`);
+                setTimeout(() => startWhatsApp(null), 1500);
             }
         } else if (connection === 'open') {
             connectionStatus = 'CONNECTED';
@@ -243,10 +243,31 @@ app.post('/send', async (req, res) => {
 
     try {
         const cleanPhone = phone.replace(/[^0-9]/g, '');
-        const jid = `${cleanPhone}@s.whatsapp.net`;
-        const result = await sock.sendMessage(jid, { text });
-        res.json({ success: true, messageId: result.key.id });
+        let targetJid = `${cleanPhone}@s.whatsapp.net`;
+
+        // Résolution automatique du JID exact sur WhatsApp (support Bénin 10 chiffres / 8 chiffres)
+        try {
+            if (typeof sock.onWhatsApp === 'function') {
+                const checks = await sock.onWhatsApp(cleanPhone);
+                if (checks && checks.length > 0 && checks[0].exists) {
+                    targetJid = checks[0].jid;
+                } else if (cleanPhone.startsWith('22901') && cleanPhone.length === 13) {
+                    const oldPhone = '229' + cleanPhone.slice(5);
+                    const oldChecks = await sock.onWhatsApp(oldPhone);
+                    if (oldChecks && oldChecks.length > 0 && oldChecks[0].exists) {
+                        targetJid = oldChecks[0].jid;
+                    }
+                }
+            }
+        } catch (checkErr) {
+            console.warn('Vérification onWhatsApp ignorée:', checkErr.message);
+        }
+
+        console.log(`📤 [WhatsApp Bridge] Envoi du message à ${targetJid}: "${text.substring(0, 50)}..."`);
+        const result = await sock.sendMessage(targetJid, { text });
+        res.json({ success: true, messageId: result.key.id, targetJid });
     } catch (sendErr) {
+        console.error('Erreur envoi WhatsApp:', sendErr);
         res.status(500).json({ success: false, error: sendErr.message });
     }
 });
