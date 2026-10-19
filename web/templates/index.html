@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Plus — Intelligence Commerciale B2B & Closing IA</title>
   <!-- PWA Meta Tags & Manifest -->
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0062ff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Invo.">
+  <meta name="apple-mobile-web-app-title" content="Agent Plus">
   <link rel="apple-touch-icon" href="/static/img/icon.svg">
   <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap" rel="stylesheet">
-  <!-- Design System Invo CSS -->
-  <link rel="stylesheet" href="/static/css/design-system.css?v=25.0">
+  <!-- Design System Agent Plus CSS -->
+  <link rel="stylesheet" href="/static/css/design-system.css?v=26.0">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -26,6 +27,11 @@
             sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
           },
           colors: {
+            brand: {
+              navy: '#0A1128',
+              blue: '#0062ff',
+              gold: '#f39c12',
+            },
             invo: {
               DEFAULT: '#0062ff',
               hover: '#004edb',
@@ -43,6 +49,8 @@
       }
     }
   </script>
+  <!-- Thinking Orbs Canvas Engine (Jakub Antalik Spec) -->
+  <script src="/static/js/thinking-orbs.js"></script>
   <!-- Chart.js (Local bundle with CDN fallback) -->
   <script src="/static/js/chart.min.js"></script>
   <script>if (typeof Chart === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>'); }</script>
@@ -321,7 +329,7 @@
         <span class="flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Chiffrement PBKDF2 actif
         </span>
-        <span>Version Invo Enterprise</span>
+        <span>Agent Plus Enterprise</span>
       </div>
 
     </div>
@@ -337,11 +345,11 @@
       </button>
 
       <!-- Logo on Mobile Header -->
-      <div class="flex items-center gap-2 md:hidden">
-        <div class="w-7 h-7 rounded-lg bg-[#0062ff] flex items-center justify-center text-white">
+      <div class="flex items-center gap-1.5 md:hidden">
+        <div class="w-7 h-7 rounded-lg bg-[#0062ff] flex items-center justify-center text-white shadow-sm">
           <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
         </div>
-        <span class="text-base font-extrabold text-slate-900 tracking-tight">Invo<span class="text-[#0062ff]">.</span></span>
+        <span class="text-base font-extrabold text-slate-900 tracking-tight">Agent<span class="agent-plus-logo-badge">+</span></span>
       </div>
 
       <!-- Topbar Search Input (Pilule Fasty) -->
@@ -359,18 +367,10 @@
         <span id="header-eval-grade">Grade A (78/100)</span>
       </div>
 
-      <!-- Bouton Master Pause / Autonomie IA -->
-      <button onclick="toggleAutopilot24h()" id="btn-header-status-toggle" title="Basculer entre Mode Autonome et Mode Pause" class="btn btn-sm btn-secondary">
-        <span class="status-pulse-wrap" id="header-status-pulse">
-          <svg width="10" height="10" viewBox="0 0 10 10">
-            <circle cx="5" cy="5" r="5" fill="#22c55e" opacity="0.3">
-              <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite"/>
-            </circle>
-            <circle cx="5" cy="5" r="3" fill="#22c55e"/>
-          </svg>
-        </span>
-        <span id="header-status-text">IA Active</span>
+      <!-- Bouton Master Pause / Autonomie IA avec Thinking Orb 20px (Jakub Antalik Spec) -->
+      <button onclick="toggleAutopilot24h()" id="btn-header-status-toggle" title="Basculer entre Mode Autonome et Mode Pause" class="btn btn-sm btn-secondary flex items-center gap-2">
+        <div id="header-thinking-orb-wrap" class="orb-mount-container w-5 h-5"></div>
+        <span id="header-status-text" class="font-semibold text-xs text-slate-800">IA Active</span>
       </button>
 
       <!-- Autopilot Sprint Action -->
@@ -399,7 +399,7 @@
       </button>
 
       <!-- User Avatar Profile -->
-      <div class="avatar" title="Dave Sagbo (Administrateur)">
+      <div class="avatar" title="Dave Sagbo (Directeur Commercial)">
         DS
       </div>
     </div>
@@ -414,21 +414,24 @@
     <!-- SIDEBAR NAVIGATION VITALIY D. STYLE (GLASS FLOAT / EXPAND & COLLAPSE) -->
     <aside id="main-sidebar" class="sidebar sidebar-vitaliy">
       
-      <!-- 1. Top Bar : Logo Invo Complet & Bouton de Réduction -->
+      <!-- 1. Top Bar : Logo Agent Plus Complet & Bouton de Réduction -->
       <div class="vitaliy-header">
-        <!-- Logo Invo Complet (Icone carrée bleue + Typographie Invo.) -->
-        <div class="vitaliy-brand-logo" onclick="showTab('dashboard')" title="Invo - Accueil Dashboard">
-          <div class="vitaliy-brand-icon">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-white"></i>
+        <!-- Logo Agent Plus (Icone carrée bleue + Typographie Agent+) -->
+        <div class="vitaliy-brand-logo flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard')" title="Agent Plus - Intelligence Commerciale">
+          <div class="vitaliy-brand-icon w-8 h-8 rounded-xl bg-gradient-to-br from-[#0062ff] to-[#004edb] flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <i data-lucide="sparkles" class="w-4 h-4 text-white"></i>
           </div>
-          <span class="vitaliy-brand-text">Invo<span class="vitaliy-brand-dot">.</span></span>
+          <div class="flex items-center gap-1">
+            <span class="vitaliy-brand-text text-base font-extrabold text-slate-900 tracking-tight">Agent</span>
+            <span class="agent-plus-logo-badge">+</span>
+          </div>
         </div>
 
-        <!-- Desktop Collapse Toggle (Chevron en mode développé / Logo Invo en mode réduit) -->
+        <!-- Desktop Collapse Toggle (Chevron en mode développé / Logo Agent+ en mode réduit) -->
         <button onclick="toggleSidebarCollapse()" class="vitaliy-collapse-btn hidden md:flex" title="Développer / Réduire le menu (Ctrl + B)">
           <i data-lucide="chevron-left" class="vitaliy-collapse-icon-chevron w-3.5 h-3.5 text-slate-400"></i>
           <div class="vitaliy-collapse-invo-logo">
-            <span class="vitaliy-invo-letter">i</span>
+            <span class="vitaliy-invo-letter font-black text-xs text-[#0062ff]">A</span>
             <span class="vitaliy-invo-dot"></span>
           </div>
         </button>
@@ -1303,7 +1306,7 @@
 
                 <!-- Tags / Pilules -->
                 <div class="flex flex-wrap items-center gap-1.5 pt-2">
-                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Tunnel Invo</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Tunnel Agent Plus</span>
                   <span class="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[10px] font-bold">Relance J+1</span>
                   <span class="px-2.5 py-1 rounded-xl bg-purple-50 text-purple-700 text-[10px] font-bold">+Closing</span>
                 </div>
@@ -2869,7 +2872,7 @@
               <div class="bg-white rounded-3xl p-6 border border-slate-100 shadow-xs space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-slate-100">
                   <h4 class="text-sm font-black text-slate-900 tracking-tight">Protocole & Sécurité Active</h4>
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Normes Invo</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Normes Agent Plus</span>
                 </div>
 
                 <div class="space-y-3 text-xs">
@@ -2960,7 +2963,7 @@
                     IA
                   </div>
                   <div>
-                    <h4 class="text-sm font-black text-slate-900 tracking-tight">Superviseur IA Invo</h4>
+                    <h4 class="text-sm font-black text-slate-900 tracking-tight">Superviseur Agent Plus</h4>
                     <span class="text-xs text-slate-400 font-medium">Orchestrateur Central de l'Essaim</span>
                   </div>
                 </div>
@@ -3968,7 +3971,7 @@
                   </h3>
                   <div class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1.5">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Assistant Commercial Invo en ligne &bull; Réponse instantanée</span>
+                    <span>Assistant Commercial Agent Plus en ligne &bull; Réponse instantanée</span>
                   </div>
                 </div>
               </div>
@@ -3990,10 +3993,10 @@
               <!-- Rempli par JavaScript avec avatars et cartes styled -->
             </div>
 
-            <!-- Indicateur de Réflexion / Frappe -->
-            <div id="sim-typing-indicator" class="hidden px-5 py-2 text-xs text-slate-600 font-medium flex items-center gap-2 bg-blue-50/70 border-t border-blue-100">
-              <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-ping"></span>
-              <span>L'Agent IA analyse le profil psychologique et formule l'argumentaire...</span>
+            <!-- Indicateur de Réflexion / Frappe avec Thinking Orb (20px) -->
+            <div id="sim-typing-indicator" class="hidden px-5 py-2.5 text-xs text-slate-700 font-medium flex items-center gap-2.5 bg-blue-50/80 border-t border-blue-100">
+              <div id="sim-orb-container" class="orb-mount-container w-5 h-5"></div>
+              <span class="font-bold text-slate-800">L'Agent Plus analyse le profil DISC et formule l'argumentaire...</span>
             </div>
 
             <!-- Bouton Flottant Optionnel "Regenerate Response" (Style Référence) -->
@@ -4441,7 +4444,7 @@
                 </div>
                 <div>
                   <h3 class="text-sm sm:text-base font-black text-slate-900" id="creative-preview-title">Aperçu du Rendu Multimodal</h3>
-                  <p class="text-[10px] text-slate-400 font-semibold">Direction Artistique Invo Haute Couture</p>
+                  <p class="text-[10px] text-slate-400 font-semibold">Direction Artistique Agent Plus Executive</p>
                 </div>
               </div>
               <span id="creative-format-badge" class="px-3 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200">
@@ -5727,7 +5730,7 @@
           </div>
           <div>
             <h3 class="font-black text-slate-900 text-lg tracking-tight">Guide Opérationnel de l'Essaim IA</h3>
-            <p class="text-xs text-slate-500 font-medium">Architecture collaborative des 5 agents spécialisés Invo</p>
+            <p class="text-xs text-slate-500 font-medium">Architecture collaborative des 5 agents spécialisés Agent Plus</p>
           </div>
         </div>
         <button onclick="hideModal('modal-swarm-guide')" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition cursor-pointer">
@@ -5816,7 +5819,7 @@
       <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
         <strong class="text-slate-900 font-black flex items-center gap-1.5">
           <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
-          Garanties de Sécurité & Conformité Invo
+          Garanties de Sécurité & Conformité Agent Plus
         </strong>
         <ul class="space-y-1 text-slate-600 text-[11px] list-disc list-inside">
           <li><strong>Délai Humain Aléatoire :</strong> Tempo de 1.2s à 2.8s simulant la frappe humaine pour neutraliser tout risque de ban Meta/WhatsApp.</li>

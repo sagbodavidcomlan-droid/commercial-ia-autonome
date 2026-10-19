@@ -1,7 +1,7 @@
 {
-  "name": "Invo. — Direction Commerciale & Unité IA",
-  "short_name": "Invo.",
-  "description": "Application autonome de prospection, vente et pilotage commercial 24h/24",
+  "name": "Agent Plus — Intelligence Commerciale & Closing B2B",
+  "short_name": "Agent Plus",
+  "description": "Application autonome d'intelligence commerciale, closing et prospection 24h/24",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

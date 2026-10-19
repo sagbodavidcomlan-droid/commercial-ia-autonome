@@ -309,6 +309,24 @@ function togglePassVisibility(inputId, btnId) {
   lucide.createIcons();
 }
 
+// --- GESTIONNAIRE GLOBAL THINKING ORBS AGENT PLUS ---
+let headerThinkingOrbCtrl = null;
+let simThinkingOrbCtrl = null;
+
+function initAgentPlusOrbs() {
+  if (window.ThinkingOrbs) {
+    const wrap = document.getElementById("header-thinking-orb-wrap");
+    if (wrap && !headerThinkingOrbCtrl) {
+      headerThinkingOrbCtrl = ThinkingOrbs.mount(wrap, {
+        state: "breathing",
+        size: 20,
+        theme: "auto",
+        label: "Statut Agent Plus IA"
+      });
+    }
+  }
+}
+
 let appInitialized = false;
 async function initAuthenticatedApp() {
   if (appInitialized) {
@@ -317,6 +335,7 @@ async function initAuthenticatedApp() {
     return;
   }
   appInitialized = true;
+  initAgentPlusOrbs();
   await loadDomainsList();
   loadDashboardData();
   await renderCalendar(calCurrentMonth, calCurrentYear);
@@ -333,6 +352,7 @@ async function initAuthenticatedApp() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  initAgentPlusOrbs();
   lucide.createIcons();
   const isAuth = await checkAuthStatus();
   if (isAuth) {
@@ -6640,7 +6660,7 @@ function initSimulator() {
       </div>
       <div class="space-y-2 flex-1">
         <div class="bg-white border border-slate-200/90 rounded-3xl rounded-tl-sm p-4 sm:p-5 text-xs text-slate-800 shadow-xs leading-relaxed font-medium">
-Bonjour ${targetName} ! Je suis votre commercial IA d'élite sous pavillon Invo.
+Bonjour ${targetName} ! Je suis votre commercial IA d'élite Agent Plus.
 Posez-moi n'importe quelle question sur nos services, formulez une objection ou demandez des détails pour observer mon raisonnement en direct !
         </div>
         <div class="flex items-center gap-3 pl-2 text-[11px] text-slate-400 font-semibold">
@@ -6695,8 +6715,23 @@ async function handleSimulatorSubmit(e) {
   container.scrollTop = container.scrollHeight;
   lucide.createIcons();
 
-  // Indicateur frappe
-  if (typing) typing.classList.remove("hidden");
+  // Indicateur frappe avec Thinking Orb (20px - mode solving)
+  if (typing) {
+    typing.classList.remove("hidden");
+    const orbWrap = document.getElementById("sim-orb-container");
+    if (orbWrap && window.ThinkingOrbs) {
+      if (!simThinkingOrbCtrl) {
+        simThinkingOrbCtrl = ThinkingOrbs.mount(orbWrap, {
+          state: "solving",
+          size: 20,
+          theme: "light",
+          label: "Agent Plus analyse le profil DISC"
+        });
+      } else {
+        simThinkingOrbCtrl.setState("solving");
+      }
+    }
+  }
 
   // Ajouter à l'historique local
   simulatorHistory.push({ role: "user", content: msg });
@@ -6963,22 +6998,21 @@ async function refreshAutopilotStatus() {
     if (salesEl) salesEl.textContent = `${d.sales_converted || 0}`;
     if (revEl) revEl.textContent = `${(d.revenue_generated || 0).toLocaleString()} FCFA`;
 
-    // Mise à jour du bouton d'état général dans le Header
+    // Mise à jour du bouton d'état général dans le Header avec Thinking Orb
     const btnHeader = document.getElementById("btn-header-status-toggle");
     const statusText = document.getElementById("header-status-text");
-    const pulseDot = document.getElementById("status-pulse-dot");
 
     if (btnHeader && statusText) {
       if (d.is_running) {
         btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100";
-        btnHeader.title = "IA en activité 100% autonome. Cliquez pour mettre en Pause (Mode Supervision).";
+        btnHeader.title = "Agent Plus en patrouille 100% autonome. Cliquez pour mettre en Pause (Mode Supervision).";
         statusText.innerHTML = "IA Active";
-        if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+        if (headerThinkingOrbCtrl) headerThinkingOrbCtrl.setState("working");
       } else {
         btnHeader.className = "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border cursor-pointer bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100";
-        btnHeader.title = "IA en Pause (Mode Supervision). Les leads sont captés mais l'IA ne répond pas automatiquement. Cliquez pour réactiver.";
+        btnHeader.title = "Agent Plus en Pause (Mode Supervision). Les leads sont captés mais l'IA ne répond pas automatiquement. Cliquez pour réactiver.";
         statusText.innerHTML = "IA en Pause";
-        if (pulseDot) pulseDot.className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+        if (headerThinkingOrbCtrl) headerThinkingOrbCtrl.setState("breathing");
       }
     }
 
@@ -7714,8 +7748,36 @@ async function triggerGenerateCreative() {
   if (!btn || !container) return;
 
   btn.disabled = true;
-  btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Génération en cours...`;
+  btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-300 animate-spin"></i> <span>Composition Agent Plus en cours...</span>`;
   if (window.lucide) lucide.createIcons();
+
+  let creativeOrbCtrl = null;
+  if (container) {
+    container.innerHTML = `
+      <div class="flex flex-col items-center justify-center p-8 space-y-4">
+        <div id="creative-generating-orb" class="w-16 h-16 orb-mount-container flex items-center justify-center"></div>
+        <div class="text-center space-y-1">
+          <h4 class="text-sm font-extrabold text-slate-900 tracking-tight">Composition Haute Définition Agent Plus en cours...</h4>
+          <p class="text-xs text-slate-500 font-medium max-w-sm">
+            Calibrage des contrastes Aksara, alignement des messages de conversion et rendu HD.
+          </p>
+        </div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold">
+          <span class="w-2 h-2 rounded-full bg-[#0062ff] animate-ping"></span>
+          <span>Rendu vectoriel & photoréaliste</span>
+        </div>
+      </div>
+    `;
+    const orbWrap = document.getElementById("creative-generating-orb");
+    if (orbWrap && window.ThinkingOrbs) {
+      creativeOrbCtrl = ThinkingOrbs.mount(orbWrap, {
+        state: "composing",
+        size: 64,
+        theme: "light",
+        label: "Composition Créative Haute Définition"
+      });
+    }
+  }
 
   let endpoint = "/api/creative/generate-carousel";
   let reqBody = { topic: topic, channel: channel };
@@ -7772,7 +7834,7 @@ async function triggerGenerateCreative() {
       } else {
         currentCreativeResult = payload;
         const titleEl = document.getElementById("creative-preview-title");
-        if (titleEl) titleEl.textContent = payload.title || payload.topic || "Création Dave Sagbo";
+        if (titleEl) titleEl.textContent = payload.title || payload.topic || "Création Agent Plus";
         const badgeEl = document.getElementById("creative-format-badge");
         if (badgeEl) badgeEl.textContent = payload.format || payload.format_type || format;
 
@@ -7799,11 +7861,43 @@ async function triggerGenerateCreative() {
 
       showToast("Création générée avec succès selon la Brand Bible !", "success");
     } else {
-      alert("Erreur lors de la génération créative : " + (data.error || "Inconnue"));
+      const errMsg = data.error || (data.detail ? JSON.stringify(data.detail) : "Moteur indisponible");
+      if (container) {
+        container.innerHTML = `
+          <div class="text-center p-8 space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h4 class="text-sm font-bold text-slate-800">Ajustement Requis</h4>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">${escapeHtml(errMsg)}</p>
+            <button onclick="triggerGenerateCreative()" class="px-4 py-2 rounded-xl bg-[#0062ff] text-white text-xs font-bold shadow-xs hover:bg-blue-600 transition">
+              Réessayer la génération
+            </button>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
+      showToast("Erreur lors de la génération : " + errMsg, "error");
     }
   } catch (e) {
-    alert("Erreur réseau : " + e.message);
+    if (container) {
+      container.innerHTML = `
+        <div class="text-center p-8 space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
+            <i data-lucide="wifi-off" class="w-6 h-6"></i>
+          </div>
+          <h4 class="text-sm font-bold text-slate-800">Erreur de Connexion</h4>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto">${escapeHtml(e.message)}</p>
+          <button onclick="triggerGenerateCreative()" class="px-4 py-2 rounded-xl bg-[#0062ff] text-white text-xs font-bold shadow-xs hover:bg-blue-600 transition">
+            Réessayer
+          </button>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+    }
+    showToast("Erreur réseau : " + e.message, "error");
   } finally {
+    if (creativeOrbCtrl) creativeOrbCtrl.destroy();
     btn.disabled = false;
     btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i> <span>Générer avec la Brand Bible</span>`;
     if (window.lucide) lucide.createIcons();
@@ -10174,27 +10268,34 @@ async function generateVisualAd() {
   const engine = engineSelect ? engineSelect.value : "minimax";
   const audience = audienceInput ? audienceInput.value : "Entrepreneurs et PME";
 
-  // Mise à jour de l'UI pendant la génération
+  // Mise à jour de l'UI pendant la génération avec Thinking Orb
   const origBtnHtml = btn ? btn.innerHTML : "";
   if (btn) {
-    btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-white"></i><span>Composition Haute Définition (${engine.toUpperCase()}) en cours...</span>`;
+    btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-300 animate-spin"></i><span>Composition Haute Définition (${engine.toUpperCase()}) en cours...</span>`;
     btn.disabled = true;
   }
   if (badgeStatus) {
     badgeStatus.className = "text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 animate-pulse";
     badgeStatus.textContent = "Génération " + engine.toUpperCase() + "...";
   }
+  let visualOrbCtrl = null;
   if (previewContainer) {
     previewContainer.innerHTML = `
       <div class="flex flex-col items-center justify-center p-6 space-y-3">
-        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-[#0062ff] flex items-center justify-center animate-spin">
-          <i data-lucide="sparkles" class="w-6 h-6 text-[#0062ff]"></i>
-        </div>
+        <div id="visual-ad-generating-orb" class="w-16 h-16 orb-mount-container flex items-center justify-center"></div>
         <p class="text-xs font-bold text-slate-800">Conception de l'affiche publicitaire HD...</p>
-        <p class="text-[11px] text-slate-500 max-w-xs text-center">Moteur ${escapeHtml(engine.toUpperCase())} & Composio génèrent le visuel photoréaliste et les éléments de conversion.</p>
+        <p class="text-[11px] text-slate-500 max-w-xs text-center">Moteur ${escapeHtml(engine.toUpperCase())} & Agent Plus génèrent le visuel photoréaliste et les éléments de conversion.</p>
       </div>
     `;
-    if (window.lucide) lucide.createIcons();
+    const orbWrap = document.getElementById("visual-ad-generating-orb");
+    if (orbWrap && window.ThinkingOrbs) {
+      visualOrbCtrl = ThinkingOrbs.mount(orbWrap, {
+        state: "shaping",
+        size: 64,
+        theme: "light",
+        label: "Génération de l'affiche publicitaire"
+      });
+    }
   }
 
   try {
@@ -10210,6 +10311,7 @@ async function generateVisualAd() {
       })
     });
     const data = await res.json();
+    if (visualOrbCtrl) visualOrbCtrl.destroy();
 
     if (data.success && data.image_url) {
       showToast("Affiche publicitaire HD générée avec succès !", "success");
