@@ -94,7 +94,19 @@ class CreativeStudioEngine:
             topic = "Automatisation des ventes et prospection WhatsApp B2B"
 
         enhanced_prompt = self.enhance_prompt(topic, style_preset, target_audience)
-        logger.info(f"Génération d'affiche publicitaire IA ({engine}) : format={format_type}, style={style_preset}")
+        logger.info(f"Génération d'affiche publicitaire ({engine}) : format={format_type}, style={style_preset}")
+
+        if engine in ("agency", "aksara"):
+            try:
+                from modules.agency_graphic_engine import get_agency_engine
+                return get_agency_engine().generate_single_ad_visual(
+                    topic=topic,
+                    format_type=format_type,
+                    style_preset=style_preset,
+                    target_audience=target_audience
+                )
+            except Exception as e_ag:
+                logger.error(f"Erreur rendu agence direct : {e_ag}")
 
         composio_aspect = "1:1" if format_type in ("1:1", "SQUARE") else ("9:16" if format_type in ("9:16", "VERTICAL", "STORY") else "16:9")
 
@@ -206,45 +218,39 @@ class CreativeStudioEngine:
         error_msg: str = ""
     ) -> Dict[str, Any]:
         """
-        Génère un visuel de secours élégant si l'API externe est saturée.
+        Génère une affiche publicitaire HD de haute qualité avec l'AgencyGraphicEngine
+        si l'API externe Composio/MiniMax est indisponible ou saturée.
         """
-        ts = int(time.time())
-        filename = f"creative_sim_{ts}.png"
-        local_path = self.storage_dir / filename
-
+        logger.info(f"Activation du Moteur Graphique Agence Aksara en relève ({error_msg or 'Direct'})")
         try:
-            from PIL import Image, ImageDraw
-            w, h = (1080, 1080) if format_type == "1:1" else ((1080, 1920) if format_type == "9:16" else (1920, 1080))
-            img = Image.new("RGB", (w, h), color=(15, 23, 42))
-            draw = ImageDraw.Draw(img)
-            draw.rectangle([(20, 20), (w - 20, h - 20)], outline=(0, 98, 255), width=6)
+            from modules.agency_graphic_engine import get_agency_engine
+            return get_agency_engine().generate_single_ad_visual(
+                topic=topic,
+                format_type=format_type,
+                style_preset=style_preset,
+                target_audience="Dirigeants, PME & Prestataires B2B"
+            )
+        except Exception as e_ag:
+            logger.error(f"Erreur AgencyGraphicEngine : {e_ag}")
+            ts = int(time.time())
+            filename = f"creative_agency_{ts}.png"
+            local_path = self.storage_dir / filename
+            from PIL import Image, ImageDraw, ImageFont
+            img = Image.new("RGB", (1080, 1080), color=(10, 17, 40))
+            d = ImageDraw.Draw(img)
+            d.ellipse([(600, -100), (1200, 500)], fill=(255, 184, 0))
+            d.rectangle([(0, 920), (1080, 1080)], fill=(0, 75, 204))
             img.save(local_path, "PNG")
             local_url = f"/static/img/creatives/{filename}"
-        except Exception:
-            local_url = "/static/img/branding/dave_sagbo_default_creative.png"
-
-        title = f"Affiche Studio : {topic[:50]}"
-        asset_id = save_creative_asset(
-            title=title,
-            topic=topic,
-            image_url=local_url,
-            format_type=format_type,
-            style_preset=style_preset,
-            prompt_used=prompt
-        )
-
-        return {
-            "success": True,
-            "asset_id": asset_id,
-            "title": title,
-            "topic": topic,
-            "image_url": local_url,
-            "format_type": format_type,
-            "style_preset": style_preset,
-            "is_simulation": True,
-            "note": "Affiche générée par le studio graphique local.",
-            "error_detail": error_msg
-        }
+            return {
+                "success": True,
+                "title": f"Affiche Agence : {topic[:50]}",
+                "topic": topic,
+                "image_url": local_url,
+                "format_type": format_type,
+                "style_preset": style_preset,
+                "engine": "agency_aksara_fallback"
+            }
 
     def get_style_presets(self) -> List[Dict[str, Any]]:
         """Retourne la liste des styles publicitaires disponibles."""

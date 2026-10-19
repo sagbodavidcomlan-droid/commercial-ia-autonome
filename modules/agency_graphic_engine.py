@@ -815,6 +815,95 @@ class AgencyGraphicEngine:
             "message": "Carrousel Agence et Stories générés avec succès selon la référence professionnelle !"
         }
 
+    def generate_single_ad_visual(
+        self,
+        topic: str,
+        format_type: str = "1:1",
+        style_preset: str = "saas_workspace",
+        target_audience: str = "Dirigeants, PME & Prestataires B2B",
+        custom_photo_path: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Génère une affiche publicitaire HD unique de niveau agence (style Aksara / Brand Bible).
+        Résolution : 1080x1080 (1:1), 1080x1350 (4:5) ou 1080x1920 (9:16).
+        """
+        ts = int(time.time())
+        clean_topic = topic.strip() if topic else "Automatiser ses Ventes B2B sur WhatsApp"
+
+        if format_type in ("1:1", "SQUARE"):
+            w, h = 1080, 1080
+        elif format_type in ("9:16", "VERTICAL", "STORY"):
+            w, h = 1080, 1920
+        else:
+            w, h = 1080, 1350
+
+        ad_data = {
+            "badge": "SYSTÈME D'ACQUISITION B2B",
+            "title": clean_topic,
+            "subtitle": f"La méthode éprouvée pour {target_audience}",
+            "metric": "+350%",
+            "metric_label": "De Croissance B2B",
+            "quote": "« Automatisez vos relances et qualifiez chaque prospect instantanément. »",
+            "points": [
+                "1. Qualification IA en 30 secondes",
+                "2. Relances intelligentes multicanales"
+            ]
+        }
+
+        # Choix de l'archétype selon le style_preset
+        if style_preset == "mobile_money_sales":
+            img = self.render_archetype_3_metric_mosaic(ad_data, w=w, h=h, scale=2)
+            used_arch = "METRIC_CIRCULAR_MOSAIC"
+        elif style_preset == "authority_founder":
+            img = self.render_archetype_6_founder_circle(ad_data, w=w, h=h, scale=2)
+            used_arch = "CIRCULAR_FOUNDER_AVATAR"
+        elif style_preset == "retail_commerce":
+            img = self.render_archetype_5_diagonal_split(ad_data, w=w, h=h, scale=2)
+            used_arch = "DIAGONAL_WEDGE_SPLIT"
+        elif style_preset == "arch_mockup":
+            img = self.render_archetype_7_arch_mockup(ad_data, w=w, h=h, scale=2)
+            used_arch = "ARCH_MOCKUP_SOLUTION"
+        else:
+            img = self.render_archetype_1_hero(ad_data, w=w, h=h, scale=2)
+            used_arch = "HERO_YELLOW_ARC"
+
+        filename = f"agency_ad_{ts}_{w}x{h}.png"
+        creatives_dir = BASE_DIR / "web" / "static" / "img" / "creatives"
+        creatives_dir.mkdir(parents=True, exist_ok=True)
+        local_path = creatives_dir / filename
+        img.save(local_path, "PNG", quality=95)
+
+        local_url = f"/static/img/creatives/{filename}"
+        title = f"Affiche Agence Aksara : {clean_topic[:50]}"
+
+        asset_id = save_creative_asset(
+            title=title,
+            topic=clean_topic,
+            image_url=local_url,
+            format_type=format_type,
+            style_preset=style_preset,
+            prompt_used=f"Aksara Pro Agency Layout ({used_arch}) for {clean_topic}",
+            metadata={
+                "engine": "agency_aksara_engine",
+                "archetype": used_arch,
+                "resolution": f"{w}x{h}"
+            }
+        )
+
+        return {
+            "success": True,
+            "asset_id": asset_id,
+            "title": title,
+            "topic": clean_topic,
+            "image_url": local_url,
+            "format_type": format_type,
+            "style_preset": style_preset,
+            "engine": "aksara_agency",
+            "model": f"Agency-Aksara-{used_arch}",
+            "prompt_used": f"Direction Artistique Agence Aksara & Brand Bible Dave Sagbo ({used_arch})",
+            "message": f"Affiche publicitaire HD générée avec succès (Style Agence {used_arch}) !"
+        }
+
 
 # Singleton
 _agency_engine = None

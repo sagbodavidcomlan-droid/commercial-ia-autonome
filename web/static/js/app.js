@@ -7733,7 +7733,7 @@ async function triggerGenerateCreative() {
       format_type: document.getElementById("visual-ad-ratio")?.value || "1:1",
       style_preset: document.getElementById("visual-ad-style")?.value || "saas_workspace",
       target_audience: "Dirigeants, PME & Prestataires B2B",
-      engine: document.getElementById("visual-ad-engine")?.value || "minimax"
+      engine: document.getElementById("visual-ad-engine")?.value || "agency"
     };
   } else if (format === "PACK_OMNICHANNEL") {
     endpoint = "/api/creative/generate-omnichannel";
